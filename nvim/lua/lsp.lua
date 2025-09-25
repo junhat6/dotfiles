@@ -7,6 +7,7 @@ require('mason-tool-installer').setup({
 	ensure_installed = {
 		"lua_ls", -- Lua言語サーバー
 		"stylua", -- Lua用フォーマッター
+		"prettierd",
 	}
 })
 
