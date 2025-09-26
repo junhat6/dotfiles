@@ -26,8 +26,3 @@ require("conform").setup({
 		sh = { "shfmt" },
 	},
 })
-
--- keymap
-vim.keymap.set("n", "<leader>f", function()
-	require("conform").format({ async = true })
-end, { silent = true })
