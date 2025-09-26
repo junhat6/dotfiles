@@ -10,4 +10,5 @@ vim.pack.add({
 	{ src = "https://github.com/nvim-tree/nvim-web-devicons" },
 	{ src = "https://github.com/MunifTanjim/nui.nvim" },
 	{ src = "https://github.com/shellRaining/hlchunk.nvim" },
+	{ src = "https://github.com/akinsho/toggleterm.nvim" },
 })
