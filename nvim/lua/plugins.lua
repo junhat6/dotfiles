@@ -20,6 +20,7 @@ vim.pack.add({
 	{ src = "https://github.com/shellRaining/hlchunk.nvim" },
 	{ src = "https://github.com/akinsho/toggleterm.nvim" },
 	{ src = "https://github.com/windwp/nvim-autopairs" },
+	{ src = "https://github.com/folke/trouble.nvim" },
 
 	-- ── LSP / Tools ───────────────────────────────────────────
 	{ src = "https://github.com/neovim/nvim-lspconfig" },
