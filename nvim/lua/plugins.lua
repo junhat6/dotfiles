@@ -4,6 +4,8 @@ vim.pack.add({
 	{ src = "https://github.com/nvim-tree/nvim-web-devicons" },
 	{ src = "https://github.com/MunifTanjim/nui.nvim" }, -- neo-tree などで使用
 	{ src = "https://github.com/kkharji/sqlite.lua" }, -- telescope-all-recent 用
+	{ src = "https://github.com/nvim-treesitter/nvim-treesitter" },
+	{ src = "https://github.com/RRethy/nvim-treesitter-textsubjects" },
 
 	-- ── Telescope: 本体 → 拡張（依存→本体→拡張の順が◎） ─────────────
 	{ src = "https://github.com/nvim-telescope/telescope.nvim" }, -- 本体
