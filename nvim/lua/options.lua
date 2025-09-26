@@ -30,5 +30,4 @@ vim.opt.updatetime = 300 -- CursorHold/diagnosticsの反応を速く
 vim.opt.timeoutlen = 600
 
 -- === クリップボード / 保存まわり ===
-vim.opt.clipboard = "unnamedplus" -- OSクリップボード共有
 vim.opt.undofile = true -- 永続Undo
