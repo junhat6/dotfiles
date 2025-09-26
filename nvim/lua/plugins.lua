@@ -38,4 +38,8 @@ vim.pack.add({
 	-- ── Git ──────────────────────────────────────────────────
 	{ src = "https://github.com/lewis6991/gitsigns.nvim" },
 	{ src = "https://github.com/sindrets/diffview.nvim" },
+
+	-- ── AI Coding Assistant ───────────────────────────────────
+	{ src = "https://github.com/folke/snacks.nvim" }, -- claudecode.nvim の依存関係
+	{ src = "https://github.com/coder/claudecode.nvim", dependencies = { "folke/snacks.nvim" } },
 })
