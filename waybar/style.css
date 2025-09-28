@@ -5,9 +5,11 @@
 @define-color accent2      #bb9af7; /* Magenta */
 @define-color warn         #e0af68; /* Yellow */
 @define-color crit         #f7768e; /* Red */
+@define-color bg-weak rgba(26,27,38,0.40); /* バーの地色（薄め） */
+@define-color bg-strong rgba(26,27,38,0.85); /* ウィジェット背景（濃いめ） */
 
 * {
-  background-color: transparent;
+  background-color: @bg-weak;
   color: @foreground;
   border: none;
   border-radius: 0;

@@ -24,6 +24,7 @@ vim.keymap.set("n", "<A->>", "<Cmd>BufferMoveNext<CR>", { desc = "Move buffer ri
 
 -- バッファを閉じる
 vim.keymap.set("n", "<A-c>", "<Cmd>BufferClose<CR>", { desc = "Close buffer" })
+vim.keymap.set("n", "<A-C>", "<Cmd>BufferCloseAllButCurrent<CR>", { desc = "Close all other buffers" })
 
 -- 直接番号で切り替え (例: Alt+1 でバッファ1)
 for i = 1, 9 do
