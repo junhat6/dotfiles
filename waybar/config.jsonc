@@ -19,7 +19,6 @@
     "clock",
     "tray",
     "custom/notifications",
-    "custom/power"
   ],
   "tray": {
     // "icon-size": 21,
@@ -99,17 +98,5 @@
     "exec": "swaync-client -c", // 未読件数を表示
     "on-click": "swaync-client -t",
     "interval": 2,
-  },
-  "custom/power": {
-    "format": "⏻ ",
-    "tooltip": false,
-    "menu": "on-click",
-    "menu-file": "$HOME/.config/waybar/power_menu.xml", // Menu file in resources folder
-    "menu-actions": {
-      "shutdown": "shutdown",
-      "reboot": "reboot",
-      "suspend": "systemctl suspend",
-      "hibernate": "systemctl hibernate",
-    },
   },
 }
