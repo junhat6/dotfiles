@@ -30,17 +30,29 @@ toggleterm.setup({
 vim.keymap.set("n", "<leader>t", "<cmd>ToggleTerm direction=horizontal<CR>", { desc = "Terminal horizontal" })
 vim.keymap.set("n", "<leader>r", "<cmd>ToggleTerm direction=vertical<CR>", { desc = "Terminal vertical" })
 
--- 端末内での操作を快適にするキー（ターミナルモード限定）
+-- ─────────────────────────────────────────────────────────────
+-- Terminalモード固定: Escや<C-\><C-n>でノーマルに戻れないようにする
+-- かつ、Terminalモードのままウィンドウ移動できるようにする
+-- ─────────────────────────────────────────────────────────────
 local function set_term_keymaps()
-	local opts = { buffer = 0, silent = true }
-	-- Esc / jk でノーマル戻り
-	vim.keymap.set("t", "<esc>", [[<C-\><C-n>]], opts)
-	-- 窓移動（Ctrl+h/j/k/l）
-	vim.keymap.set("t", "<C-h>", [[<C-\><C-n><C-w>h]], opts)
-	vim.keymap.set("t", "<C-j>", [[<C-\><C-n><C-w>j]], opts)
-	vim.keymap.set("t", "<C-k>", [[<C-\><C-n><C-w>k]], opts)
-	vim.keymap.set("t", "<C-l>", [[<C-\><C-n><C-w>l]], opts)
+	local opts = { buffer = 0, silent = true, noremap = true }
+
+	-- (重要) ノーマルに戻す操作を潰す
+	-- Esc はそのまま端末アプリに送る（ノーマルに戻さない）
+	vim.keymap.set("t", "<Esc>", "<Esc>", opts)
+	-- Ctrl-\ Ctrl-n を完全に無効化（ノーマルに戻れない）
+	vim.keymap.set("t", [[<C-\><C-n>]], "<Nop>", opts)
+
+	-- Terminalモードのままウィンドウ移動（:wincmd を直接叩く）
+	vim.keymap.set("t", "<C-h>", "<Cmd>wincmd h<CR>", opts)
+	vim.keymap.set("t", "<C-j>", "<Cmd>wincmd j<CR>", opts)
+	vim.keymap.set("t", "<C-k>", "<Cmd>wincmd k<CR>", opts)
+	vim.keymap.set("t", "<C-l>", "<Cmd>wincmd l<CR>", opts)
+
+	-- 念のため、ターミナルに入ったら常に挿入モードへ
+	vim.cmd("startinsert")
 end
+
 vim.api.nvim_create_autocmd("TermOpen", {
 	pattern = "term://*",
 	callback = set_term_keymaps,
