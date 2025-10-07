@@ -23,7 +23,7 @@ toggleterm.setup({
 	persist_mode = true, -- モードを維持
 	close_on_exit = true,
 	shade_terminals = false,
-	hide_numbers = true,
+	hide_numbers = true, -- 行番号を隠す
 })
 
 -- keymaps
