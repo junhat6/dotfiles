@@ -1,6 +1,4 @@
-# ========================================
-# Completion System
-# ========================================
+# === Completion System ===
 autoload -Uz compinit
 compinit
 
@@ -10,9 +8,7 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Better completion menu
 zstyle ':completion:*' menu select
 
-# ========================================
-# History Configuration
-# ========================================
+# === History Configuration ===
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
 SAVEHIST=10000
@@ -20,9 +16,7 @@ setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
-# ========================================
-# fzf - Fuzzy Finder
-# ========================================
+# === fzf - Fuzzy Finder ===
 eval "$(fzf --zsh)"
 
 # fzf configuration
@@ -30,23 +24,17 @@ export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --inline-info"
 export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
-# ========================================
-# zoxide - Smart cd
-# ========================================
+# === zoxide - Smart cd ===
 eval "$(zoxide init zsh)"
 
-# ========================================
-# eza - Modern ls replacement
-# ========================================
+# === eza - Modern ls replacement ===
 alias ls='eza --icons'
 alias ll='eza -lh --icons --git'
 alias la='eza -lah --icons --git'
 alias lt='eza --tree --icons --level=2'
 alias llt='eza --tree --icons --level=2 -lh'
 
-# ========================================
-# bat - Better cat with syntax highlighting
-# ========================================
+# === bat - Better cat with syntax highlighting ===
 export BAT_THEME="Monokai Extended"
 alias cat='bat --style=auto'
 alias bathelp='bat --plain --language=help'
@@ -56,24 +44,16 @@ help() {
     "$@" --help 2>&1 | bat --plain --language=help
 }
 
-# ========================================
-# ripgrep - Fast grep alternative
-# ========================================
+# === ripgrep - Fast grep alternative ===
 alias rg='rg --smart-case --hidden --glob "!.git/*"'
 
-# ========================================
-# mise - Version Manager for Node, Python, etc
-# ========================================
+# === mise - Version Manager for Node, Python, etc ===
 eval "$(mise activate zsh)"
 
-# ========================================
-# direnv - Directory-specific environment variables
-# ========================================
+# === direnv - Directory-specific environment variables ===
 eval "$(direnv hook zsh)"
 
-# ========================================
-# ghq - Git repository manager
-# ========================================
+# === ghq - Git repository manager ===
 # Quick jump to repository with fzf
 function ghq-cd() {
   local selected
@@ -92,17 +72,13 @@ function ghq-get() {
 }
 alias ghqclone='ghq-get'
 
-# ========================================
-# starship - Modern prompt
-# ========================================
+# === starship - Modern prompt ===
 eval "$(starship init zsh)"
 
-# ========================================
-# zsh-syntax-highlighting
-# ========================================
+# === zsh-syntax-highlighting ===
 source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-# ==================== Git ====================
+# === Git ===
 
 # g で git を短縮
 alias g='git'
@@ -110,7 +86,7 @@ alias g='git'
 # git の補完を g でも効くようにする
 compdef g=git
 
-# ==================== fzf Git 拡張 ====================
+# === fzf Git 拡張 ===
 
 # fzf を使ったブランチ切り替え
 gb() {

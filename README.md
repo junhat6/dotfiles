@@ -27,31 +27,6 @@ git config --global user.email "your@email.com"
 
 ## 使用可能なコマンド
 
-### 基本コマンド（.gitconfig）
-
-```bash
-g st              # git status
-g ad file.txt     # git add file.txt
-g cm "message"    # git commit -m "message"
-g co main         # git checkout main
-g br              # git branch
-g df              # git diff
-
-g lg              # git log --oneline --graph --decorate
-g lga             # 全ブランチのログ
-g lgg             # 見やすいカラフルなログ
-g last            # 最後のコミット
-
-g ps              # git push
-g psf             # git push --force-with-lease
-g pl              # git pull
-
-g aa              # git add .
-g cob feature     # git checkout -b feature
-g amend           # git commit --amend --no-edit
-g aliases         # エイリアス一覧表示
-```
-
 ### fzf 拡張コマンド（.zshrc）
 
 ```bash
@@ -72,17 +47,6 @@ gstp              # fzf でスタッシュ選択して pop
 
 ```bash
 brew install fzf
-```
-
-## Git で管理
-
-```bash
-cd ~/dotfiles
-git init
-git add .
-git commit -m "Initial dotfiles"
-git remote add origin https://github.com/yourusername/dotfiles.git
-git push -u origin main
 ```
 
 ## 新しいマシンでのセットアップ
