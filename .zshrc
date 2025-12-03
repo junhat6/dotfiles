@@ -95,7 +95,7 @@ gb() {
 }
 
 # fzf を使ったファイル選択して git add
-ga() {
+gadd() {
   git status --short |
   fzf -m --ansi --preview 'git diff --color=always {2}' |
   awk '{print $2}' |

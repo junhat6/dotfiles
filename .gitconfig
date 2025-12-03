@@ -2,7 +2,7 @@
     # 基本
     st = status
     ad = add
-    cm = commit
+    cm = commit -m
     co = checkout
     br = branch
     df = diff
@@ -14,7 +14,7 @@
     last = log -1 HEAD
 
     # プッシュ
-    p = push
+    p = push origin HEAD
     
     # リセット
     undo = reset --soft HEAD^
