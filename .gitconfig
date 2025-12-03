@@ -1,0 +1,34 @@
+[alias]
+    # 基本
+    st = status
+    ad = add
+    cm = commit
+    co = checkout
+    br = branch
+    df = diff
+
+    # ログ（見やすい）
+    lg = log --oneline --graph --decorate
+    lga = log --oneline --graph --decorate --all
+    lgg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+    last = log -1 HEAD
+
+    # プッシュ
+    p = push
+    
+    # リセット
+    undo = reset --soft HEAD^
+
+    # 便利
+    amend = commit --amend --no-edit
+    aliases = config --get-regexp alias
+
+    # ブランチクリーンアップ
+    cleanup = !git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d
+
+[user]
+    name = JunichiHattori
+    email = junhat6@gmail.com
+
+[init]
+    defaultBranch = main
