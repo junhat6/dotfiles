@@ -1,59 +1,53 @@
 # Dotfiles
 
-個人用の dotfiles 設定
+個人用の dotfiles セット。zsh + fzf を中心に、軽くて実用的な最小構成。
 
 ## 構成
+- `.gitconfig` : Git エイリアスと基本設定
+- `.zshrc` : zsh 設定（補完・履歴・fzf・zoxide・Gitユーティリティ）
+- `install.sh` : シンボリックリンク作成と初期セットアップ
 
-- `.gitconfig` - Git エイリアスと基本設定
-- `.zshrc` - zsh 設定と fzf を使った Git 拡張機能
-- `install.sh` - セットアップスクリプト
-
-## セットアップ
-
-```bash
-cd ~/dotfiles
-./install.sh
-source ~/.zshrc
-```
-
-## Git の設定
-
-インストール後、以下を実行してユーザー情報を設定してください：
-
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your@email.com"
-```
-
-## 使用可能なコマンド
-
-### fzf 拡張コマンド（.zshrc）
-
-```bash
-gb                # fzf でブランチ選択して切り替え
-gbd               # fzf でブランチ選択して削除
-gbr               # fzf でリモートブランチも含めて検索
-
-gshow             # fzf でコミット選択して詳細表示
-gcp               # fzf でコミット選択してチェリーピック
-
-gaf               # fzf でファイル選択して git add
-gstp              # fzf でスタッシュ選択して pop
-```
-
-## 必要な依存関係
-
-- [fzf](https://github.com/junegunn/fzf) - ファジーファインダー
-
-```bash
-brew install fzf
-```
-
-## 新しいマシンでのセットアップ
-
+## インストール
 ```bash
 git clone https://github.com/yourusername/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 source ~/.zshrc
+```
+
+`install.sh` は既存の `~/.gitconfig` / `~/.zshrc` がある場合にバックアップを案内します。
+
+## 依存ツール（主なもの）
+- fzf
+- eza / bat / ripgrep (rg)
+- zoxide
+- mise / direnv
+- ghq
+- starship
+- zsh-syntax-highlighting
+- docker (alias 用、任意)
+
+macOS (Homebrew) の例:
+```bash
+brew install fzf eza bat ripgrep zoxide ghq starship direnv
+```
+
+## 主な機能 (.zshrc)
+- 補完: `compinit` と大文字小文字無視、メニュー選択。
+- 履歴: 重複排除（追加時・検索時）、スペース始まり無視、履歴展開確認。
+- fzf 基本: `FZF_DEFAULT_COMMAND=rg --files --hidden --follow --glob "!.git/*"` を設定。Ctrl-T でファイル選択が高速。
+- ナビゲーション: zoxide + `AUTO_CD`。`Ctrl-Q` で zoxide 一覧を fzf から選んで移動（プレビューは eza/ls）。
+- 表示: `ls/ll/la/lt/llt` を eza で置換、`cat` を bat で置換、`rg` に便利オプション付与。
+- Git:
+  - `g` で git エイリアス、補完有効。
+  - `gadd`: `git status -sb` から fzf で複数選択して add（diff プレビュー付）。
+  - `gstp`: スタッシュを fzf で選んで pop（パッチプレビュー付）。
+- ghq: `ghqcd` でリポジトリ移動、`ghqclone` で取得して即移動。
+- プロンプト: starship。
+- ショートカット: `zshconfig` / `reload`、`d` / `dc`、`anti`（Antigravity 起動）。
+
+## Git ユーザー情報セット
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your@email.com"
 ```
