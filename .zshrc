@@ -121,7 +121,12 @@ gstp() {
 
 # === ディレクトリ移動 ===
 setopt AUTO_CD          # ディレクトリ名だけで cd
-alias ..='cd ..'
+setopt AUTO_PUSHD PUSHD_IGNORE_DUPS PUSHD_SILENT PUSHDMINUS  # cd をスタックに積み、重複排除・静音・往復しやすく
+
+# シェル操作の品質向上
+setopt EXTENDED_GLOB    # 拡張グロブ（^*.log などの除外マッチ）
+setopt HIST_VERIFY      # 履歴展開を実行前に確認
+setopt NO_BEEP          # ビープ音を抑止
 
 # === 設定ファイル編集 ===
 alias zshconfig='${EDITOR:-vim} ~/.zshrc'
