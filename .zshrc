@@ -16,6 +16,8 @@ HISTSIZE=10000
 SAVEHIST=10000
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS    # 追加する際に過去の重複を消す
+setopt HIST_FIND_NO_DUPS       # 検索結果で重複を表示しない
 setopt HIST_IGNORE_SPACE
 
 # === fzf - あいまい検索 ===
@@ -28,6 +30,19 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
 # === zoxide - スマート cd ===
 eval "$(zoxide init zsh)"
+
+# Ctrl-Q で zoxide 一覧からディレクトリ移動
+fzf-cd-widget() {
+  local dir
+  dir=$(zoxide query -l |
+    fzf --ansi --reverse \
+        --preview 'eza -lah --icons --git {} 2>/dev/null || ls -la {}' \
+        --preview-window=right:60%) || return
+  cd "$dir"
+  zle reset-prompt
+}
+zle -N fzf-cd-widget
+bindkey '^Q' fzf-cd-widget
 
 # === eza - モダンな ls ===
 alias ls='eza --icons'
@@ -87,61 +102,26 @@ alias g='git'
 # git の補完を g でも効くようにする
 compdef g=git
 
-# === fzf Git 拡張 ===
-# fzf を使ったブランチ切り替え
-gb() {
-  local branches branch
-  branches=$(git branch -a) &&
-  branch=$(echo "$branches" | fzf +m) &&
-  git checkout "$(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")"
-}
-
-# fzf を使ったファイル選択して git add
+# === fzf Git ユーティリティ（簡潔版） ===
+# 変更ファイルを選んで add
 gadd() {
-  git status --short |
-  fzf -m --ansi --preview 'git diff --color=always {2}' |
-  awk '{print $2}' |
-  xargs git add
+  git status -sb |
+  fzf -m --ansi --preview 'echo {} | sed "s/^...//" | xargs git diff --color=always --' --preview-window=down,60% |
+  sed 's/^...//' |
+  xargs -r git add
 }
 
-# fzf を使ったコミット選択（git show）
-gshow() {
-  git log --oneline --graph --decorate --all |
-  fzf --ansi --no-sort --reverse --tiebreak=index --preview \
-    'echo {} | grep -o "[a-f0-9]\{7\}" | head -1 | xargs git show --color=always' |
-  grep -o "[a-f0-9]\{7\}" | head -1 | xargs git show
-}
-
-# fzf でコミット選択してチェリーピック
-gcp() {
-  git log --oneline --graph --decorate --all |
-  fzf --ansi --no-sort --reverse --preview \
-    'echo {} | grep -o "[a-f0-9]\{7\}" | head -1 | xargs git show --color=always' |
-  grep -o "[a-f0-9]\{7\}" | head -1 | xargs git cherry-pick
-}
-
-# fzf でスタッシュ選択して pop
+# スタッシュを選んで pop
 gstp() {
-  git stash list |
-  fzf --preview 'echo {} | cut -d: -f1 | xargs git stash show -p --color=always' |
+  git stash list --color=always |
+  fzf --ansi --preview 'cut -d: -f1 <<< "{}" | xargs git stash show -p --color=always' |
   cut -d: -f1 |
-  xargs git stash pop
-}
-
-# fzf でリモートブランチも含めて検索
-gbr() {
-  local branch
-  branch=$(git branch -a |
-    fzf --preview 'echo {} | sed "s/.* //" | sed "s#remotes/[^/]*/##" | xargs git log --oneline --graph --decorate --color=always' |
-    sed "s/.* //" |
-    sed "s#remotes/[^/]*/##")
-  [ -n "$branch" ] && git checkout "$branch"
+  xargs -r git stash pop
 }
 
 # === ディレクトリ移動 ===
+setopt AUTO_CD          # ディレクトリ名だけで cd
 alias ..='cd ..'
-alias ...='cd ../..'
-alias ....='cd ../../..'
 
 # === 設定ファイル編集 ===
 alias zshconfig='${EDITOR:-vim} ~/.zshrc'
@@ -150,3 +130,8 @@ alias reload='source ~/.zshrc'
 # === Docker ===
 alias d='docker'
 alias dc='docker compose'
+
+# Added by Antigravity
+export PATH="/Users/junhat6/.antigravity/antigravity/bin:$PATH"
+
+alias anti='open -a Antigravity'
