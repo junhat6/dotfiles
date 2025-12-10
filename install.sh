@@ -24,6 +24,24 @@ if [ ! -L "$HOME/.gitconfig" ]; then
     echo "✅ ~/.gitconfig のシンボリックリンクを作成しました"
 fi
 
+# .zprofile のシンボリックリンクを作成
+if [ -f "$HOME/.zprofile" ]; then
+    echo "⚠️  既存の ~/.zprofile が見つかりました"
+    read -p "バックアップを作成して上書きしますか？ (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/.zprofile" "$HOME/.zprofile.backup"
+        echo "✅ ~/.zprofile を ~/.zprofile.backup にバックアップしました"
+    else
+        echo "❌ .zprofile のリンク作成をスキップしました"
+    fi
+fi
+
+if [ ! -L "$HOME/.zprofile" ]; then
+    ln -sf "$DOTFILES_DIR/.zprofile" "$HOME/.zprofile"
+    echo "✅ ~/.zprofile のシンボリックリンクを作成しました"
+fi
+
 # .zshrc のシンボリックリンクを作成
 if [ -f "$HOME/.zshrc" ]; then
     echo "⚠️  既存の ~/.zshrc が見つかりました"
