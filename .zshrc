@@ -35,6 +35,7 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 eval "$(zoxide init zsh)"
 setopt AUTO_CD                       # ディレクトリ名だけで cd
 setopt AUTO_PUSHD PUSHD_IGNORE_DUPS PUSHD_SILENT PUSHDMINUS  # cd をスタックに積む、重複排除
+stty -ixon                          # Ctrl-S/Ctrl-Q のフロー制御を無効化（Ctrl-Q をショートカットで使うため）
 fzf-cd-widget() {                    # Ctrl-Q で zoxide 一覧から移動
   local dir
   dir=$(zoxide query -l |
