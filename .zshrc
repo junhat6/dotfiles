@@ -90,6 +90,14 @@ alias g='git'
 compdef g=git
 
 # === fzf Git ユーティリティ（簡潔版） ===
+# ブランチ切り替え
+gb() {
+  local branches branch
+  branches=$(git branch -a) &&
+  branch=$(echo "$branches" | fzf +m) &&
+  git checkout "$(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")"
+}
+
 # 変更ファイルを選んで add
 gadd() {
   git status -sb |
