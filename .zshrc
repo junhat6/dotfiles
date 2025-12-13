@@ -60,6 +60,11 @@ alias bathelp='bat --plain --language=help'
 help() { "$@" --help 2>&1 | bat --plain --language=help; }
 alias rg='rg --smart-case --hidden --glob "!.git/*"'
 
+# === Go環境変数 ===
+export GOPATH=$HOME/go
+export GOBIN=$GOPATH/bin
+export PATH=$PATH:$GOBIN
+
 # === mise - バージョン管理 ===
 eval "$(mise activate zsh)"
 
