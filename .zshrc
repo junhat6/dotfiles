@@ -125,6 +125,7 @@ alias reload='source ~/.zshrc'
 
 alias d='docker'
 alias dc='docker compose'
+alias cc='claude --dangerously-skip-permissions'
 
 # Added by Antigravity
 export PATH="/Users/junhat6/.antigravity/antigravity/bin:$PATH"
