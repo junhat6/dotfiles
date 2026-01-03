@@ -27,8 +27,14 @@ yabai -m rule --add app="^Google Gemini$" space=1
 # Space 2: ブラウザ
 yabai -m rule --add app="^Google Chrome$" space=2
 
-# Space 3, 4, 5: 開発エディタ (VS Code は最初に開いたものが space=3 に行く)
-yabai -m rule --add app="^Visual Studio Code$" space=3
+# Space 3: Docs (Antigravity)
+yabai -m rule --add app="^Antigravity$" space=3
+
+# Space 4: Frontend (VS Code)
+yabai -m rule --add app="^Visual Studio Code$" space=4
+
+# Space 5: Backend (IntelliJ)
+yabai -m rule --add app="^IntelliJ IDEA$" space=5
 
 # Space 6: コミュニケーション
 yabai -m rule --add app="^Discord$" space=6
@@ -43,9 +49,22 @@ yabai -m rule --add app="^Archive Utility$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
 
 # ===== ログイン時のアプリ自動起動 =====
+# Space 1: AI
 pgrep -x "Google Gemini" > /dev/null || open -a "Google Gemini"
+
+# Space 2: ブラウザ
 pgrep -x "Google Chrome" > /dev/null || open -a "Google Chrome"
-pgrep -x "Code" > /dev/null || open -a "Visual Studio Code"
+
+# Space 3: Docs (Antigravity)
+pgrep -x "Antigravity" > /dev/null || open -a "Antigravity" ~/ghq/github.com/assari-harassment/voicebooklm-docs
+
+# Space 4: Frontend (VS Code)
+pgrep -x "Code" > /dev/null || code ~/ghq/github.com/assari-harassment/voicebooklm-frontend
+
+# Space 5: Backend (IntelliJ)
+pgrep -x "idea" > /dev/null || open -a "IntelliJ IDEA" ~/dev/team/voicebooklm/voicebooklm-backend
+
+# Space 6: コミュニケーション
 pgrep -x "Discord" > /dev/null || open -a "Discord"
 pgrep -x "Slack" > /dev/null || open -a "Slack"
 
