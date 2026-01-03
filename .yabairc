@@ -43,10 +43,10 @@ yabai -m rule --add app="^Archive Utility$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
 
 # ===== ログイン時のアプリ自動起動 =====
-open -a "Google Gemini"
-open -a "Google Chrome"
-open -a "Visual Studio Code"
-open -a "Discord"
-open -a "Slack"
+pgrep -x "Google Gemini" > /dev/null || open -a "Google Gemini"
+pgrep -x "Google Chrome" > /dev/null || open -a "Google Chrome"
+pgrep -x "Code" > /dev/null || open -a "Visual Studio Code"
+pgrep -x "Discord" > /dev/null || open -a "Discord"
+pgrep -x "Slack" > /dev/null || open -a "Slack"
 
 echo "yabai configuration loaded"
