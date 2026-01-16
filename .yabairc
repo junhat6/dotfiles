@@ -62,7 +62,7 @@ pgrep -x "Antigravity" > /dev/null || open -a "Antigravity" ~/ghq/github.com/ass
 pgrep -x "Code" > /dev/null || code ~/ghq/github.com/assari-harassment/voicebooklm-frontend
 
 # Space 5: Backend (IntelliJ)
-pgrep -x "idea" > /dev/null || open -a "IntelliJ IDEA" ~/dev/team/voicebooklm/voicebooklm-backend
+pgrep -x "idea" > /dev/null || open -a "IntelliJ IDEA" ~/ghq/github.com/assari-harassment/voicebooklm-backend
 
 # Space 6: コミュニケーション
 pgrep -x "Discord" > /dev/null || open -a "Discord"

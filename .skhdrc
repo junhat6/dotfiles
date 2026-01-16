@@ -20,6 +20,9 @@ shift + alt - j : yabai -m window --swap south
 shift + alt - k : yabai -m window --swap north
 shift + alt - l : yabai -m window --swap east
 
+# ===== フォーカス中のwindowのデスクトップの切り替え =====
+shift + alt - n : yabai -m window --display next; yabai -m display --focus next
+
 # ===== レイアウト切り替え =====
 alt - e : yabai -m space --layout bsp
 alt - s : yabai -m space --layout stack
