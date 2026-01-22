@@ -128,6 +128,15 @@ alias dc='docker compose'
 alias cc='claude --dangerously-skip-permissions'
 alias lg='lazygit'
 
+# === エディタ ===
+export EDITOR='nvim'
+alias v='nvim .'     # カレントディレクトリを開く
+alias nv='nvim'      # ファイル指定用
+
+# === Zellij ===
+eval "$(zellij setup --generate-auto-start zsh)"
+eval "$(zellij setup --generate-completion zsh)"
+
 # Added by Antigravity
 export PATH="/Users/junhat6/.antigravity/antigravity/bin:$PATH"
 alias anti='open -a Antigravity'
