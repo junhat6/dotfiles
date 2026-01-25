@@ -60,6 +60,62 @@ if [ ! -L "$HOME/.zshrc" ]; then
     echo "✅ ~/.zshrc のシンボリックリンクを作成しました"
 fi
 
+# Ghostty の設定ディレクトリとシンボリックリンクを作成
+mkdir -p "$HOME/.config/ghostty"
+if [ -f "$HOME/.config/ghostty/config" ] && [ ! -L "$HOME/.config/ghostty/config" ]; then
+    echo "⚠️  既存の ~/.config/ghostty/config が見つかりました"
+    read -p "バックアップを作成して上書きしますか？ (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/.config/ghostty/config" "$HOME/.config/ghostty/config.backup"
+        echo "✅ ~/.config/ghostty/config を ~/.config/ghostty/config.backup にバックアップしました"
+    else
+        echo "❌ Ghostty config のリンク作成をスキップしました"
+    fi
+fi
+
+if [ ! -L "$HOME/.config/ghostty/config" ]; then
+    ln -sf "$DOTFILES_DIR/ghostty/config" "$HOME/.config/ghostty/config"
+    echo "✅ ~/.config/ghostty/config のシンボリックリンクを作成しました"
+fi
+
+# .tmux.conf のシンボリックリンクを作成
+if [ -f "$HOME/.tmux.conf" ] && [ ! -L "$HOME/.tmux.conf" ]; then
+    echo "⚠️  既存の ~/.tmux.conf が見つかりました"
+    read -p "バックアップを作成して上書きしますか？ (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/.tmux.conf" "$HOME/.tmux.conf.backup"
+        echo "✅ ~/.tmux.conf を ~/.tmux.conf.backup にバックアップしました"
+    else
+        echo "❌ .tmux.conf のリンク作成をスキップしました"
+    fi
+fi
+
+if [ ! -L "$HOME/.tmux.conf" ]; then
+    ln -sf "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
+    echo "✅ ~/.tmux.conf のシンボリックリンクを作成しました"
+fi
+
+# Hammerspoon の設定ディレクトリとシンボリックリンクを作成
+mkdir -p "$HOME/.hammerspoon"
+if [ -f "$HOME/.hammerspoon/init.lua" ] && [ ! -L "$HOME/.hammerspoon/init.lua" ]; then
+    echo "⚠️  既存の ~/.hammerspoon/init.lua が見つかりました"
+    read -p "バックアップを作成して上書きしますか？ (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/.hammerspoon/init.lua" "$HOME/.hammerspoon/init.lua.backup"
+        echo "✅ ~/.hammerspoon/init.lua を ~/.hammerspoon/init.lua.backup にバックアップしました"
+    else
+        echo "❌ Hammerspoon init.lua のリンク作成をスキップしました"
+    fi
+fi
+
+if [ ! -L "$HOME/.hammerspoon/init.lua" ]; then
+    ln -sf "$DOTFILES_DIR/hammerspoon/init.lua" "$HOME/.hammerspoon/init.lua"
+    echo "✅ ~/.hammerspoon/init.lua のシンボリックリンクを作成しました"
+fi
+
 echo ""
 echo "✨ セットアップが完了しました！"
 echo ""
