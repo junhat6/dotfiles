@@ -1,0 +1,24 @@
+# Ghostty Configuration
+# https://ghostty.org/docs/config
+
+# Font settings
+font-family = "JetBrains Mono"
+font-size = 16
+
+# Window settings
+window-padding-x = 10
+window-padding-y = 10
+window-decoration = true
+
+# Theme
+# theme = catppuccin-mocha
+
+# Cursor
+cursor-style = block
+cursor-style-blink = true
+
+# Shell integration
+shell-integration = zsh
+
+# macOS specific
+macos-option-as-alt = true
