@@ -22,3 +22,6 @@ shell-integration = zsh
 
 # macOS specific
 macos-option-as-alt = true
+
+# Keybindings
+keybind = cmd+r=prompt_surface_title
