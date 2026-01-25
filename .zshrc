@@ -3,6 +3,7 @@ export LANG=ja_JP.UTF-8
 # === 基本オプション・補完 ===
 setopt EXTENDED_GLOB                 # 拡張グロブ（^*.log など）
 setopt NO_BEEP                       # ビープ抑止
+fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit
 compinit
 
@@ -133,9 +134,8 @@ export EDITOR='nvim'
 alias v='nvim .'     # カレントディレクトリを開く
 alias nv='nvim'      # ファイル指定用
 
-# === Zellij ===
-eval "$(zellij setup --generate-auto-start zsh)"
-eval "$(zellij setup --generate-completion zsh)"
+# === tmux ===
+alias ta='tmux new-session -A -s'
 
 # Added by Antigravity
 export PATH="/Users/junhat6/.antigravity/antigravity/bin:$PATH"
