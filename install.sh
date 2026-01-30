@@ -116,6 +116,44 @@ if [ ! -L "$HOME/.hammerspoon/init.lua" ]; then
     echo "✅ ~/.hammerspoon/init.lua のシンボリックリンクを作成しました"
 fi
 
+# Claude hooks のシンボリックリンクを作成
+mkdir -p "$HOME/.claude/hooks"
+if [ -f "$HOME/.claude/hooks/watch-and-save.sh" ] && [ ! -L "$HOME/.claude/hooks/watch-and-save.sh" ]; then
+    echo "⚠️  既存の ~/.claude/hooks/watch-and-save.sh が見つかりました"
+    read -p "バックアップを作成して上書きしますか？ (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/.claude/hooks/watch-and-save.sh" "$HOME/.claude/hooks/watch-and-save.sh.backup"
+        echo "✅ ~/.claude/hooks/watch-and-save.sh をバックアップしました"
+    else
+        echo "❌ watch-and-save.sh のリンク作成をスキップしました"
+    fi
+fi
+
+if [ ! -L "$HOME/.claude/hooks/watch-and-save.sh" ]; then
+    ln -sf "$DOTFILES_DIR/.claude/hooks/watch-and-save.sh" "$HOME/.claude/hooks/watch-and-save.sh"
+    echo "✅ ~/.claude/hooks/watch-and-save.sh のシンボリックリンクを作成しました"
+fi
+
+# LaunchAgents のシンボリックリンクを作成
+mkdir -p "$HOME/Library/LaunchAgents"
+if [ -f "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" ] && [ ! -L "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" ]; then
+    echo "⚠️  既存の ~/Library/LaunchAgents/com.claude.obsidian-sync.plist が見つかりました"
+    read -p "バックアップを作成して上書きしますか？ (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist.backup"
+        echo "✅ ~/Library/LaunchAgents/com.claude.obsidian-sync.plist をバックアップしました"
+    else
+        echo "❌ LaunchAgent plist のリンク作成をスキップしました"
+    fi
+fi
+
+if [ ! -L "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" ]; then
+    ln -sf "$DOTFILES_DIR/LaunchAgents/com.claude.obsidian-sync.plist" "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist"
+    echo "✅ ~/Library/LaunchAgents/com.claude.obsidian-sync.plist のシンボリックリンクを作成しました"
+fi
+
 echo ""
 echo "✨ セットアップが完了しました！"
 echo ""
