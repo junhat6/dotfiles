@@ -7,19 +7,12 @@
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
--- Claude Code連携用の自動保存設定
--- フォーカスを失った時に自動保存（Claude Codeに切り替えた時など）
-vim.api.nvim_create_autocmd("FocusLost", {
+-- 外部変更を積極的にチェック（Claude Codeが編集した後など）
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
   pattern = "*",
   callback = function()
-    vim.cmd("silent! wall")
-  end,
-})
-
--- フォーカスを取り戻した時に外部変更をチェック（Claude Codeが編集した後など）
-vim.api.nvim_create_autocmd("FocusGained", {
-  pattern = "*",
-  callback = function()
-    vim.cmd("checktime")
+    if vim.fn.mode() ~= "c" then
+      vim.cmd("checktime")
+    end
   end,
 })

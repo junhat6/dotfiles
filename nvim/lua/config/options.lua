@@ -1,3 +1,9 @@
 -- Options are automatically loaded before lazy.nvim startup
 -- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
 -- Add any additional options here
+
+-- 外部変更を自動で読み込む
+vim.opt.autoread = true
+
+-- CursorHold時間を短くする（ミリ秒）
+vim.opt.updatetime = 250
