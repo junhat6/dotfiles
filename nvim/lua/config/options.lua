@@ -7,3 +7,6 @@ vim.opt.autoread = true
 
 -- CursorHold時間を短くする（ミリ秒）
 vim.opt.updatetime = 250
+
+-- コメント行で改行した時に自動でコメントリーダーを挿入しない
+vim.opt.formatoptions:remove({ "r", "o" })
