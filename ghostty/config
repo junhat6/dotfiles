@@ -2,7 +2,7 @@
 # https://ghostty.org/docs/config
 
 # Font settings
-font-family = "JetBrains Mono"
+font-family = "HackGen Console NF"
 font-size = 16
 
 # Window settings

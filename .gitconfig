@@ -1,7 +1,7 @@
 [alias]
     # 基本
     st = status
-    ad = add
+    ad = !git add . && git status
     cm = commit -m
     co = checkout
     br = branch
@@ -25,6 +25,9 @@
 
     # ブランチクリーンアップ
     cleanup = !git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d
+
+    # タイムスタンプでコミット
+    snap = !git commit -m \"$(date +%Y-%m-%d_%H:%M:%S)\"
 
 [user]
     name = JunichiHattori

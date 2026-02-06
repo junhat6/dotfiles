@@ -10,3 +10,6 @@ vim.opt.updatetime = 250
 
 -- コメント行で改行した時に自動でコメントリーダーを挿入しない
 vim.opt.formatoptions:remove({ "r", "o" })
+
+-- 絶対行番号を表示（相対行番号を無効化）
+vim.opt.relativenumber = false
