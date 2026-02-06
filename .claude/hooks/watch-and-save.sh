@@ -138,9 +138,7 @@ sync_session() {
             echo "$new_content" >> "$OUTPUT_FILE"
             echo "" >> "$OUTPUT_FILE"
 
-            # Git commit (silent)
-            cd "$OBSIDIAN_DIR" && git add -A && \
-                git commit -m "Claude: ${project_name} ${TODAY} (auto)" 2>/dev/null || true
+            # Git commit はObsidian Gitプラグインに任せる
         fi
 
         # Update last synced line for THIS session
