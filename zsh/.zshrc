@@ -56,7 +56,7 @@ alias la='eza -lah --icons --git'
 alias lt='eza --tree --icons --level=2'
 alias llt='eza --tree --icons --level=2 -lh'
 
-export BAT_THEME="Monokai Extended"
+export BAT_THEME="Catppuccin Latte"
 alias rg='rg --smart-case --hidden --glob "!.git/*"'
 
 # === Go環境変数 ===

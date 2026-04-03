@@ -46,7 +46,8 @@
     navigate = true      # n/N でファイル間を移動
     side-by-side = true  # 左右に並べて差分表示
     line-numbers = true
-    syntax-theme = Monokai Extended
+    syntax-theme = Catppuccin Latte
+    light = true
 
 [merge]
     conflictstyle = diff3

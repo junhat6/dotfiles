@@ -3,7 +3,7 @@
 
 # Font settings
 font-family = "HackGen Console NF"
-font-size = 16
+font-size = 18
 
 # Window settings
 window-padding-x = 10
@@ -11,7 +11,7 @@ window-padding-y = 10
 window-decoration = true
 
 # Theme
-# theme = catppuccin-mocha
+theme = Catppuccin Latte
 
 # Cursor
 cursor-style = block

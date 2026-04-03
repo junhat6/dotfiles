@@ -1,4 +1,4 @@
 git:
   paging:
     colorArg: always
-    pager: delta --dark --pager "less --RAW-CONTROL-CHARS --quit-if-one-screen --no-init"
+    pager: delta --light --syntax-theme "Catppuccin Latte" --pager "less --RAW-CONTROL-CHARS --quit-if-one-screen --no-init"
