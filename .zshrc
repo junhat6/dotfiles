@@ -20,7 +20,6 @@ SAVEHIST=10000
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_ALL_DUPS          # 追加時に過去の重複を消す
-setopt HIST_FIND_NO_DUPS             # 検索結果で重複を表示しない
 setopt HIST_IGNORE_SPACE
 setopt HIST_VERIFY                   # 履歴展開を実行前に確認
 
@@ -30,7 +29,6 @@ eval "$(fzf --zsh)"
 # fzf 設定
 export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --inline-info"
 export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
 # === ナビゲーション zoxide (brew install zoxide) ===
 eval "$(zoxide init zsh)"
@@ -50,15 +48,15 @@ zle -N fzf-cd-widget
 bindkey '^Q' fzf-cd-widget
 
 # === 表示・閲覧ツール (eza / bat / ripgrep が必要) ===
+
+# eza
 alias ls='eza --icons'
 alias ll='eza -lh --icons --git'
 alias la='eza -lah --icons --git'
 alias lt='eza --tree --icons --level=2'
 alias llt='eza --tree --icons --level=2 -lh'
+
 export BAT_THEME="Monokai Extended"
-alias cat='bat --style=auto'
-alias bathelp='bat --plain --language=help'
-help() { "$@" --help 2>&1 | bat --plain --language=help; }
 alias rg='rg --smart-case --hidden --glob "!.git/*"'
 
 # === Go環境変数 ===
@@ -73,27 +71,23 @@ eval "$(mise activate zsh)"
 eval "$(direnv hook zsh)"
 
 # === ghq - Git リポジトリ管理 ===
-# ghq-cd でリポジトリに移動
-function ghq-cd() {
-  local selected ghq_root
-  ghq_root=$(ghq root)
-  selected=$(ghq list | fzf --preview "ls -la $ghq_root/{}" --height 50%)
-  [ -n "$selected" ] && cd "$ghq_root/$selected"
+# fzf でリポジトリ選択して移動 (Ctrl-G)
+fzf-ghq-widget() {
+  local repo
+  repo=$(ghq list | fzf \
+    --preview 'eza -lah --icons --git "$(ghq root)/{}" 2>/dev/null' \
+    --preview-window=right:60%) || return
+  cd "$(ghq root)/$repo"
+  zle reset-prompt
 }
-alias ghqcd='ghq-cd'
-# ghq-get でリポジトリをクローンして移動
-function ghq-get() { ghq get "$@" && ghq-cd; }
-alias ghqclone='ghq-get'
+zle -N fzf-ghq-widget
+bindkey '^G' fzf-ghq-widget
 
 # === starship - モダンなプロンプト ===
 eval "$(starship init zsh)"
 
 # === zsh-syntax-highlighting - シンタックスハイライト ===
 source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
-# === Git ===
-alias g='git'
-compdef g=git
 
 # === fzf Git ユーティリティ（簡潔版） ===
 # ブランチ切り替え
@@ -104,24 +98,8 @@ gb() {
   git checkout "$(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")"
 }
 
-# 変更ファイルを選んで add
-gadd() {
-  git status -sb |
-  fzf -m --ansi --preview 'echo {} | sed "s/^...//" | xargs git diff --color=always --' --preview-window=down,60% |
-  sed 's/^...//' |
-  xargs -r git add
-}
-
-# スタッシュを選んで pop
-gstp() {
-  git stash list --color=always |
-  fzf --ansi --preview 'cut -d: -f1 <<< "{}" | xargs git stash show -p --color=always' |
-  cut -d: -f1 |
-  xargs -r git stash pop
-}
-
 # === ショートカット ===
-alias zshconfig='${EDITOR:-vim} ~/.zshrc'
+alias zshconfig='nvim ~/.zshrc'
 alias reload='source ~/.zshrc'
 
 alias d='docker'
@@ -132,7 +110,6 @@ alias lg='lazygit'
 # === エディタ ===
 export EDITOR='nvim'
 alias v='nvim .'     # カレントディレクトリを開く
-alias nv='nvim'      # ファイル指定用
 
 # === tmux ===
 alias ta='tmux new-session -A -s'
