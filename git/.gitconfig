@@ -6,6 +6,7 @@
     co = checkout
     br = branch
     df = diff
+    sw = switch
 
     # ログ（見やすい）
     lg = log --oneline --graph --decorate
