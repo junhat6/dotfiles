@@ -118,6 +118,7 @@ end)
 
 -- =============================================================================
 -- アプリ切り替え (alt + キー)
+-- アプリにフォーカスした際、マウスカーソルもそのウィンドウ中央に移動する
 -- =============================================================================
 local appShortcuts = {
 	{ key = "g", app = "Google Chrome" },
@@ -129,9 +130,20 @@ local appShortcuts = {
 	{ key = "v", app = "Visual Studio Code" },
 }
 
+local function moveMouseToWindow(win)
+	if win and win:isVisible() then
+		local frame = win:frame()
+		hs.mouse.absolutePosition({
+			x = frame.x + frame.w / 2,
+			y = frame.y + frame.h / 2,
+		})
+	end
+end
+
 for _, shortcut in ipairs(appShortcuts) do
 	hs.hotkey.bind({ "alt" }, shortcut.key, function()
 		hs.application.launchOrFocus(shortcut.app)
+		moveMouseToWindow(hs.window.focusedWindow())
 	end)
 end
 
