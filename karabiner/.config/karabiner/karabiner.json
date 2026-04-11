@@ -57,6 +57,34 @@
                                 "type": "basic"
                             }
                         ]
+                    },
+                    {
+                        "description": "Tap Left Shift for 英数 or Hold for Shift",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "left_shift",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [{ "key_code": "left_shift", "lazy": true }],
+                                "to_if_alone": [{ "key_code": "japanese_eisuu" }],
+                                "type": "basic"
+                            }
+                        ]
+                    },
+                    {
+                        "description": "Tap Right Shift for かな or Hold for Shift",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "right_shift",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [{ "key_code": "right_shift", "lazy": true }],
+                                "to_if_alone": [{ "key_code": "japanese_kana" }],
+                                "type": "basic"
+                            }
+                        ]
                     }
                 ]
             },
@@ -66,14 +94,6 @@
                 {
                     "from": { "key_code": "left_control" },
                     "to": [{ "key_code": "caps_lock" }]
-                },
-                {
-                    "from": { "key_code": "right_command" },
-                    "to": [{ "key_code": "japanese_eisuu" }]
-                },
-                {
-                    "from": { "key_code": "right_option" },
-                    "to": [{ "key_code": "japanese_kana" }]
                 }
             ],
             "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
