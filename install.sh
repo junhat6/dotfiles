@@ -22,6 +22,7 @@ PACKAGES=(
     hammerspoon
     claude
     LaunchAgents
+    karabiner
 )
 
 for pkg in "${PACKAGES[@]}"; do
