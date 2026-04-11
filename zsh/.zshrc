@@ -6,6 +6,7 @@ setopt NO_BEEP                       # ビープ抑止
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit
 compinit
+bindkey -e                       # Emacs キーバインド
 
 # 大文字小文字を区別しない補完
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
