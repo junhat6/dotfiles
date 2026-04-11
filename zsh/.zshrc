@@ -68,9 +68,6 @@ export PATH=$PATH:$GOBIN
 # === mise - バージョン管理 ===
 eval "$(mise activate zsh)"
 
-# === direnv - ディレクトリ別環境変数 ===
-eval "$(direnv hook zsh)"
-
 # === ghq - Git リポジトリ管理 ===
 # fzf でリポジトリ選択して移動 (Ctrl-G)
 fzf-ghq-widget() {
