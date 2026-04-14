@@ -1,4 +1,14 @@
+# https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md
+
 git:
-  paging:
-    colorArg: always
-    pager: delta --light --syntax-theme "Catppuccin Latte" --pager "less --RAW-CONTROL-CHARS --quit-if-one-screen --no-init"
+  pagers:
+    - pager: delta --light --paging=never --line-numbers --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"
+
+customCommands:
+  - key: "B"
+    command: "git czg"
+    context: files
+    output: terminal
+
+gui:
+  language: "ja"
