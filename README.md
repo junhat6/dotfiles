@@ -74,7 +74,6 @@ brew bundle cleanup
 - 履歴: 重複排除・スペース始まり無視・共有履歴
 - `Ctrl-Q`: zoxide 一覧を fzf で選んで移動（eza プレビュー付き）
 - `Ctrl-G`: ghq リポジトリを fzf で選んで移動
-- `gb`: ブランチを fzf で選んでチェックアウト
 - エイリアス: `ll/la/lt/llt`（eza）、`cc`（claude）、`lg`（lazygit）、`v`（nvim）、`ta`（tmux attach）
 
 ### git / delta
