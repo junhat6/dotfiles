@@ -1,81 +1,55 @@
-# Taps
 tap "yakitrak/yakitrak"
-
-# === Shell / Terminal ===
-brew "fzf"
-brew "zoxide"
-brew "zsh-syntax-highlighting"
-brew "starship"
-brew "mise"
-brew "stow"
-
-# === File / Search ===
-brew "eza"
 brew "bat"
-brew "fd"
-brew "ripgrep"
-brew "tldr"
-
-# === Git ===
-brew "git-delta"
-brew "gh"
-brew "ghq"
-brew "lazygit"
-
-# === Editor ===
-brew "neovim"
-
-# === Multiplexer ===
-brew "tmux"
-
-# === Docker ===
+brew "cmake"
 brew "colima", restart_service: :changed
+brew "czg"
 brew "docker"
 brew "docker-buildx"
 brew "docker-compose"
 brew "docker-credential-helper"
-brew "lazydocker"
-
-# === Dev tools ===
-brew "rustup"
-brew "uv"
-brew "lnav"
-
-# === CLI utilities ===
+brew "eza"
+brew "fd"
+brew "ffmpeg"
+brew "fzf"
+brew "gh"
+brew "ghq"
+brew "gibo"
+brew "git-delta"
+brew "go"
 brew "googleworkspace-cli"
-brew "obsidian-cli", tap: "yakitrak/yakitrak"
-
-# === Casks: Terminals & Editors ===
-cask "ghostty"
-cask "visual-studio-code"
-
-# === Casks: Browsers ===
-cask "google-chrome"
-
-# === Casks: Dev tools ===
-cask "dbeaver-community"
-cask "postman"
-cask "hammerspoon"
-
-# === Casks: Productivity ===
-cask "obsidian"
-cask "karabiner-elements"
-
-# === Casks: Communication ===
-cask "slack"
-cask "discord"
-cask "zoom"
-
-# === Casks: Utilities ===
-cask "applite"
+brew "lazydocker"
+brew "lazygit"
+brew "lnav"
+brew "mise"
+brew "neovim"
+brew "rclone"
+brew "ripgrep"
+brew "rustup"
+brew "starship"
+brew "stow"
+brew "tldr"
+brew "tmux"
+brew "uv"
+brew "zoxide"
+brew "zsh-syntax-highlighting"
+brew "yakitrak/yakitrak/obsidian-cli"
 cask "amical"
+cask "applite"
+cask "caffeine"
 cask "commander-one"
-cask "keyboardcleantool"
-
-# === Fonts ===
+cask "dbeaver-community"
+cask "discord"
 cask "font-hackgen-nerd"
-
-# === Go tools (via mise-managed Go) ===
+cask "ghostty"
+cask "google-chrome"
+cask "hammerspoon"
+cask "karabiner-elements"
+cask "keyboardcleantool"
+cask "obsidian"
+cask "postman"
+cask "slack"
+cask "visual-studio-code"
+cask "zoom"
 go "golang.org/x/tools/cmd/goimports"
 go "golang.org/x/tools/gopls"
 go "honnef.co/go/tools/cmd/staticcheck"
