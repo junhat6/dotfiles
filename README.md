@@ -69,22 +69,22 @@ brew bundle cleanup
 
 `Brewfile` で管理しています。主なもの:
 
-| ツール | 用途 |
-|---|---|
-| chezmoi | dotfiles 管理 |
-| fzf | ファジーファインダー（Ctrl-T / Ctrl-G / Ctrl-Q） |
-| eza | `ls` 代替（アイコン・Git情報付き） |
-| bat | `cat` 代替（シンタックスハイライト） |
-| ripgrep | 高速 grep |
-| zoxide | スマート `cd` |
-| ghq | Git リポジトリ管理 |
-| starship | モダンなプロンプト |
-| direnv | ディレクトリ別環境変数 |
-| mise | 言語バージョン管理 |
-| git-delta | Git diff の見た目改善 |
-| lazygit | TUI Git クライアント |
-| tmux | ターミナルマルチプレクサ |
-| zsh-syntax-highlighting | zsh コマンドのシンタックスハイライト |
+| ツール                  | 用途                                             |
+| ----------------------- | ------------------------------------------------ |
+| chezmoi                 | dotfiles 管理                                    |
+| fzf                     | ファジーファインダー（Ctrl-T / Ctrl-G / Ctrl-Q） |
+| eza                     | `ls` 代替（アイコン・Git情報付き）               |
+| bat                     | `cat` 代替（シンタックスハイライト）             |
+| ripgrep                 | 高速 grep                                        |
+| zoxide                  | スマート `cd`                                    |
+| ghq                     | Git リポジトリ管理                               |
+| starship                | モダンなプロンプト                               |
+| direnv                  | ディレクトリ別環境変数                           |
+| mise                    | 言語バージョン管理                               |
+| git-delta               | Git diff の見た目改善                            |
+| lazygit                 | TUI Git クライアント                             |
+| tmux                    | ターミナルマルチプレクサ                         |
+| zsh-syntax-highlighting | zsh コマンドのシンタックスハイライト             |
 
 ## 主な機能
 
@@ -109,4 +109,14 @@ brew bundle cleanup
 ```bash
 chezmoi edit ~/.gitconfig
 chezmoi apply
+```
+
+## macOS キーリピートをターミナル上で変更するコマンド
+
+```bash
+# キーリピートを最速に（デフォルト: 6、小さいほど速い）
+defaults write NSGlobalDomain KeyRepeat -int 1
+
+# キーリピート開始までの時間を短く（デフォルト: 25、小さいほど速い）
+defaults write NSGlobalDomain InitialKeyRepeat -int 15
 ```
