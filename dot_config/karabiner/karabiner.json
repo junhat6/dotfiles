@@ -42,7 +42,7 @@
                         ]
                     },
                     {
-                        "description": "Tap Left Shift for 英数 or Hold for Shift",
+                        "description": "Tap Left Shift for Caps Lock or Hold for Shift",
                         "manipulators": [
                             {
                                 "from": {
@@ -52,6 +52,25 @@
                                 "to": [
                                     {
                                         "key_code": "left_shift",
+                                        "lazy": true
+                                    }
+                                ],
+                                "to_if_alone": [{ "key_code": "caps_lock" }],
+                                "type": "basic"
+                            }
+                        ]
+                    },
+                    {
+                        "description": "Tap Left Command for 英数 or Hold for Left Command",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "left_command",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "left_command",
                                         "lazy": true
                                     }
                                 ],
