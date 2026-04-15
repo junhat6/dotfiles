@@ -1,34 +1,35 @@
 #!/bin/bash
 
-# Dotfiles セットアップスクリプト
+# Dotfiles セットアップスクリプト (chezmoi)
+
+set -e
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Dotfiles セットアップを開始します..."
 
-# stow がインストールされているか確認
-if ! command -v stow &> /dev/null; then
-    echo "stow が見つかりません。インストールしてください: brew install stow"
+# chezmoi がインストールされているか確認
+if ! command -v chezmoi &> /dev/null; then
+    echo "chezmoi が見つかりません。インストールしてください: brew install chezmoi"
     exit 1
 fi
 
-PACKAGES=(
-    git
-    zsh
-    tmux
-    ghostty
-    lazygit
-    nvim
-    hammerspoon
-    claude
-    LaunchAgents
-    karabiner
-)
+# chezmoi 設定ディレクトリを作成し、ソースを指定
+mkdir -p "$HOME/.config/chezmoi"
+cat > "$HOME/.config/chezmoi/chezmoi.toml" << EOF
+sourceDir = "$DOTFILES_DIR"
+EOF
 
-for pkg in "${PACKAGES[@]}"; do
-    echo "Stowing $pkg..."
-    stow --target="$HOME" --dir="$DOTFILES_DIR" "$pkg"
-done
+echo "chezmoi ソースディレクトリ: $DOTFILES_DIR"
+
+# 差分を表示してから適用
+echo ""
+echo "適用される変更:"
+chezmoi diff || true
+
+echo ""
+echo "適用中..."
+chezmoi apply
 
 echo ""
 echo "セットアップが完了しました！"

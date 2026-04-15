@@ -1,20 +1,27 @@
 # Dotfiles
 
-個人用の dotfiles セット。GNU Stow で管理。
+個人用の dotfiles セット。chezmoi で管理。
 
 ## 構成
 
 ```
 dotfiles/
-├── claude/       # Claude Code 設定・hooks
-├── ghostty/      # Ghostty ターミナル設定
-├── git/          # .gitconfig（エイリアス・delta設定）
-├── hammerspoon/  # Hammerspoon (macOS 自動化)
-├── LaunchAgents/ # macOS LaunchAgents
-├── lazygit/      # lazygit 設定（delta pager）
-├── nvim/         # Neovim (LazyVim)
-├── tmux/         # tmux 設定
-└── zsh/          # .zshrc / .zprofile
+├── dot_claude/       # Claude Code 設定・hooks
+├── dot_config/
+│   ├── ghostty/      # Ghostty ターミナル設定
+│   ├── karabiner/    # Karabiner-Elements 設定
+│   ├── lazygit/      # lazygit 設定（delta pager）
+│   └── nvim/         # Neovim (LazyVim)
+├── dot_gitconfig     # .gitconfig（エイリアス・delta設定）
+├── dot_hammerspoon/  # Hammerspoon (macOS 自動化)
+├── dot_tmux.conf     # tmux 設定
+├── dot_zshrc         # zsh 設定
+├── dot_zprofile      # zsh 環境変数
+├── Library/
+│   └── LaunchAgents/ # macOS LaunchAgents
+├── Brewfile          # Homebrew パッケージ一覧
+├── install.sh        # セットアップスクリプト
+└── .chezmoiignore    # chezmoi 管理対象外リスト
 ```
 
 ## インストール
@@ -26,18 +33,30 @@ cd ~/dotfiles
 # Homebrew パッケージを一括インストール
 brew bundle
 
-# シンボリックリンクを作成
+# dotfiles をホームディレクトリへ展開
 ./install.sh
 source ~/.zshrc
 ```
 
-`install.sh` は `stow` を使って各パッケージのシンボリックリンクを `$HOME` に作成します。
+`install.sh` は chezmoi を使って各ファイルを `$HOME` へ展開します。既存ファイルがある場合は差分を表示してから適用するため、コンフリクトが起きません。
+
+## chezmoi の使い方
+
+```bash
+chezmoi diff          # ホームとの差分を確認
+chezmoi apply         # dotfiles をホームへ反映
+chezmoi update        # git pull + apply を一括実行（リモート変更の取り込み）
+chezmoi add <file>    # 新しいファイルを管理対象に追加
+chezmoi re-add <file> # ホーム側の変更をソースへ取り込む
+chezmoi edit <file>   # ソースを編集して即反映
+chezmoi cd            # ソースディレクトリへ移動
+```
 
 ### Brewfile の管理
 
 ```bash
-# 現在の環境を Brewfile に反映
-brew bundle dump --force
+# 現在の環境を Brewfile に反映（VSCode 拡張を除く）
+brew bundle dump --force --no-vscode
 
 # Brewfile にあって未インストールのものを確認
 brew bundle check
@@ -52,7 +71,7 @@ brew bundle cleanup
 
 | ツール | 用途 |
 |---|---|
-| stow | dotfiles リンク管理 |
+| chezmoi | dotfiles 管理 |
 | fzf | ファジーファインダー（Ctrl-T / Ctrl-G / Ctrl-Q） |
 | eza | `ls` 代替（アイコン・Git情報付き） |
 | bat | `cat` 代替（シンタックスハイライト） |
@@ -81,11 +100,13 @@ brew bundle cleanup
 - エイリアス: `g st/ad/cm/co/lg/lga/p/undo/amend/cleanup/snap`
 
 ### Neovim
-- LazyVim ベース。詳細は [`nvim/.config/nvim/README.md`](nvim/.config/nvim/README.md)
+- LazyVim ベース。詳細は [`dot_config/nvim/README.md`](dot_config/nvim/README.md)
 
 ## Git ユーザー情報の更新
 
+`dot_gitconfig` を直接編集して chezmoi で反映してください。
+
 ```bash
-git config --global user.name "Your Name"
-git config --global user.email "your@email.com"
+chezmoi edit ~/.gitconfig
+chezmoi apply
 ```

@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Ruby LSP (自動生成)
+.ruby-lsp/
+
+# Claude Code プロジェクトローカル設定
+.claude/

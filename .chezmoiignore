@@ -1,0 +1,8 @@
+# dotfiles リポジトリ管理ファイル（ホームへ展開しない）
+Brewfile
+README.md
+install.sh
+.ruby-lsp
+
+# 頻繁に自動更新されるファイル
+dot_config/nvim/lazy-lock.json
