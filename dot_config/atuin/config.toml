@@ -26,10 +26,10 @@
 ## either "l", "local" to use the system's current local timezone, or an offset
 ## from UTC in the format of "<+|->H[H][:M[M][:S[S]]]"
 ## for example: "+9", "-05", "+03:30", "-01:23:45", etc.
-# timezone = "local"
+timezone = "local"
 
 ## enable or disable automatic sync
-# auto_sync = true
+auto_sync = true
 
 ## enable or disable automatic update checks
 # update_check = true
@@ -44,12 +44,12 @@
 
 ## which search mode to use
 ## possible values: prefix, fulltext, fuzzy, skim
-# search_mode = "fuzzy"
+search_mode = "fuzzy"
 
 ## which filter mode to use by default
 ## possible values: "global", "host", "session", "session-preload", "directory", "workspace"
 ## consider using search.filters to customize the enablement and order of filter modes
-# filter_mode = "global"
+filter_mode = "workspace"
 
 ## With workspace filtering enabled, Atuin will filter for commands executed
 ## in any directory within a git repository tree (default: false).
@@ -57,7 +57,7 @@
 ## To use workspace mode by default when available, set this to true and
 ## set filter_mode to "workspace" or leave it unspecified and
 ## set search.filters to include "workspace" before other filter modes.
-# workspaces = false
+workspaces = true
 
 ## which filter mode to use when atuin is invoked from a shell up-key binding
 ## the accepted values are identical to those of "filter_mode"
@@ -75,7 +75,7 @@
 
 ## the maximum number of lines the interface should take up
 ## set it to 0 to always go full screen
-# inline_height = 0
+inline_height = 20
 
 ## the maximum number of lines the interface should take up
 ## when atuin is invoked from a shell up-key binding
@@ -200,29 +200,17 @@ search_mode = "daemon-fuzzy"
 
 [stats]
 ## Set commands where we should consider the subcommand for statistics. Eg, kubectl get vs just kubectl
-# common_subcommands = [
-#   "apt",
-#   "cargo",
-#   "composer",
-#   "dnf",
-#   "docker",
-#   "dotnet",
-#   "git",
-#   "go",
-#   "ip",
-#   "jj",
-#   "kubectl",
-#   "nix",
-#   "nmcli",
-#   "npm",
-#   "pecl",
-#   "pnpm",
-#   "podman",
-#   "port",
-#   "systemctl",
-#   "tmux",
-#   "yarn",
-# ]
+common_subcommands = [
+  "cargo",
+  "docker",
+  "git",
+  "go",
+  "kubectl",
+  "npm",
+  "pnpm",
+  "tmux",
+  "yarn",
+]
 
 ## Set commands that should be totally stripped and ignored from stats
 # common_prefix = ["sudo"]
@@ -322,7 +310,7 @@ autostart = true
 ## Set to false to disable the popup.
 ## This can also be controlled with the ATUIN_TMUX_POPUP environment variable.
 ## Note: The tmux popup is currently supported in zsh, bash, and fish shells. This currently doesn't work with iTerm native tmux integration.
-# enabled = false
+enabled = true
 
 ## Width of the tmux popup window
 ## Can be a percentage, or integer (e.g. "100" means 100 characters wide)
@@ -355,6 +343,7 @@ autostart = true
 ##
 ## Default:
 # columns = ["duration", "time", "command"]
+columns = ["duration", "time", { type = "directory", width = 20 }, "command"]
 ##
 ## Examples:
 ##
