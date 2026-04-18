@@ -1,4 +1,5 @@
 tap "yakitrak/yakitrak"
+brew "atuin"
 brew "bat"
 brew "chezmoi"
 brew "cmake"
