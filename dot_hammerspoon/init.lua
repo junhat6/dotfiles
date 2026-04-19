@@ -127,7 +127,7 @@ local appShortcuts = {
 	{ key = "o", app = "Obsidian" },
 	{ key = "f", app = "Finder" },
 	{ key = "d", app = "Discord" },
-	{ key = "v", app = "Visual Studio Code" },
+	{ key = "i", app = "Visual Studio Code" },
 }
 
 local function moveMouseToWindow(win)
