@@ -51,9 +51,7 @@ export BAT_THEME="Catppuccin Latte"
 alias rg='rg --smart-case --hidden --glob "!.git/*"'
 
 # === Go環境変数 ===
-export GOPATH=$HOME/go
-export GOBIN=$GOPATH/bin
-export PATH=$PATH:$GOBIN
+export PATH=$PATH:$HOME/go/bin
 
 # === mise - バージョン管理 ===
 eval "$(mise activate zsh)"
