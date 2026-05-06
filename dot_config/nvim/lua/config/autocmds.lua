@@ -16,3 +16,16 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHo
     end
   end,
 })
+
+-- 日本語など非ASCII文字をスペルチェック対象から除外する
+-- LazyVim は markdown / gitcommit / text などで spell=true を有効化するため、
+-- そのままだと treesitter の @spell キャプチャ経由で日本語にも赤線が引かれる。
+-- 非ASCII連続部分を @NoSpell クラスタに入れることで、英語のスペルチェックは
+-- 維持しつつ日本語だけ除外する。
+vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType", "Syntax" }, {
+  group = vim.api.nvim_create_augroup("nospell_non_ascii", { clear = true }),
+  pattern = "*",
+  callback = function()
+    vim.cmd([[syntax match NonAsciiNoSpell /[^\x00-\x7F]\+/ contains=@NoSpell containedin=ALL transparent]])
+  end,
+})
