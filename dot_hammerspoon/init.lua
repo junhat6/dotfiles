@@ -128,6 +128,8 @@ local appShortcuts = {
 	{ key = "f", app = "Finder" },
 	{ key = "d", app = "Discord" },
 	{ key = "i", app = "Visual Studio Code" },
+	{ key = "b", app = "DBeaver" },
+	{ key = "c", app = "Claude" },
 }
 
 local function moveMouseToWindow(win)
