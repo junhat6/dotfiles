@@ -13,3 +13,10 @@ vim.opt.formatoptions:remove({ "r", "o" })
 
 -- 絶対行番号を表示（相対行番号を無効化）
 vim.opt.relativenumber = false
+
+-- 日本語など CJK 文字をスペルチェックから除外する
+-- `cjk` は spell エンジン組み込みのフラグで、treesitter の @spell キャプチャ
+-- が付いていても CJK Unicode 範囲は赤線対象外になる。
+-- syntax match + @NoSpell は旧 vim syntax にしか効かず、LazyVim の
+-- treesitter ベースの markdown では効かないため、こちらが本筋。
+vim.opt.spelllang:append("cjk")
