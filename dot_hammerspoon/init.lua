@@ -127,7 +127,8 @@ local appShortcuts = {
 	{ key = "o", app = "Obsidian" },
 	{ key = "f", app = "Finder" },
 	{ key = "d", app = "Discord" },
-	{ key = "i", app = "Visual Studio Code" },
+	{ key = "i", app = "Zed" },
+	{ key = "v", app = "Visual Studio Code" },
 	{ key = "b", app = "DBeaver" },
 	{ key = "c", app = "Claude" },
 }
