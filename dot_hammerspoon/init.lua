@@ -130,6 +130,7 @@ local appShortcuts = {
 	{ key = "i", app = "Visual Studio Code" },
 	{ key = "b", app = "DBeaver" },
 	{ key = "c", app = "Claude" },
+	{ key = "a", app = "Codex" },
 }
 
 local function moveMouseToWindow(win)
