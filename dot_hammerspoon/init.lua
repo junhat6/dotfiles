@@ -122,7 +122,7 @@ end)
 -- =============================================================================
 local appShortcuts = {
 	{ key = "g", app = "Google Chrome" },
-	{ key = "t", app = "Ghostty" },
+	{ key = "t", app = "WezTerm" },
 	{ key = "s", app = "Slack" },
 	{ key = "o", app = "Obsidian" },
 	{ key = "f", app = "Finder" },
