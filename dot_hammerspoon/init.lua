@@ -131,6 +131,7 @@ local appShortcuts = {
 	{ key = "b", app = "DBeaver" },
 	{ key = "c", app = "Claude" },
 	{ key = "a", app = "Codex" },
+	{ key = "z", app = "zoom.us" },
 }
 
 local function moveMouseToWindow(win)
