@@ -26,17 +26,6 @@ eval "$(zoxide init zsh)"
 setopt AUTO_CD                       # ディレクトリ名だけで cd
 setopt AUTO_PUSHD PUSHD_IGNORE_DUPS PUSHD_SILENT PUSHDMINUS  # cd をスタックに積む、重複排除
 stty -ixon                          # Ctrl-S/Ctrl-Q のフロー制御を無効化（Ctrl-Q をショートカットで使うため）
-fzf-cd-widget() {                    # Ctrl-Q で zoxide 一覧から移動
-  local dir
-  dir=$(zoxide query -l |
-    fzf --ansi --reverse \
-        --preview 'eza -lah --icons --git {} 2>/dev/null || ls -la {}' \
-        --preview-window=right:60%) || return
-  cd "$dir"
-  zle reset-prompt
-}
-zle -N fzf-cd-widget
-bindkey '^Q' fzf-cd-widget
 
 # === 表示・閲覧ツール (eza / bat / ripgrep が必要) ===
 
@@ -57,7 +46,7 @@ export PATH=$PATH:$HOME/go/bin
 eval "$(mise activate zsh)"
 
 # === ghq - Git リポジトリ管理 ===
-# fzf でリポジトリ選択して移動 (Ctrl-G)
+# fzf でリポジトリ選択して移動 (Ctrl-Q) — 訪問履歴に関係なく ghq 管理下の全リポジトリが対象
 fzf-ghq-widget() {
   local repo
   repo=$(ghq list | fzf \
@@ -67,7 +56,7 @@ fzf-ghq-widget() {
   zle reset-prompt
 }
 zle -N fzf-ghq-widget
-bindkey '^G' fzf-ghq-widget
+bindkey '^Q' fzf-ghq-widget
 
 # === starship - モダンなプロンプト ===
 eval "$(starship init zsh)"
