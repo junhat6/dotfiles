@@ -8,15 +8,22 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/junhat6/.claude/hooks/watch-and-save.sh</string>
+        <string>{{ .chezmoi.homeDir }}/.claude/hooks/watch-and-save.sh</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>ProcessType</key>
+    <string>Background</string>
     <key>StandardOutPath</key>
-    <string>/Users/junhat6/.claude/logs/obsidian-sync.log</string>
+    <string>{{ .chezmoi.homeDir }}/.claude/logs/obsidian-sync.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/junhat6/.claude/logs/obsidian-sync-error.log</string>
+    <string>{{ .chezmoi.homeDir }}/.claude/logs/obsidian-sync-error.log</string>
 </dict>
 </plist>
