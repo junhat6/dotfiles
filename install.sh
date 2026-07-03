@@ -31,6 +31,19 @@ echo ""
 echo "適用中..."
 chezmoi apply
 
+# LaunchAgent (Obsidian sync) を有効化
+# chezmoi apply はplistファイルを配置するだけで、launchctlへの登録は行わないため、
+# ここで明示的にロードしないとデーモンが起動しない。
+# unload → load で、既存ロード分にも設定変更を反映する（再実行時の冪等性のため）。
+LAUNCH_AGENT="$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist"
+if [ -f "$LAUNCH_AGENT" ]; then
+    echo ""
+    echo "LaunchAgent を読み込み中: $LAUNCH_AGENT"
+    mkdir -p "$HOME/.claude/logs"
+    launchctl unload "$LAUNCH_AGENT" 2>/dev/null || true
+    launchctl load -w "$LAUNCH_AGENT"
+fi
+
 echo ""
 echo "セットアップが完了しました！"
 echo ""

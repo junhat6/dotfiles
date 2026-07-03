@@ -8,11 +8,13 @@
 dotfiles/
 ├── dot_claude/       # Claude Code 設定・hooks
 ├── dot_config/
+│   ├── atuin/        # atuin (シェル履歴) 設定
 │   ├── ghostty/      # Ghostty ターミナル設定
 │   ├── karabiner/    # Karabiner-Elements 設定
-│   ├── lazygit/      # lazygit 設定（delta pager）
-│   └── nvim/         # Neovim (LazyVim)
-├── dot_gitconfig     # .gitconfig（エイリアス・delta設定）
+│   ├── lazygit/      # lazygit 設定
+│   ├── nvim/         # Neovim (LazyVim)
+│   └── wezterm/      # WezTerm ターミナル設定
+├── dot_gitconfig     # .gitconfig
 ├── dot_hammerspoon/  # Hammerspoon (macOS 自動化)
 ├── dot_tmux.conf     # tmux 設定
 ├── dot_zshrc         # zsh 設定
@@ -23,6 +25,8 @@ dotfiles/
 ├── install.sh        # セットアップスクリプト
 └── .chezmoiignore    # chezmoi 管理対象外リスト
 ```
+
+エイリアス・キーバインド・プラグイン構成などの詳細は、このREADMEには書かず各 `dot_*` ファイルを直接参照してください（変更のたびにREADMEを追随させる運用コストを避けるため）。
 
 ## インストール
 
@@ -38,7 +42,7 @@ brew bundle
 source ~/.zshrc
 ```
 
-`install.sh` は chezmoi を使って各ファイルを `$HOME` へ展開します。既存ファイルがある場合は差分を表示してから適用するため、コンフリクトが起きません。
+`install.sh` は chezmoi を使って各ファイルを `$HOME` へ展開します。既存ファイルがある場合は差分を表示してから適用するため、コンフリクトが起きません。また、Obsidian同期用のLaunchAgentも合わせて読み込みます。
 
 ## chezmoi の使い方
 
@@ -64,43 +68,6 @@ brew bundle check
 # Brewfile にないパッケージを一括削除
 brew bundle cleanup
 ```
-
-## 依存ツール
-
-`Brewfile` で管理しています。主なもの:
-
-| ツール                  | 用途                                             |
-| ----------------------- | ------------------------------------------------ |
-| chezmoi                 | dotfiles 管理                                    |
-| fzf                     | ファジーファインダー（Ctrl-T / Ctrl-G / Ctrl-Q） |
-| eza                     | `ls` 代替（アイコン・Git情報付き）               |
-| bat                     | `cat` 代替（シンタックスハイライト）             |
-| ripgrep                 | 高速 grep                                        |
-| zoxide                  | スマート `cd`                                    |
-| ghq                     | Git リポジトリ管理                               |
-| starship                | モダンなプロンプト                               |
-| direnv                  | ディレクトリ別環境変数                           |
-| mise                    | 言語バージョン管理                               |
-| git-delta               | Git diff の見た目改善                            |
-| lazygit                 | TUI Git クライアント                             |
-| tmux                    | ターミナルマルチプレクサ                         |
-| zsh-syntax-highlighting | zsh コマンドのシンタックスハイライト             |
-
-## 主な機能
-
-### zsh
-- 補完: `compinit`・大文字小文字無視・メニュー選択
-- 履歴: 重複排除・スペース始まり無視・共有履歴
-- `Ctrl-Q`: zoxide 一覧を fzf で選んで移動（eza プレビュー付き）
-- `Ctrl-G`: ghq リポジトリを fzf で選んで移動
-- エイリアス: `ll/la/lt/llt`（eza）、`cc`（claude）、`lg`（lazygit）、`v`（nvim）、`ta`（tmux attach）
-
-### git / delta
-- Side-by-side diff・行番号・シンタックスハイライト（Catppuccin Latte）
-- エイリアス: `g st/ad/cm/co/lg/lga/p/undo/amend/cleanup/snap`
-
-### Neovim
-- LazyVim ベース。詳細は [`dot_config/nvim/README.md`](dot_config/nvim/README.md)
 
 ## Git ユーザー情報の更新
 

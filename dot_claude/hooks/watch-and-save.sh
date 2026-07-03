@@ -5,6 +5,9 @@
 OBSIDIAN_DIR="$HOME/ghq/github.com/junhat6/my-vault/claude"
 SESSION_DIR="$HOME/.claude/projects"
 SYNC_STATE_DIR="$HOME/.claude/sync-state"  # セッションごとの同期状態を保存
+LOG_DIR="$HOME/.claude/logs"                # LaunchAgentのStandardOut/ErrorPath先
+MAX_LOG_BYTES=$((10 * 1024 * 1024))         # このサイズを超えたら切り詰める
+LOG_KEEP_LINES=5000                         # 切り詰め後に残す行数
 
 mkdir -p "$OBSIDIAN_DIR"
 mkdir -p "$SYNC_STATE_DIR"
@@ -179,6 +182,20 @@ cleanup_old_state() {
     find "$SYNC_STATE_DIR" -name "*.line" -type f -mtime +7 -delete 2>/dev/null
 }
 
+# KeepAliveで無期限に常駐し続けるためlaunchdのStandardOut/ErrorPathはローテーション
+# されない。肥大化を防ぐため、一定サイズを超えたら末尾のみ残して切り詰める。
+rotate_logs() {
+    local log size
+    for log in "$LOG_DIR/obsidian-sync.log" "$LOG_DIR/obsidian-sync-error.log"; do
+        if [ -f "$log" ]; then
+            size=$(stat -f%z "$log" 2>/dev/null || echo 0)
+            if [ "$size" -gt "$MAX_LOG_BYTES" ]; then
+                tail -n "$LOG_KEEP_LINES" "$log" > "${log}.tmp" && mv "${log}.tmp" "$log"
+            fi
+        fi
+    done
+}
+
 echo "Watching for Claude session changes (multi-session mode)..."
 echo "Saving to: $OBSIDIAN_DIR/<project-name>/<date>.md"
 
@@ -202,6 +219,7 @@ while true; do
     if [ $((loop_count % 720)) -eq 0 ]; then
         cleanup_old_state
         refresh_ghq_owners
+        rotate_logs
     fi
 
     sleep 5
