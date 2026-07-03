@@ -56,13 +56,26 @@ export PATH=$PATH:$HOME/go/bin
 eval "$(mise activate zsh)"
 
 # === ghq - Git リポジトリ管理 ===
-# fzf でリポジトリ選択して移動 (Ctrl-Q) — 訪問履歴に関係なく ghq 管理下の全リポジトリが対象
+# fzf でリポジトリ選択して移動 (Ctrl-Q) — 訪問履歴に関係なく ghq 管理下の全リポジトリ + ~/.config 配下の独立リポジトリが対象
 fzf-ghq-widget() {
-  local repo
-  repo=$(ghq list | fzf \
-    --preview 'eza -lah --icons --git "$(ghq root)/{}" 2>/dev/null' \
-    --preview-window=right:60%) || return
-  cd "$(ghq root)/$repo"
+  local root selected config_dirs=()
+  root="$(ghq root)"
+
+  for dir in "$HOME"/.config/*/; do
+    [[ -d "${dir}.git" ]] && config_dirs+=("${dir#$HOME/}")
+  done
+
+  selected=$(
+    { ghq list; printf '%s\n' "${config_dirs[@]}"; } | fzf \
+      --preview 'eza -lah --icons --git "'"$root"'/{}" 2>/dev/null || eza -lah --icons --git "'"$HOME"'/{}" 2>/dev/null' \
+      --preview-window=right:60%
+  ) || return
+
+  if [[ -d "$root/$selected" ]]; then
+    cd "$root/$selected"
+  elif [[ -d "$HOME/$selected" ]]; then
+    cd "$HOME/$selected"
+  fi
   zle reset-prompt
 }
 zle -N fzf-ghq-widget
