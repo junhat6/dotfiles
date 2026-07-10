@@ -1,13 +1,20 @@
 #!/bin/bash
-# Watch Claude Code sessions and sync to Obsidian in real-time (append mode)
+# Watch Claude Code / Codex sessions and sync to Obsidian in real-time (append mode)
 # Supports multiple concurrent sessions with project/date/branch organization
 #
-# 出力構造:
+# 出力構造（Claude / Codex 共通の1つのツリーに統合）:
 #   main/master での作業: <OBSIDIAN_DIR>/<repo>/<日付>.md
 #   ブランチでの作業:     <OBSIDIAN_DIR>/<repo>/<日付>/<ラベル>.md
 #     ラベルは Issue 番号を含むブランチ (feature/104 等) なら gh CLI で
 #     「104 <Issueタイトル>」に解決し、それ以外はブランチ名をそのまま使う。
 #     Orca IDE 等で worktree を並列に動かしてもブランチ単位で会話が分かれる。
+#
+# ソースごとの抽出方法:
+#   Claude: ~/.claude/projects/**/*.jsonl
+#     各 user/assistant 行の .cwd / .gitBranch を利用
+#   Codex:  ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl
+#     session_meta 行の .payload.cwd / .payload.git.branch / .payload.git.repository_url を利用
+#     会話は event_msg の user_message / agent_message から取る
 #
 # usage: watch-and-save.sh [--once]
 #   --once: 1回だけ同期して終了（テスト・手動同期用）
@@ -17,6 +24,7 @@ export LC_ALL=en_US.UTF-8
 
 OBSIDIAN_DIR="${OBSIDIAN_DIR:-$HOME/ghq/github.com/junhat6/my-vault/claude}"
 SESSION_DIR="${SESSION_DIR:-$HOME/.claude/projects}"
+CODEX_SESSION_DIR="${CODEX_SESSION_DIR:-$HOME/.codex/sessions}"
 SYNC_STATE_DIR="${SYNC_STATE_DIR:-$HOME/.claude/sync-state}"  # セッションごとの同期状態を保存
 LOG_DIR="$HOME/.claude/logs"                # LaunchAgentのStandardOut/ErrorPath先
 MAX_LOG_BYTES=$((10 * 1024 * 1024))         # このサイズを超えたら切り詰める
@@ -101,7 +109,12 @@ get_repo_from_cwd() {
 
 # GitHub の owner/repo を解決する（Issue タイトル取得用）
 resolve_repo_slug() {
-    local cwd="$1" repo="$2"
+    local cwd="$1" repo="$2" repo_url="$3"
+    # Codex は remote URL をログに記録しているので最優先で使う
+    if [[ "$repo_url" =~ github\.com[:/]([^/]+)/([^/[:space:]]+) ]]; then
+        echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}"
+        return
+    fi
     if [[ "$cwd" =~ ghq/github\.com/([^/]+/[^/]+) ]]; then
         echo "${BASH_REMATCH[1]}"
         return
@@ -133,7 +146,7 @@ sanitize_label() {
 # 5秒ループから呼ばれるため必ずファイルキャッシュし、失敗時も1時間は再試行しない
 # （オフラインや gh 未認証のときに GitHub API を叩き続けないため）
 get_issue_title() {
-    local repo="$1" num="$2" cwd="$3"
+    local repo="$1" num="$2" cwd="$3" repo_url="$4"
     local cache="$TITLE_CACHE_DIR/${repo}#${num}"
     if [ -f "$cache" ]; then
         cat "$cache"
@@ -143,7 +156,7 @@ get_issue_title() {
         return
     fi
     local slug title=""
-    slug=$(resolve_repo_slug "$cwd" "$repo")
+    slug=$(resolve_repo_slug "$cwd" "$repo" "$repo_url")
     if [ -n "$slug" ] && command -v gh >/dev/null 2>&1; then
         title=$(gh issue view "$num" -R "$slug" --json title -q .title 2>/dev/null)
     fi
@@ -159,7 +172,7 @@ get_issue_title() {
 
 # ブランチからファイル名用ラベルを作る。空を返したら main 扱い（リポジトリ直下の日付ファイル）
 get_branch_label() {
-    local repo="$1" branch="$2" cwd="$3"
+    local repo="$1" branch="$2" cwd="$3" repo_url="$4"
     case "$branch" in
         "" | main | master) return ;;
     esac
@@ -167,7 +180,7 @@ get_branch_label() {
     if [[ "$branch" =~ [0-9]+ ]]; then
         local num="${BASH_REMATCH[0]}"
         local title
-        title=$(get_issue_title "$repo" "$num" "$cwd")
+        title=$(get_issue_title "$repo" "$num" "$cwd" "$repo_url")
         if [ -n "$title" ]; then
             echo "${num} $(sanitize_label "$title")"
             return
@@ -182,8 +195,13 @@ get_session_hash() {
     echo "$session_file" | md5 | cut -c1-12
 }
 
+# フォーマット別: チャンクから cwd/branch/repo_url を TSV 3列で抽出する jq フィルタ
+META_JQ_CLAUDE='(try fromjson catch empty) | select(.cwd) | [.cwd, (.gitBranch // ""), ""] | @tsv'
+META_JQ_CODEX='(try fromjson catch empty) | select(.type == "session_meta") | [.payload.cwd, (.payload.git.branch // ""), (.payload.git.repository_url // "")] | @tsv'
+
 sync_session() {
     local session_file="$1"
+    local format="$2"   # claude | codex
     local TODAY=$(date +%Y年%-m月%-d日)
     # システムのローカルタイムゾーンに依存せず「今日のローカル0時」をUTCに変換する
     local TODAY_START_UTC=$(TZ=UTC date -j -f "%s" "$(date -v0H -v0M -v0S +%s)" +%Y-%m-%dT%H:%M:%S 2>/dev/null)
@@ -213,21 +231,32 @@ sync_session() {
         return
     fi
 
-    # 新規行から cwd / ブランチを抽出（JSONLの user/assistant 行に記録されている）。
-    # チャンクに含まれなければ前回値を使い、それも無ければ旧来のディレクトリ名パースに落ちる
-    local meta
-    meta=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | \
-        jq -R -r '(try fromjson catch empty) | select(.cwd) | [.cwd, (.gitBranch // "")] | @tsv' 2>/dev/null | tail -1)
-    if [ -n "$meta" ]; then
-        printf '%s\n' "$meta" > "$META_FILE"
-    elif [ -f "$META_FILE" ]; then
-        meta=$(cat "$META_FILE")
+    local meta_jq="$META_JQ_CLAUDE"
+    if [ "$format" = "codex" ]; then
+        meta_jq="$META_JQ_CODEX"
     fi
 
-    local cwd="" branch=""
+    # 新規行から cwd / ブランチを抽出。チャンクに含まれなければ前回値を使い、
+    # それも無ければファイル先頭付近から探す（Codexは先頭行が必ずsession_meta）。
+    # 最後の手段として旧来のディレクトリ名パースに落ちる
+    local meta
+    meta=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | \
+        jq -R -r "$meta_jq" 2>/dev/null | tail -1)
+    if [ -z "$meta" ] && [ -f "$META_FILE" ]; then
+        meta=$(cat "$META_FILE")
+    fi
+    if [ -z "$meta" ]; then
+        meta=$(head -100 "$session_file" | jq -R -r "$meta_jq" 2>/dev/null | tail -1)
+    fi
+    if [ -n "$meta" ]; then
+        printf '%s\n' "$meta" > "$META_FILE"
+    fi
+
+    local cwd="" branch="" repo_url=""
     if [ -n "$meta" ]; then
         cwd=$(printf '%s\n' "$meta" | cut -f1)
         branch=$(printf '%s\n' "$meta" | cut -f2)
+        repo_url=$(printf '%s\n' "$meta" | cut -f3)
     fi
 
     local project_name
@@ -239,7 +268,7 @@ sync_session() {
 
     # main/master → <repo>/<日付>.md、それ以外 → <repo>/<日付>/<ラベル>.md
     local label
-    label=$(get_branch_label "$project_name" "$branch" "$cwd")
+    label=$(get_branch_label "$project_name" "$branch" "$cwd" "$repo_url")
     local project_dir OUTPUT_FILE
     if [ -n "$label" ]; then
         project_dir="${OBSIDIAN_DIR}/${project_name}/${TODAY}"
@@ -249,87 +278,109 @@ sync_session() {
         OUTPUT_FILE="${project_dir}/${TODAY}.md"
     fi
 
-    # プロジェクトディレクトリを作成
-    mkdir -p "$project_dir"
-
-    # Create file with header if it doesn't exist
-    if [ ! -f "$OUTPUT_FILE" ]; then
-        if [ -n "$label" ]; then
-            echo "# ${TODAY} - ${project_name} (${branch})" > "$OUTPUT_FILE"
-            # Issue タイトルに解決できたラベルなら冒頭に Issue リンクを置く
-            if [[ "$label" =~ ^([0-9]+)[[:space:]] ]]; then
-                local num="${BASH_REMATCH[1]}"
-                local slug_file="$TITLE_CACHE_DIR/${project_name}#${num}.slug"
-                if [ -f "$slug_file" ]; then
-                    echo "" >> "$OUTPUT_FILE"
-                    echo "Issue: [#${num}](https://github.com/$(cat "$slug_file")/issues/${num})" >> "$OUTPUT_FILE"
-                fi
-            fi
-        else
-            echo "# ${TODAY} - ${project_name}" > "$OUTPUT_FILE"
-        fi
-        echo "" >> "$OUTPUT_FILE"
-    fi
-
     # current_lines算出後にファイルが追記される可能性があるため、tailではなく
     # head -n current_lines で読む範囲をカウント時点に固定する（レースで重複書き込みを防ぐ）
     # -R + try/catchで壊れたJSON行を1行単位でスキップし、バッチ中の1行の破損で
     # それ以降の行が全て失われないようにする
-    local new_content
-    new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r --arg today_start "$TODAY_START_UTC" '
-    (try fromjson catch empty) |
-    select(.type == "user" or .type == "assistant") |
-    select((.timestamp // "9999") >= $today_start) |
-    if .type == "user" then
-        (.message.content // .content // "") as $content |
-        if ($content | type) == "string" then
-            if ($content | test("<local-command|<command-name>|<system-reminder>|<task-notification>"; "i")) then
-                empty
+    local new_content jq_status
+    if [ "$format" = "codex" ]; then
+        # Codex: event_msg の user_message / agent_message が会話本文。
+        # environment_context 等は response_item 側にしか入らないため除外フィルタ不要
+        new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r --arg today_start "$TODAY_START_UTC" '
+        (try fromjson catch empty) |
+        select(.type == "event_msg") |
+        select((.timestamp // "9999") >= $today_start) |
+        if .payload.type == "user_message" then
+            "**ユーザー**: " + (.payload.message | rtrimstr("\n")) + "\n"
+        elif .payload.type == "agent_message" then
+            "**Codex**: " + (.payload.message | rtrimstr("\n")) + "\n"
+        else
+            empty
+        end
+        ')
+        jq_status=$?
+    else
+        new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r --arg today_start "$TODAY_START_UTC" '
+        (try fromjson catch empty) |
+        select(.type == "user" or .type == "assistant") |
+        select((.timestamp // "9999") >= $today_start) |
+        if .type == "user" then
+            (.message.content // .content // "") as $content |
+            if ($content | type) == "string" then
+                if ($content | test("<local-command|<command-name>|<system-reminder>|<task-notification>"; "i")) then
+                    empty
+                else
+                    "**ユーザー**: " + $content + "\n"
+                end
             else
-                "**ユーザー**: " + $content + "\n"
+                empty
+            end
+        elif .type == "assistant" then
+            if (.message.content | type) == "array" then
+                (.message.content[] | select(.type == "text") |
+                    if (.text | test("^No response requested"; "i")) then
+                        empty
+                    else
+                        "**Claude**: " + .text + "\n"
+                    end
+                )
+            else
+                empty
             end
         else
             empty
         end
-    elif .type == "assistant" then
-        if (.message.content | type) == "array" then
-            (.message.content[] | select(.type == "text") |
-                if (.text | test("^No response requested"; "i")) then
-                    empty
-                else
-                    "**Claude**: " + .text + "\n"
-                end
-            )
-        else
-            empty
-        end
-    else
-        empty
-    end
-    ')
-    local jq_status=$?
+        ')
+        jq_status=$?
+    fi
 
     if [ "$jq_status" -ne 0 ]; then
         # jqが失敗した場合はlast_lineを進めない（次回同じ範囲を再試行させる）
         echo "$(date '+%Y-%m-%d %H:%M:%S') [ERROR] jq failed (exit=$jq_status) for session=$session_file, will retry next cycle" >&2
-    else
-        # Append new content if any
-        if [ -n "$new_content" ]; then
-            printf '%s\n' "$new_content" >> "$OUTPUT_FILE"
-            echo "" >> "$OUTPUT_FILE"
+        return
+    fi
 
-            # Git commit はObsidian Gitプラグインに任せる
+    # Append new content if any
+    # 書き込む内容があるときだけディレクトリ・ヘッダーを作る
+    # （会話の無いセッションで空の日付ファイルを量産しないため）
+    if [ -n "$new_content" ]; then
+        mkdir -p "$project_dir"
+        if [ ! -f "$OUTPUT_FILE" ]; then
+            if [ -n "$label" ]; then
+                echo "# ${TODAY} - ${project_name} (${branch})" > "$OUTPUT_FILE"
+                # Issue タイトルに解決できたラベルなら冒頭に Issue リンクを置く
+                if [[ "$label" =~ ^([0-9]+)[[:space:]] ]]; then
+                    local num="${BASH_REMATCH[1]}"
+                    local slug_file="$TITLE_CACHE_DIR/${project_name}#${num}.slug"
+                    if [ -f "$slug_file" ]; then
+                        echo "" >> "$OUTPUT_FILE"
+                        echo "Issue: [#${num}](https://github.com/$(cat "$slug_file")/issues/${num})" >> "$OUTPUT_FILE"
+                    fi
+                fi
+            else
+                echo "# ${TODAY} - ${project_name}" > "$OUTPUT_FILE"
+            fi
+            echo "" >> "$OUTPUT_FILE"
         fi
 
-        # Update last synced line for THIS session
-        echo "$current_lines" > "$LAST_LINE_FILE"
+        printf '%s\n' "$new_content" >> "$OUTPUT_FILE"
+        echo "" >> "$OUTPUT_FILE"
+
+        # Git commit はObsidian Gitプラグインに任せる
     fi
+
+    # Update last synced line for THIS session
+    echo "$current_lines" > "$LAST_LINE_FILE"
 }
 
 # Find ALL active sessions (not just the most recent one)
-find_sessions() {
+find_claude_sessions() {
     find "$SESSION_DIR" -path "*/subagents/*" -prune -o \
         -name "*.jsonl" -type f -mmin -60 -size +1000c -print 2>/dev/null
+}
+
+find_codex_sessions() {
+    find "$CODEX_SESSION_DIR" -name "*.jsonl" -type f -mmin -60 -size +1000c -print 2>/dev/null
 }
 
 # Clean up old sync state files (older than 7 days)
@@ -354,9 +405,15 @@ rotate_logs() {
 run_sync_cycle() {
     while IFS= read -r session; do
         if [ -n "$session" ]; then
-            sync_session "$session"
+            sync_session "$session" claude
         fi
-    done < <(find_sessions)
+    done < <(find_claude_sessions)
+
+    while IFS= read -r session; do
+        if [ -n "$session" ]; then
+            sync_session "$session" codex
+        fi
+    done < <(find_codex_sessions)
 }
 
 # --once: 1回同期して終了（テスト・手動同期用）
@@ -365,7 +422,7 @@ if [ "${1:-}" = "--once" ]; then
     exit 0
 fi
 
-echo "Watching for Claude session changes (multi-session mode)..."
+echo "Watching for Claude Code / Codex session changes (multi-session mode)..."
 echo "Saving to: $OBSIDIAN_DIR/<project-name>/<date>[/<branch-label>].md"
 
 # Initial cleanup
