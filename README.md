@@ -6,7 +6,7 @@
 
 ```
 dotfiles/
-├── dot_claude/       # Claude Code 設定・hooks
+├── dot_claude/       # Claude Code 設定・hooks（Brewfile 自動同期スクリプトを含む）
 ├── dot_config/
 │   ├── atuin/        # atuin (シェル履歴) 設定
 │   ├── ghostty/      # Ghostty ターミナル設定
@@ -58,8 +58,15 @@ chezmoi cd            # ソースディレクトリへ移動
 
 ### Brewfile の管理
 
+`Library/LaunchAgents/com.claude.brewfile-sync.plist` により、`dot_claude/hooks/brewfile-sync.sh` が毎日10時（および `install.sh` 実行直後）に自動実行される。`brew bundle dump --force --no-vscode` で Brewfile を実環境に同期し、差分があればそのまま `git commit` する（他に未コミットの変更が残っている場合はスキップする）。**push は自動で行わないため、次に dotfiles を触ったタイミングで `git push` を忘れないこと。**
+
+手動で操作したい場合は以下を使う。
+
 ```bash
-# 現在の環境を Brewfile に反映（VSCode 拡張を除く）
+# 自動化と同じ処理を即時実行
+~/.claude/hooks/brewfile-sync.sh
+
+# 現在の環境を Brewfile に反映（VSCode 拡張を除く、commit はしない）
 brew bundle dump --force --no-vscode
 
 # Brewfile にあって未インストールのものを確認
