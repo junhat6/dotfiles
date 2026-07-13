@@ -113,3 +113,5 @@ alias v='nvim .'     # カレントディレクトリを開く
 alias ta='tmux new-session -A -s'
 
 eval "$(atuin init zsh)"
+
+eval "$(devctl shell zsh)"
