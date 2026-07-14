@@ -133,6 +133,7 @@ local appShortcuts = {
 	{ key = "a", app = "Codex" },
 	{ key = "z", app = "zoom.us" },
 	{ key = "u", app = "Orca" },
+	{ key = "l", app = "Amical" },
 }
 
 local function moveMouseToWindow(win)
