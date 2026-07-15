@@ -80,6 +80,19 @@
             ]
           },
           {
+            "description": "Right Option to Caps Lock",
+            "manipulators": [
+              {
+                "from": {
+                  "key_code": "right_option",
+                  "modifiers": { "optional": ["any"] }
+                },
+                "to": [{ "key_code": "caps_lock" }],
+                "type": "basic"
+              }
+            ]
+          },
+          {
             "description": "Tap Right Command for かな or Hold for Fn",
             "manipulators": [
               {
