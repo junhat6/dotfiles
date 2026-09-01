@@ -1,4 +1,5 @@
-tap "yakitrak/yakitrak"
+tap "stablyai/orca"
+tap "yakitrak/yakitrak", trusted: true
 # Improved shell history for zsh, bash, fish and nushell
 brew "atuin"
 # Clone of cat(1) with syntax highlighting and Git integration
@@ -95,12 +96,15 @@ cask "karabiner-elements"
 cask "keyboardcleantool"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
+# IDE for orchestrating AI coding agents across terminals and worktrees
+cask "stablyai/orca/orca", trusted: true
 # Team communication and collaboration software
 cask "slack"
 # Open-source code editor
 cask "visual-studio-code"
 # GPU-accelerated cross-platform terminal emulator and multiplexer
-cask "wezterm"
+cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
 cargo "mdbook-plantuml"
+npm "@anthropic-ai/claude-code"
