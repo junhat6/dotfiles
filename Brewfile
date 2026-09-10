@@ -1,15 +1,19 @@
+tap "cirruslabs/cli", trusted: { formulae: ["softnet"] }
+tap "fujibee/agmsg", trusted: true
 tap "stablyai/orca"
 tap "yakitrak/yakitrak", trusted: true
 # Improved shell history for zsh, bash, fish and nushell
 brew "atuin"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
+# Incredibly fast JavaScript runtime, bundler, test runner, and package manager
+brew "bun"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # Cross-platform make
 brew "cmake"
 # Container runtimes on MacOS (and Linux) with minimal setup
-brew "colima", restart_service: :changed
+brew "colima"
 # Interactive Commitizen CLI that generate standardized commit messages
 brew "czg"
 # Pack, ship and run any application as a lightweight container
@@ -72,6 +76,10 @@ brew "uv"
 brew "zoxide"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
+# Run macOS and Linux VMs on Apple Hardware
+brew "cirruslabs/cli/tart", trusted: true
+# Agent messaging desktop app
+cask "fujibee/agmsg/agmsg"
 # AI dictation app
 cask "amical"
 # User-friendly GUI app for Homebrew
