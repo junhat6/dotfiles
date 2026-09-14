@@ -1,4 +1,4 @@
-tap "cirruslabs/cli", trusted: { formulae: ["softnet"] }
+tap "cirruslabs/cli", trusted: { formulae: ["softnet", "tart"] }
 tap "fujibee/agmsg", trusted: true
 tap "stablyai/orca"
 tap "yakitrak/yakitrak", trusted: true
@@ -76,8 +76,6 @@ brew "uv"
 brew "zoxide"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
-# Run macOS and Linux VMs on Apple Hardware
-brew "cirruslabs/cli/tart", trusted: true
 # Agent messaging desktop app
 cask "fujibee/agmsg/agmsg"
 # AI dictation app
