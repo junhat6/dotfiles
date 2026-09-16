@@ -182,6 +182,7 @@ local pinnedLinks = {
 local chromeBundleID = "com.google.Chrome"
 local maxChromeHistoryChoices = 50
 local dynamicSlotsSettingsKey = "urlLauncherDynamicSlotsV1"
+local chromeEpochOffsetSeconds = 11644473600
 
 local function isWebURL(url)
 	return type(url) == "string" and (url:match("^http://") or url:match("^https://"))
@@ -369,6 +370,20 @@ local function chromeHistoryPath()
 	return chromeDataDirectory .. "/" .. profileDirectory .. "/History"
 end
 
+local function formatChromeVisitTime(chromeVisitTime)
+	local visitTime = tonumber(chromeVisitTime)
+	if not visitTime then
+		return "日時不明"
+	end
+
+	local unixTimestamp = math.floor(visitTime / 1000000 - chromeEpochOffsetSeconds)
+	local succeeded, formatted = pcall(os.date, "%m/%d %H:%M", unixTimestamp)
+	if not succeeded or type(formatted) ~= "string" then
+		return "日時不明"
+	end
+	return formatted
+end
+
 -- Chrome起動中は履歴DBがロックされるため、一時コピーをSQLiteで読み込む。
 local function chromeHistoryChoices(excludedURLs)
 	local historyPath = chromeHistoryPath()
@@ -399,21 +414,38 @@ local function chromeHistoryChoices(excludedURLs)
 	end
 
 	local querySucceeded = pcall(function()
-		local query = [[
-SELECT url, title, visit_count
-FROM urls
-WHERE hidden = 0
-	AND visit_count > 0
-	AND (url LIKE 'http://%' OR url LIKE 'https://%')
-ORDER BY visit_count DESC, last_visit_time DESC
+		local now = os.time()
+		local visitsSince30Days = math.floor((now - 30 * 24 * 60 * 60 + chromeEpochOffsetSeconds) * 1000000)
+		local visitsSince7Days = math.floor((now - 7 * 24 * 60 * 60 + chromeEpochOffsetSeconds) * 1000000)
+		local query = string.format([[
+SELECT
+	u.url,
+	u.title,
+	COUNT(*) AS visits_30d,
+	SUM(CASE WHEN v.visit_time >= %.0f THEN 1 ELSE 0 END) AS visits_7d,
+	MAX(v.visit_time) AS last_visit_time
+FROM visits AS v
+JOIN urls AS u ON u.id = v.url
+WHERE u.hidden = 0
+	AND v.visit_time >= %.0f
+	AND (u.url LIKE 'http://%%' OR u.url LIKE 'https://%%')
+GROUP BY u.id, u.url, u.title
+ORDER BY visits_30d DESC, visits_7d DESC, last_visit_time DESC
 LIMIT 100;
-]]
+]], visitsSince7Days, visitsSince30Days)
 
 		for row in database:nrows(query) do
 			if not hiddenURLs[row.url] then
 				table.insert(choices, {
 					text = row.title and row.title ~= "" and row.title or row.url,
-					subText = "Chrome履歴 (" .. row.visit_count .. "回) — " .. row.url,
+					subText = "30日 "
+						.. row.visits_30d
+						.. "回・7日 "
+						.. row.visits_7d
+						.. "回・最終 "
+						.. formatChromeVisitTime(row.last_visit_time)
+						.. " — "
+						.. row.url,
 					title = row.title and row.title ~= "" and row.title or row.url,
 					url = row.url,
 					source = "history",
