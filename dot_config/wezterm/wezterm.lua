@@ -29,6 +29,7 @@ config.window_padding = {
 	bottom = 5,
 }
 config.hide_tab_bar_if_only_one_tab = true
+config.window_close_confirmation = "NeverPrompt"
 
 -- 枠（タイトルバー/信号機ボタン）を消す。リサイズだけ可能。
 -- 背景色は color_scheme（Catppuccin Latte）に任せる。
