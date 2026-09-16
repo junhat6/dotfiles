@@ -21,8 +21,23 @@ hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
 hs.alert.show("Hammerspoon loaded")
 
 -- =============================================================================
--- ウィンドウ管理 (ctrl + alt + 矢印/Enter)
+-- ウィンドウ管理 (ctrl + alt + 矢印/Enter, ctrl + alt + M)
 -- =============================================================================
+-- 次のモニターへ移動
+hs.hotkey.bind({ "ctrl", "alt" }, "M", function()
+	local win = hs.window.focusedWindow()
+	if not win then
+		return
+	end
+
+	if #hs.screen.allScreens() < 2 then
+		hs.alert.show("移動先のモニターがありません")
+		return
+	end
+
+	win:moveToScreen(win:screen():next(), true, true)
+end)
+
 -- 左半分
 hs.hotkey.bind({ "ctrl", "alt" }, "Left", function()
 	local win = hs.window.focusedWindow()
@@ -152,6 +167,77 @@ for _, shortcut in ipairs(appShortcuts) do
 		moveMouseToWindow(hs.window.focusedWindow())
 	end)
 end
+
+-- =============================================================================
+-- ウィンドウ選択 (alt + P/,/.)
+-- =============================================================================
+local function windowLabel(win)
+	local app = win:application()
+	local appName = app and app:name() or "不明なアプリ"
+	local title = win:title() or ""
+	if title == "" then
+		return appName
+	end
+	return appName .. " — " .. title
+end
+
+-- 開いているウィンドウをタイトルまたはアプリ名で検索してフォーカスする
+local function buildWindowChoices()
+	local choices = {}
+	for _, win in ipairs(hs.window.filter.default:getWindows()) do
+		local app = win:application()
+		local appName = app and app:name() or "不明なアプリ"
+		local title = win:title() or ""
+		table.insert(choices, {
+			text = title ~= "" and title or appName,
+			subText = appName,
+			window = win,
+		})
+	end
+	return choices
+end
+
+local windowChooser = hs.chooser.new(function(choice)
+	if choice and choice.window then
+		choice.window:focus()
+	end
+end)
+
+windowChooser:placeholderText("ウィンドウを検索...")
+windowChooser:searchSubText(true)
+
+hs.hotkey.bind({ "alt" }, "P", function()
+	local choices = buildWindowChoices()
+	if #choices == 0 then
+		hs.alert.show("切り替え可能なウィンドウがありません")
+		return
+	end
+	windowChooser:query("")
+	windowChooser:choices(choices)
+	windowChooser:show()
+end)
+
+-- よく戻るウィンドウを記憶し、任意のアプリから復帰する
+local markedWindowID = nil
+
+hs.hotkey.bind({ "alt" }, ",", function()
+	local win = hs.window.focusedWindow()
+	if not win then
+		return
+	end
+	markedWindowID = win:id()
+	hs.alert.show("記憶しました: " .. windowLabel(win))
+end)
+
+hs.hotkey.bind({ "alt" }, ".", function()
+	local markedWindow = markedWindowID and hs.window.get(markedWindowID)
+	if not markedWindow then
+		markedWindowID = nil
+		hs.alert.show("記憶したウィンドウがありません")
+		return
+	end
+	markedWindow:focus()
+end)
 
 -- =============================================================================
 -- クリップボード履歴 (cmd + shift + V)
