@@ -1,7 +1,5 @@
-tap "cirruslabs/cli", trusted: { formulae: ["softnet", "tart"] }
 tap "fujibee/agmsg", trusted: true
 tap "supabase/tap"
-tap "stablyai/orca"
 tap "yakitrak/yakitrak", trusted: true
 # Improved shell history for zsh, bash, fish and nushell
 brew "atuin"
@@ -13,14 +11,12 @@ brew "bat"
 brew "pixman"
 # Vector graphics library with cross-device output support
 brew "cairo"
-# Incredibly fast JavaScript runtime, bundler, test runner, and package manager
-brew "bun"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # Cross-platform make
 brew "cmake"
 # Container runtimes on MacOS (and Linux) with minimal setup
-brew "colima"
+brew "colima", restart_service: :changed
 # Interactive Commitizen CLI that generate standardized commit messages
 brew "czg"
 # Pack, ship and run any application as a lightweight container
@@ -83,8 +79,6 @@ brew "rclone"
 brew "render"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
-# Safe, concurrent, practical language
-brew "rust"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Simplified and community-driven man pages
@@ -123,6 +117,8 @@ cask "font-hackgen-nerd"
 cask "font-udev-gothic-nf"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
+# Web browser
+cask "google-chrome"
 # Desktop automation application
 cask "hammerspoon"
 # Keyboard customiser
@@ -133,8 +129,8 @@ cask "keyboardcleantool"
 cask "keycastr"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
-# IDE for orchestrating AI coding agents across terminals and worktrees
-cask "stablyai/orca/orca", trusted: true
+# Collaboration platform for API development
+cask "postman"
 # Team communication and collaboration software
 cask "slack"
 # Open-source code editor
@@ -146,6 +142,9 @@ cask "zed"
 # Video communication and virtual meeting platform
 cask "zoom"
 go "github.com/air-verse/air"
+go "golang.org/x/tools/cmd/goimports"
+go "golang.org/x/tools/gopls"
+go "honnef.co/go/tools/cmd/staticcheck"
 go "github.com/swaggo/swag/cmd/swag"
+uv "serena-agent", source: "git+https://github.com/oraios/serena"
 npm "@openai/codex"
-npm "@anthropic-ai/claude-code"
