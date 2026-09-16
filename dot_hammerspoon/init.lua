@@ -56,24 +56,6 @@ hs.hotkey.bind({ "ctrl", "alt" }, "Right", function()
 	win:moveToUnit(hs.layout.right50)
 end)
 
--- 上半分
-hs.hotkey.bind({ "ctrl", "alt" }, "Up", function()
-	local win = hs.window.focusedWindow()
-	if not win then
-		return
-	end
-	win:moveToUnit({ 0, 0, 1, 0.5 })
-end)
-
--- 下半分
-hs.hotkey.bind({ "ctrl", "alt" }, "Down", function()
-	local win = hs.window.focusedWindow()
-	if not win then
-		return
-	end
-	win:moveToUnit({ 0, 0.5, 1, 0.5 })
-end)
-
 -- 最大化
 hs.hotkey.bind({ "ctrl", "alt" }, "Return", function()
 	local win = hs.window.focusedWindow()
@@ -90,45 +72,6 @@ hs.hotkey.bind({ "ctrl", "alt" }, "C", function()
 		return
 	end
 	win:moveToUnit({ 0.15, 0.15, 0.7, 0.7 })
-end)
-
--- =============================================================================
--- 四隅配置 (ctrl + alt + shift + 矢印)
--- =============================================================================
--- 左上
-hs.hotkey.bind({ "ctrl", "alt", "shift" }, "Left", function()
-	local win = hs.window.focusedWindow()
-	if not win then
-		return
-	end
-	win:moveToUnit({ 0, 0, 0.5, 0.5 })
-end)
-
--- 右上
-hs.hotkey.bind({ "ctrl", "alt", "shift" }, "Right", function()
-	local win = hs.window.focusedWindow()
-	if not win then
-		return
-	end
-	win:moveToUnit({ 0.5, 0, 0.5, 0.5 })
-end)
-
--- 左下
-hs.hotkey.bind({ "ctrl", "alt", "shift" }, "Down", function()
-	local win = hs.window.focusedWindow()
-	if not win then
-		return
-	end
-	win:moveToUnit({ 0, 0.5, 0.5, 0.5 })
-end)
-
--- 右下
-hs.hotkey.bind({ "ctrl", "alt", "shift" }, "Up", function()
-	local win = hs.window.focusedWindow()
-	if not win then
-		return
-	end
-	win:moveToUnit({ 0.5, 0.5, 0.5, 0.5 })
 end)
 
 -- =============================================================================
