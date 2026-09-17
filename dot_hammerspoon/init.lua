@@ -255,43 +255,6 @@ bindWithHelp({ "ctrl", "alt" }, "C", "ウィンドウ", "中央に70%サイズ�
 end)
 
 -- =============================================================================
--- アプリ切り替え (alt + キー)
--- アプリにフォーカスした際、マウスカーソルもそのウィンドウ中央に移動する
--- =============================================================================
-local appShortcuts = {
-	{ key = "g", app = "Google Chrome" },
-	{ key = "t", app = "WezTerm" },
-	{ key = "s", app = "Slack" },
-	{ key = "o", app = "Obsidian" },
-	{ key = "f", app = "Finder" },
-	{ key = "d", app = "Discord" },
-	{ key = "i", app = "Visual Studio Code" },
-	{ key = "b", app = "DBeaver" },
-	{ key = "c", app = "Claude" },
-	{ key = "a", app = "Codex" },
-	{ key = "z", app = "zoom.us" },
-	{ key = "u", app = "Orca" },
-	{ key = "k", app = "Amical" },
-}
-
-local function moveMouseToWindow(win)
-	if win and win:isVisible() then
-		local frame = win:frame()
-		hs.mouse.absolutePosition({
-			x = frame.x + frame.w / 2,
-			y = frame.y + frame.h / 2,
-		})
-	end
-end
-
-for _, shortcut in ipairs(appShortcuts) do
-	bindWithHelp({ "alt" }, shortcut.key, "アプリ", shortcut.app .. "を開く", function()
-		hs.application.launchOrFocus(shortcut.app)
-		moveMouseToWindow(hs.window.focusedWindow())
-	end, { searchTerms = shortcut.app })
-end
-
--- =============================================================================
 -- URLランチャー (alt + 数字, alt + L)
 -- =============================================================================
 local pinnedLinks = {
@@ -716,17 +679,19 @@ urlLauncher:rightClickCallback(function(row)
 	end
 end)
 
-bindWithHelp({ "alt" }, "L", "URL", "URLランチャーを開く", function()
+local function showURLLauncher()
 	urlLauncher:query("")
 	local historyError = refreshURLLauncherChoices()
 	urlLauncher:show()
 	if historyError then
 		hs.alert.show(historyError)
 	end
-end)
+end
+
+bindWithHelp({ "alt" }, "L", "URL", "URLランチャーを開く", showURLLauncher)
 
 -- =============================================================================
--- ウィンドウ選択 (alt + P/,/.)
+-- ウィンドウ選択 (alt + W/,/.)
 -- =============================================================================
 local function windowLabel(win)
 	local app = win:application()
@@ -763,7 +728,7 @@ end)
 windowChooser:placeholderText("ウィンドウを検索...")
 windowChooser:searchSubText(true)
 
-bindWithHelp({ "alt" }, "P", "ウィンドウ切り替え", "ウィンドウ検索を開く", function()
+local function showWindowSwitcher()
 	local choices = buildWindowChoices()
 	if #choices == 0 then
 		hs.alert.show("切り替え可能なウィンドウがありません")
@@ -772,7 +737,9 @@ bindWithHelp({ "alt" }, "P", "ウィンドウ切り替え", "ウィンドウ検�
 	windowChooser:query("")
 	windowChooser:choices(choices)
 	windowChooser:show()
-end)
+end
+
+bindWithHelp({ "alt" }, "W", "ウィンドウ切り替え", "ウィンドウ検索を開く", showWindowSwitcher)
 
 -- よく戻るウィンドウを記憶し、任意のアプリから復帰する
 local markedWindowID = nil
@@ -878,7 +845,38 @@ bindWithHelp({ "alt" }, "H", "ヘルプ", "Hammerspoonショートカット一�
 	searchTerms = { "ヘルプ", "一覧", "検索" },
 })
 
-hotkeyHelpMenubar = hs.menubar.new()
-hotkeyHelpMenubar:setTitle("⌨")
-hotkeyHelpMenubar:setTooltip("Hammerspoonショートカット一覧")
-hotkeyHelpMenubar:setClickCallback(showHotkeyHelp)
+-- =============================================================================
+-- アプリショートカットと統合パレット
+-- =============================================================================
+local AppShortcuts = require("modules.app_shortcuts")
+local CommandPalette = require("modules.command_palette")
+
+local appShortcutManager = AppShortcuts.new({
+	settingsKey = "appShortcutBindingsV1",
+	initializedKey = "appShortcutBindingsV1Initialized",
+	reservedKeys = {
+		p = "Hammerspoon Palette",
+		w = "ウィンドウ検索",
+		l = "URLランチャー",
+		h = "ショートカット一覧",
+	},
+	showHelp = showHotkeyHelp,
+})
+
+local commandPalette = CommandPalette.new({
+	appShortcuts = appShortcutManager,
+	showWindowSwitcher = showWindowSwitcher,
+	showURLLauncher = showURLLauncher,
+})
+
+appShortcutManager:setPaletteCallback(function(currentApp)
+	commandPalette:show(currentApp)
+end)
+
+bindWithHelp({ "alt" }, "P", "パレット", "Hammerspoon Paletteを開く", function()
+	-- chooserを開く前に、現在前面にいるアプリを退避する。
+	local currentApp = appShortcutManager:captureFrontmostApp()
+	commandPalette:show(currentApp)
+end, { searchTerms = { "アプリ登録", "ウィンドウ", "URL", "管理" } })
+
+appShortcutManager:start()
