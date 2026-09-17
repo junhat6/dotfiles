@@ -17,14 +17,194 @@ local function reloadConfig(files)
 	end
 end
 
-hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
+configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig)
+configWatcher:start()
 hs.alert.show("Hammerspoon loaded")
+
+-- =============================================================================
+-- ショートカット登録とヘルプ
+-- =============================================================================
+local hotkeyCatalog = {}
+local registeredHotkeys = {}
+
+local modifierAliases = {
+	cmd = "cmd",
+	command = "cmd",
+	ctrl = "ctrl",
+	control = "ctrl",
+	alt = "alt",
+	option = "alt",
+	shift = "shift",
+}
+
+local modifierDisplayOrder = {
+	{ name = "cmd", symbol = "⌘" },
+	{ name = "ctrl", symbol = "⌃" },
+	{ name = "alt", symbol = "⌥" },
+	{ name = "shift", symbol = "⇧" },
+}
+
+local keySymbols = {
+	left = "←",
+	right = "→",
+	up = "↑",
+	down = "↓",
+	["return"] = "↩",
+	space = "Space",
+}
+
+local function normalizedModifiers(mods)
+	local normalized = {}
+	for _, modifier in ipairs(mods) do
+		local canonicalName = modifierAliases[modifier:lower()]
+		if canonicalName then
+			normalized[canonicalName] = true
+		end
+	end
+	return normalized
+end
+
+local function formatHotkey(mods, key)
+	local modifiers = normalizedModifiers(mods)
+	local parts = {}
+	for _, modifier in ipairs(modifierDisplayOrder) do
+		if modifiers[modifier.name] then
+			table.insert(parts, modifier.symbol)
+		end
+	end
+
+	local normalizedKey = tostring(key):lower()
+	table.insert(parts, keySymbols[normalizedKey] or tostring(key):upper())
+	return table.concat(parts)
+end
+
+local function hotkeyIdentifier(mods, key)
+	return formatHotkey(mods, key) .. ":" .. tostring(key):lower()
+end
+
+local function bindWithHelp(mods, key, category, description, action, options)
+	local identifier = hotkeyIdentifier(mods, key)
+	if registeredHotkeys[identifier] then
+		error("Duplicate hotkey registration: " .. formatHotkey(mods, key))
+	end
+
+	registeredHotkeys[identifier] = true
+	hs.hotkey.bind(mods, key, action)
+	table.insert(hotkeyCatalog, {
+		mods = mods,
+		key = key,
+		category = category,
+		description = description,
+		action = action,
+		searchTerms = options and options.searchTerms or nil,
+	})
+end
+
+local function resolveHelpValue(value, fallback)
+	if type(value) ~= "function" then
+		return tostring(value or fallback or "")
+	end
+
+	local succeeded, result = pcall(value)
+	if succeeded and result ~= nil then
+		return tostring(result)
+	end
+	return fallback or ""
+end
+
+local function helpSearchTerms(entry)
+	local value = entry.searchTerms
+	if type(value) == "function" then
+		local succeeded, result = pcall(value)
+		value = succeeded and result or nil
+	end
+	if type(value) == "table" then
+		return table.concat(value, " ")
+	end
+	return type(value) == "string" and value or ""
+end
+
+local function buildHotkeyHelpChoices()
+	local choices = {}
+	for catalogIndex, entry in ipairs(hotkeyCatalog) do
+		local description = resolveHelpValue(entry.description, "説明を取得できませんでした")
+		local searchTerms = helpSearchTerms(entry)
+		local subText = entry.category
+		if searchTerms ~= "" then
+			subText = subText .. " — " .. searchTerms
+		end
+		table.insert(choices, {
+			text = formatHotkey(entry.mods, entry.key) .. "  " .. description,
+			subText = subText,
+			catalogIndex = catalogIndex,
+		})
+	end
+	return choices
+end
+
+local hotkeyHelpContext = nil
+local hotkeyHelpActionTimer = nil
+
+local function runHelpAction(action)
+	local context = hotkeyHelpContext
+	hotkeyHelpContext = nil
+	if not context then
+		action()
+		return
+	end
+
+	local restoredWindow = false
+	if context.window then
+		local succeeded, windowID = pcall(function()
+			return context.window:id()
+		end)
+		if succeeded and windowID then
+			local currentWindow = hs.window.get(windowID)
+			if currentWindow then
+				currentWindow:focus()
+				restoredWindow = true
+			end
+		end
+	end
+	if not restoredWindow and context.application then
+		pcall(function()
+			context.application:activate(true)
+		end)
+	end
+
+	hotkeyHelpActionTimer = hs.timer.doAfter(0.15, function()
+		hotkeyHelpActionTimer = nil
+		action()
+	end)
+end
+
+local hotkeyHelpChooser = hs.chooser.new(function(choice)
+	local entry = choice and hotkeyCatalog[choice.catalogIndex]
+	if entry then
+		runHelpAction(entry.action)
+	else
+		hotkeyHelpContext = nil
+	end
+end)
+
+hotkeyHelpChooser:placeholderText("ショートカットを検索...")
+hotkeyHelpChooser:searchSubText(true)
+
+local function showHotkeyHelp()
+	hotkeyHelpContext = {
+		window = hs.window.focusedWindow(),
+		application = hs.application.frontmostApplication(),
+	}
+	hotkeyHelpChooser:query("")
+	hotkeyHelpChooser:choices(buildHotkeyHelpChoices())
+	hotkeyHelpChooser:show()
+end
 
 -- =============================================================================
 -- ウィンドウ管理 (ctrl + alt + 矢印/Enter, ctrl + alt + M)
 -- =============================================================================
 -- 次のモニターへ移動
-hs.hotkey.bind({ "ctrl", "alt" }, "M", function()
+bindWithHelp({ "ctrl", "alt" }, "M", "ウィンドウ", "次のモニターへ移動", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -39,7 +219,7 @@ hs.hotkey.bind({ "ctrl", "alt" }, "M", function()
 end)
 
 -- 左半分
-hs.hotkey.bind({ "ctrl", "alt" }, "Left", function()
+bindWithHelp({ "ctrl", "alt" }, "Left", "ウィンドウ", "左半分に配置", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -48,7 +228,7 @@ hs.hotkey.bind({ "ctrl", "alt" }, "Left", function()
 end)
 
 -- 右半分
-hs.hotkey.bind({ "ctrl", "alt" }, "Right", function()
+bindWithHelp({ "ctrl", "alt" }, "Right", "ウィンドウ", "右半分に配置", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -57,7 +237,7 @@ hs.hotkey.bind({ "ctrl", "alt" }, "Right", function()
 end)
 
 -- 最大化
-hs.hotkey.bind({ "ctrl", "alt" }, "Return", function()
+bindWithHelp({ "ctrl", "alt" }, "Return", "ウィンドウ", "最大化", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -66,7 +246,7 @@ hs.hotkey.bind({ "ctrl", "alt" }, "Return", function()
 end)
 
 -- 中央配置 (70%サイズ)
-hs.hotkey.bind({ "ctrl", "alt" }, "C", function()
+bindWithHelp({ "ctrl", "alt" }, "C", "ウィンドウ", "中央に70%サイズで配置", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -105,10 +285,10 @@ local function moveMouseToWindow(win)
 end
 
 for _, shortcut in ipairs(appShortcuts) do
-	hs.hotkey.bind({ "alt" }, shortcut.key, function()
+	bindWithHelp({ "alt" }, shortcut.key, "アプリ", shortcut.app .. "を開く", function()
 		hs.application.launchOrFocus(shortcut.app)
 		moveMouseToWindow(hs.window.focusedWindow())
-	end)
+	end, { searchTerms = shortcut.app })
 end
 
 -- =============================================================================
@@ -232,9 +412,9 @@ end tell
 end
 
 for _, link in ipairs(pinnedLinks) do
-	hs.hotkey.bind({ "alt" }, link.key, function()
+	bindWithHelp({ "alt" }, link.key, "URL", link.title .. "を開く", function()
 		openURLInChrome(link.url)
-	end)
+	end, { searchTerms = { link.title, link.url, "固定URL" } })
 end
 
 local function registerCurrentChromeTab(slotKey)
@@ -276,7 +456,13 @@ end
 -- 動的スロットのホットキーは初期化時に一度だけ登録する。
 for slotNumber = 2, 9 do
 	local slotKey = tostring(slotNumber)
-	hs.hotkey.bind({ "alt" }, slotKey, function()
+	bindWithHelp({ "alt" }, slotKey, "URL", function()
+		local slot = loadDynamicSlots()[slotKey]
+		if slot then
+			return "「" .. slot.title .. "」を開く"
+		end
+		return "URLスロット" .. slotKey .. "は未登録"
+	end, function()
 		local slot = loadDynamicSlots()[slotKey]
 		if not slot then
 			hs.alert.show(
@@ -285,11 +471,16 @@ for slotNumber = 2, 9 do
 			return
 		end
 		openURLInChrome(slot.url)
-	end)
+	end, {
+		searchTerms = function()
+			local slot = loadDynamicSlots()[slotKey]
+			return slot and { "URLスロット" .. slotKey, slot.title, slot.url } or { "URLスロット" .. slotKey, "未登録" }
+		end,
+	})
 
-	hs.hotkey.bind({ "alt", "shift" }, slotKey, function()
+	bindWithHelp({ "alt", "shift" }, slotKey, "URL", "現在のChromeタブをURLスロット" .. slotKey .. "へ登録", function()
 		registerCurrentChromeTab(slotKey)
-	end)
+	end, { searchTerms = { "Chrome", "URLスロット" .. slotKey, "登録", "上書き" } })
 end
 
 local function shellQuote(value)
@@ -525,7 +716,7 @@ urlLauncher:rightClickCallback(function(row)
 	end
 end)
 
-hs.hotkey.bind({ "alt" }, "L", function()
+bindWithHelp({ "alt" }, "L", "URL", "URLランチャーを開く", function()
 	urlLauncher:query("")
 	local historyError = refreshURLLauncherChoices()
 	urlLauncher:show()
@@ -572,7 +763,7 @@ end)
 windowChooser:placeholderText("ウィンドウを検索...")
 windowChooser:searchSubText(true)
 
-hs.hotkey.bind({ "alt" }, "P", function()
+bindWithHelp({ "alt" }, "P", "ウィンドウ切り替え", "ウィンドウ検索を開く", function()
 	local choices = buildWindowChoices()
 	if #choices == 0 then
 		hs.alert.show("切り替え可能なウィンドウがありません")
@@ -586,7 +777,7 @@ end)
 -- よく戻るウィンドウを記憶し、任意のアプリから復帰する
 local markedWindowID = nil
 
-hs.hotkey.bind({ "alt" }, ",", function()
+bindWithHelp({ "alt" }, ",", "ウィンドウ切り替え", "現在のウィンドウを記憶", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -595,7 +786,7 @@ hs.hotkey.bind({ "alt" }, ",", function()
 	hs.alert.show("記憶しました: " .. windowLabel(win))
 end)
 
-hs.hotkey.bind({ "alt" }, ".", function()
+bindWithHelp({ "alt" }, ".", "ウィンドウ切り替え", "記憶したウィンドウへ戻る", function()
 	local markedWindow = markedWindowID and hs.window.get(markedWindowID)
 	if not markedWindow then
 		markedWindowID = nil
@@ -677,7 +868,17 @@ clipboardChooser:queryChangedCallback(function(query)
 end)
 
 -- 履歴を表示
-hs.hotkey.bind({ "cmd", "shift" }, "V", function()
+bindWithHelp({ "cmd", "shift" }, "V", "クリップボード", "クリップボード履歴を開く", function()
 	clipboardChooser:choices(buildChoices(""))
 	clipboardChooser:show()
 end)
+
+-- Alt + H自体を忘れても開けるよう、メニューバーにも入口を置く。
+bindWithHelp({ "alt" }, "H", "ヘルプ", "Hammerspoonショートカット一覧を開く", showHotkeyHelp, {
+	searchTerms = { "ヘルプ", "一覧", "検索" },
+})
+
+hotkeyHelpMenubar = hs.menubar.new()
+hotkeyHelpMenubar:setTitle("⌨")
+hotkeyHelpMenubar:setTooltip("Hammerspoonショートカット一覧")
+hotkeyHelpMenubar:setClickCallback(showHotkeyHelp)
