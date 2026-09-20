@@ -254,6 +254,192 @@ bindWithHelp({ "ctrl", "alt" }, "C", "ウィンドウ", "中央に70%サイズ�
 	win:moveToUnit({ 0.15, 0.15, 0.7, 0.7 })
 end)
 
+-- フルスクリーン用Spaceを除き、Mission Control上のデスクトップ順で返す。
+local function userSpacesForScreen(screen)
+	local screenSpaces, errorMessage = hs.spaces.spacesForScreen(screen)
+	if not screenSpaces then
+		return nil, errorMessage
+	end
+
+	local userSpaces = {}
+	for _, spaceID in ipairs(screenSpaces) do
+		local spaceType = hs.spaces.spaceType(spaceID)
+		if spaceType == "user" then
+			table.insert(userSpaces, spaceID)
+		end
+	end
+	return userSpaces
+end
+
+local windowSpaceMoveInProgress = false
+
+local function desktopShortcutKey(desktopNumber)
+	if desktopNumber == 10 then
+		return "0"
+	end
+	return tostring(desktopNumber)
+end
+
+local function desktopNumberForWindow(win, userSpaces)
+	local currentSpaces = hs.spaces.windowSpaces(win)
+	if not currentSpaces then
+		return nil
+	end
+
+	for desktopNumber, userSpaceID in ipairs(userSpaces) do
+		for _, currentSpaceID in ipairs(currentSpaces) do
+			if currentSpaceID == userSpaceID then
+				return desktopNumber
+			end
+		end
+	end
+	return nil
+end
+
+local function windowDragPoint(win)
+	local zoomButton = win:zoomButtonRect()
+	if zoomButton and zoomButton.w > 0 and zoomButton.h > 0 then
+		return {
+			x = zoomButton.x + zoomButton.w + 10,
+			y = zoomButton.y + zoomButton.h / 2,
+		}
+	end
+
+	local frame = win:frame()
+	return {
+		x = frame.x + math.min(100, frame.w / 2),
+		y = frame.y + 12,
+	}
+end
+
+local function waitForMoveHotkeyRelease(action, attempts)
+	attempts = attempts or 0
+	local modifiers = hs.eventtap.checkKeyboardModifiers()
+	if not modifiers.ctrl and not modifiers.shift then
+		action()
+		return
+	end
+	if attempts >= 100 then
+		windowSpaceMoveInProgress = false
+		hs.alert.show("キーを離してからもう一度実行してください")
+		return
+	end
+
+	hs.timer.doAfter(0.03, function()
+		waitForMoveHotkeyRelease(action, attempts + 1)
+	end)
+end
+
+-- macOS 15ではmoveWindowToSpaceが成功を返しても移動しないため、
+-- タイトルバーを掴んだままmacOS標準のデスクトップ切替を送って移動する。
+local function dragWindowToDesktop(win, targetDesktopNumber, targetSpaceID)
+	local targetShortcutKey = desktopShortcutKey(targetDesktopNumber)
+	local targetShortcut = hs.hotkey.systemAssigned({ "ctrl" }, targetShortcutKey)
+	if not targetShortcut or not targetShortcut.enabled then
+		windowSpaceMoveInProgress = false
+		hs.alert.show("システム設定でControl + " .. targetShortcutKey .. "のデスクトップ切替を有効にしてください")
+		return
+	end
+
+	local originalMousePosition = hs.mouse.absolutePosition()
+	local dragPoint = windowDragPoint(win)
+	local draggedPoint = { x = dragPoint.x + 1, y = dragPoint.y }
+
+	hs.mouse.absolutePosition(dragPoint)
+	hs.eventtap.event.newMouseEvent(hs.eventtap.event.types.leftMouseDown, dragPoint):post()
+	hs.eventtap.event.newMouseEvent(hs.eventtap.event.types.leftMouseDragged, draggedPoint):post()
+
+	hs.timer.doAfter(0.1, function()
+		hs.eventtap.keyStroke({ "ctrl" }, targetShortcutKey, 0)
+
+		-- デスクトップ切替アニメーションが終わるまでタイトルバーを掴み続ける。
+		hs.timer.doAfter(0.8, function()
+			local releasePoint = hs.mouse.absolutePosition()
+			hs.eventtap.event.newMouseEvent(hs.eventtap.event.types.leftMouseUp, releasePoint):post()
+			hs.mouse.absolutePosition(originalMousePosition)
+
+			hs.timer.doAfter(0.15, function()
+				local moved = false
+				local currentSpaces = hs.spaces.windowSpaces(win)
+				for _, currentSpaceID in ipairs(currentSpaces or {}) do
+					if currentSpaceID == targetSpaceID then
+						moved = true
+						break
+					end
+				end
+
+				windowSpaceMoveInProgress = false
+				if moved then
+					hs.alert.show("デスクトップ" .. targetDesktopNumber .. "へ移動しました")
+				else
+					hs.alert.show("デスクトップ" .. targetDesktopNumber .. "へ移動できませんでした")
+				end
+			end)
+		end)
+	end)
+end
+
+local function moveFocusedWindowToDesktop(desktopNumber)
+	if windowSpaceMoveInProgress then
+		hs.alert.show("別のウィンドウを移動中です")
+		return
+	end
+
+	local win = hs.window.focusedWindow()
+	if not win then
+		hs.alert.show("移動するウィンドウがありません")
+		return
+	end
+	if win:isFullScreen() then
+		hs.alert.show("フルスクリーンのウィンドウは移動できません")
+		return
+	end
+
+	local screen = win:screen()
+	local userSpaces, errorMessage = userSpacesForScreen(screen)
+	if not userSpaces then
+		hs.alert.show("デスクトップの一覧を取得できませんでした")
+		print("デスクトップ一覧の取得に失敗: " .. tostring(errorMessage))
+		return
+	end
+
+	local targetSpaceID = userSpaces[desktopNumber]
+	if not targetSpaceID then
+		hs.alert.show("デスクトップ" .. desktopNumber .. "がありません")
+		return
+	end
+
+	local sourceDesktopNumber = desktopNumberForWindow(win, userSpaces)
+	if not sourceDesktopNumber then
+		hs.alert.show("現在のデスクトップを特定できませんでした")
+		return
+	end
+	if sourceDesktopNumber == desktopNumber then
+		hs.alert.show("すでにデスクトップ" .. desktopNumber .. "にあります")
+		return
+	end
+
+	windowSpaceMoveInProgress = true
+	waitForMoveHotkeyRelease(function()
+		dragWindowToDesktop(win, desktopNumber, targetSpaceID)
+	end)
+end
+
+-- Ctrl + Shift + 数字で、フォーカス中のウィンドウを同じ画面のデスクトップへ移動する。
+for desktopNumber = 1, 9 do
+	local targetDesktopNumber = desktopNumber
+	bindWithHelp(
+		{ "ctrl", "shift" },
+		tostring(targetDesktopNumber),
+		"ウィンドウ",
+		"デスクトップ" .. targetDesktopNumber .. "へ移動",
+		function()
+			moveFocusedWindowToDesktop(targetDesktopNumber)
+		end,
+		{ searchTerms = { "Mission Control", "Space", "デスクトップ移動" } }
+	)
+end
+
 -- =============================================================================
 -- URLランチャー (alt + 数字, alt + L)
 -- =============================================================================
