@@ -82,14 +82,7 @@ local function hotkeyIdentifier(mods, key)
 	return formatHotkey(mods, key) .. ":" .. tostring(key):lower()
 end
 
-local function bindWithHelp(mods, key, category, description, action, options)
-	local identifier = hotkeyIdentifier(mods, key)
-	if registeredHotkeys[identifier] then
-		error("Duplicate hotkey registration: " .. formatHotkey(mods, key))
-	end
-
-	registeredHotkeys[identifier] = true
-	hs.hotkey.bind(mods, key, action)
+local function addHelpEntry(mods, key, category, description, action, options)
 	table.insert(hotkeyCatalog, {
 		mods = mods,
 		key = key,
@@ -98,6 +91,17 @@ local function bindWithHelp(mods, key, category, description, action, options)
 		action = action,
 		searchTerms = options and options.searchTerms or nil,
 	})
+end
+
+local function bindWithHelp(mods, key, category, description, action, options)
+	local identifier = hotkeyIdentifier(mods, key)
+	if registeredHotkeys[identifier] then
+		error("Duplicate hotkey registration: " .. formatHotkey(mods, key))
+	end
+
+	registeredHotkeys[identifier] = true
+	hs.hotkey.bind(mods, key, action)
+	addHelpEntry(mods, key, category, description, action, options)
 end
 
 local function resolveHelpValue(value, fallback)
@@ -455,6 +459,12 @@ local chromeBundleID = "com.google.Chrome"
 local maxChromeHistoryChoices = 50
 local dynamicSlotsSettingsKey = "urlLauncherDynamicSlotsV1"
 local chromeEpochOffsetSeconds = 11644473600
+local ChromeTabs = require("modules.chrome_tabs")
+local chromeTabs = ChromeTabs.new({ bundleID = chromeBundleID, timeoutSeconds = 5 })
+local urlLauncherPreferredWindowID = nil
+local urlLauncherSnapshot = nil
+local urlLauncherTabsLoading = false
+local urlLauncherRequestID = 0
 
 local function isWebURL(url)
 	return type(url) == "string" and (url:match("^http://") or url:match("^https://"))
@@ -528,36 +538,8 @@ local function clearDynamicSlot(slotKey)
 	return true
 end
 
-local function escapeAppleScriptString(value)
-	return value:gsub("\\", "\\\\"):gsub('"', '\\"')
-end
-
--- 現在のChromeウィンドウに新しいタブを作る。失敗時もChromeを指定して開く。
-local function openURLInChrome(url)
-	local escapedURL = escapeAppleScriptString(url)
-	local script = string.format([[
-tell application "Google Chrome"
-	activate
-	if (count of windows) is 0 then
-		set newWindow to make new window
-		set URL of active tab of newWindow to "%s"
-	else
-		tell front window
-			make new tab at end of tabs with properties {URL:"%s"}
-			set active tab index to (count of tabs)
-		end tell
-	end if
-end tell
-]], escapedURL, escapedURL)
-
-	local succeeded = hs.osascript.applescript(script)
-	if succeeded then
-		return
-	end
-
-	if not hs.urlevent.openURLWithBundle(url, chromeBundleID) then
-		hs.alert.show("Google ChromeでURLを開けませんでした")
-	end
+local function openURLInChrome(url, preferredWindowID)
+	chromeTabs:openURL(url, preferredWindowID)
 end
 
 for _, link in ipairs(pinnedLinks) do
@@ -567,39 +549,17 @@ for _, link in ipairs(pinnedLinks) do
 end
 
 local function registerCurrentChromeTab(slotKey)
-	local frontmostApplication = hs.application.frontmostApplication()
-	if not frontmostApplication or frontmostApplication:bundleID() ~= chromeBundleID then
-		hs.alert.show("Chromeで登録したいページを表示してから実行してください")
-		return
-	end
-
-	local script = [[
-tell application "Google Chrome"
-	if (count of windows) is 0 then
-		return {"", ""}
-	end if
-	set currentTab to active tab of front window
-	return {title of currentTab, URL of currentTab}
-end tell
-]]
-	local executed, succeeded, result = pcall(hs.osascript.applescript, script)
-	if not executed or not succeeded or type(result) ~= "table" then
-		hs.alert.show("Chromeの現在のタブを取得できませんでした")
-		return
-	end
-
-	local title = type(result[1]) == "string" and result[1] or ""
-	local url = type(result[2]) == "string" and result[2] or ""
-	if url == "" then
-		hs.alert.show("Chromeに登録できるタブがありません")
-		return
-	end
-	if not isWebURL(url) then
-		hs.alert.show("http:// または https:// のページだけ登録できます")
-		return
-	end
-
-	saveDynamicSlot(slotKey, title, url)
+	chromeTabs:currentTab(function(tab, errorMessage)
+		if not tab then
+			hs.alert.show(errorMessage)
+			return
+		end
+		if not isWebURL(tab.url) then
+			hs.alert.show("http:// または https:// のページだけ登録できます")
+			return
+		end
+		saveDynamicSlot(slotKey, tab.title, tab.url)
+	end)
 end
 
 -- 動的スロットのホットキーは初期化時に一度だけ登録する。
@@ -721,7 +681,7 @@ LIMIT 100;
 			if not hiddenURLs[row.url] then
 				table.insert(choices, {
 					text = row.title and row.title ~= "" and row.title or row.url,
-					subText = "30日 "
+					subText = "履歴 — 30日 "
 						.. row.visits_30d
 						.. "回・7日 "
 						.. row.visits_7d
@@ -749,13 +709,40 @@ LIMIT 100;
 	return choices
 end
 
-local function urlLauncherChoices()
+local function chromeWindowLabel(tab)
+	local name = tab.windowName ~= "" and tab.windowName or "Chromeウィンドウ"
+	return name .. " (ID " .. tab.windowID .. ")"
+end
+
+local function urlLauncherChoices(snapshot, tabsLoading)
 	local choices = {}
 	local visibleURLs = {}
+	if snapshot then
+		for _, tab in ipairs(snapshot.tabs) do
+			if type(tab.url) == "string" and tab.url ~= "" then
+				table.insert(choices, {
+					text = tab.title ~= "" and tab.title or tab.url,
+					subText = "開いている — " .. chromeWindowLabel(tab) .. " — " .. tab.url,
+					title = tab.title ~= "" and tab.title or tab.url,
+					url = tab.url,
+					source = "open",
+					tab = tab,
+				})
+				visibleURLs[tab.url] = true
+			end
+		end
+	elseif tabsLoading then
+		table.insert(choices, {
+			text = "開いているタブを取得中...",
+			subText = "Chromeが応答しなくても登録済みURLと履歴は利用できます",
+			valid = false,
+		})
+	end
+
 	for _, link in ipairs(pinnedLinks) do
 		table.insert(choices, {
 			text = "⌥" .. link.key .. "  " .. link.title,
-			subText = "固定 (Alt + " .. link.key .. ") — " .. link.url,
+			subText = "登録済み・固定 (Alt + " .. link.key .. ") — " .. link.url,
 			title = link.title,
 			url = link.url,
 			source = "pinned",
@@ -771,7 +758,7 @@ local function urlLauncherChoices()
 			local savedAt = slot.savedAt and os.date("%Y-%m-%d %H:%M", slot.savedAt) or "日時不明"
 			table.insert(choices, {
 				text = "⌥" .. slotKey .. "  " .. slot.title,
-				subText = "Alt + " .. slotKey .. " — " .. slot.url .. " — 登録: " .. savedAt,
+				subText = "登録済み (Alt + " .. slotKey .. ") — " .. slot.url .. " — 登録: " .. savedAt,
 				title = slot.title,
 				url = slot.url,
 				source = "dynamic",
@@ -799,8 +786,14 @@ local function urlLauncherChoices()
 end
 
 local urlLauncher = hs.chooser.new(function(choice)
-	if choice and choice.url then
-		openURLInChrome(choice.url)
+	if choice and choice.tab then
+		chromeTabs:focusTab(choice.tab, function(succeeded, errorMessage)
+			if not succeeded then
+				hs.alert.show(errorMessage)
+			end
+		end)
+	elseif choice and choice.url then
+		openURLInChrome(choice.url, urlLauncherPreferredWindowID)
 	end
 end)
 
@@ -815,7 +808,7 @@ urlLauncher:invalidCallback(function(choice)
 end)
 
 local function refreshURLLauncherChoices()
-	local choices, historyError = urlLauncherChoices()
+	local choices, historyError = urlLauncherChoices(urlLauncherSnapshot, urlLauncherTabsLoading)
 	urlLauncher:choices(choices)
 	return historyError
 end
@@ -833,7 +826,21 @@ urlLauncher:rightClickCallback(function(row)
 	end
 
 	local menuItems = {}
+	if type(choice.url) == "string" and choice.url ~= "" then
+		table.insert(menuItems, {
+			title = "新しいタブで開く",
+			fn = function()
+				chromeTabs:openNewTab(choice.url, urlLauncherPreferredWindowID, function(succeeded, errorMessage)
+					if not succeeded then
+						hs.alert.show(errorMessage)
+					end
+				end)
+			end,
+		})
+	end
+
 	if isWebURL(choice.url) then
+		table.insert(menuItems, { title = "-" })
 		for slotNumber = 2, 9 do
 			local slotKey = tostring(slotNumber)
 			table.insert(menuItems, {
@@ -866,12 +873,34 @@ urlLauncher:rightClickCallback(function(row)
 end)
 
 local function showURLLauncher()
+	urlLauncherRequestID = urlLauncherRequestID + 1
+	local requestID = urlLauncherRequestID
+	urlLauncherSnapshot = nil
+	urlLauncherPreferredWindowID = nil
+	urlLauncherTabsLoading = chromeTabs:isRunning()
 	urlLauncher:query("")
 	local historyError = refreshURLLauncherChoices()
 	urlLauncher:show()
 	if historyError then
 		hs.alert.show(historyError)
 	end
+
+	chromeTabs:listTabs(function(snapshot, errorMessage)
+		if requestID ~= urlLauncherRequestID then
+			return
+		end
+		urlLauncherTabsLoading = false
+		if snapshot then
+			urlLauncherSnapshot = snapshot
+			urlLauncherPreferredWindowID = snapshot.preferredWindowID
+		else
+			print("Chromeタブ一覧の取得に失敗: " .. tostring(errorMessage))
+			hs.alert.show("開いているChromeタブを取得できませんでした")
+		end
+		if urlLauncher:isVisible() then
+			refreshURLLauncherChoices()
+		end
+	end)
 end
 
 bindWithHelp({ "alt" }, "L", "URL", "URLランチャーを開く", showURLLauncher)
@@ -1026,6 +1055,18 @@ bindWithHelp({ "cmd", "shift" }, "V", "クリップボード", "クリップボ�
 	clipboardChooser:show()
 end)
 
+-- =============================================================================
+-- Cmd + Q 長押し終了保護
+-- =============================================================================
+local HoldToQuit = require("modules.hold_to_quit")
+local holdToQuitDuration = 0.8
+local holdToQuit = HoldToQuit.new({ duration = holdToQuitDuration }):start()
+
+-- ヘルプから選択しても終了せず、操作方法だけを表示する。
+addHelpEntry({ "cmd" }, "Q", "アプリ終了", "0.8秒長押しでアプリを終了", function()
+	hs.alert.show("終了するには⌘Qを0.8秒長押し")
+end, { searchTerms = { "長押し", "誤操作防止", "HoldToQuit" } })
+
 -- Alt + H自体を忘れても開けるよう、メニューバーにも入口を置く。
 bindWithHelp({ "alt" }, "H", "ヘルプ", "Hammerspoonショートカット一覧を開く", showHotkeyHelp, {
 	searchTerms = { "ヘルプ", "一覧", "検索" },
@@ -1066,3 +1107,8 @@ bindWithHelp({ "alt" }, "P", "パレット", "Hammerspoon Paletteを開く", fun
 end, { searchTerms = { "アプリ登録", "ウィンドウ", "URL", "管理" } })
 
 appShortcutManager:start()
+
+hs.shutdownCallback = function()
+	holdToQuit:stop()
+	chromeTabs:stop()
+end
