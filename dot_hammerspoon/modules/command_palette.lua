@@ -6,6 +6,7 @@ function CommandPalette.new(options)
 	self.appShortcuts = options.appShortcuts
 	self.showWindowSwitcher = options.showWindowSwitcher
 	self.showURLLauncher = options.showURLLauncher
+	self.showGitHubRepos = options.showGitHubRepos
 	self.currentApp = nil
 	self.chooser = hs.chooser.new(function(choice)
 		if not choice then
@@ -21,6 +22,8 @@ function CommandPalette.new(options)
 			self.showWindowSwitcher()
 		elseif choice.actionID == "urlLauncher" then
 			self.showURLLauncher()
+		elseif choice.actionID == "githubRepos" then
+			self.showGitHubRepos()
 		elseif choice.actionID == "launch" and choice.key then
 			local binding = self.appShortcuts:loadBindings()[choice.key]
 			if binding then
@@ -60,6 +63,11 @@ function CommandPalette:buildChoices(currentApp)
 			text = "URLを検索",
 			subText = "Alt + L",
 			actionID = "urlLauncher",
+		},
+		{
+			text = "GitHubリポジトリを検索",
+			subText = "Ctrl + Alt + G",
+			actionID = "githubRepos",
 		},
 		{
 			text = "登録済みアプリの一覧",

@@ -1077,6 +1077,19 @@ bindWithHelp({ "alt" }, "H", "ヘルプ", "Hammerspoonショートカット一�
 -- =============================================================================
 local AppShortcuts = require("modules.app_shortcuts")
 local CommandPalette = require("modules.command_palette")
+local GitHubRepos = require("modules.github_repos")
+
+local githubRepos = GitHubRepos.new({
+	ghPath = "/opt/homebrew/bin/gh",
+	cacheSeconds = 300,
+	openURL = function(url)
+		openURLInChrome(url)
+	end,
+})
+
+bindWithHelp({ "ctrl", "alt" }, "G", "GitHub", "GitHubリポジトリを検索", function()
+	githubRepos:show()
+end, { searchTerms = { "repository", "repo", "リポジトリ", "GitHub検索" } })
 
 local appShortcutManager = AppShortcuts.new({
 	settingsKey = "appShortcutBindingsV1",
@@ -1094,6 +1107,9 @@ local commandPalette = CommandPalette.new({
 	appShortcuts = appShortcutManager,
 	showWindowSwitcher = showWindowSwitcher,
 	showURLLauncher = showURLLauncher,
+	showGitHubRepos = function()
+		githubRepos:show()
+	end,
 })
 
 appShortcutManager:setPaletteCallback(function(currentApp)
@@ -1111,4 +1127,5 @@ appShortcutManager:start()
 hs.shutdownCallback = function()
 	holdToQuit:stop()
 	chromeTabs:stop()
+	githubRepos:stop()
 end
