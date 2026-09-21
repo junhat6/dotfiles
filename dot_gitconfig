@@ -16,6 +16,10 @@
 
     # プッシュ
     p = push origin HEAD
+
+    # pull 後の表示を比較する実験用（pl = pull、c = commits、pr = PRs）
+    plc = pull-summary commits
+    plpr = pull-summary prs
     
     # リセット
     undo = reset --soft HEAD^

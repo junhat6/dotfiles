@@ -1,0 +1,127 @@
+#!/bin/sh
+
+set -u
+
+usage() {
+  echo "使い方: git pull-summary {commits|prs} [git pull のオプション]" >&2
+}
+
+resolve_github_repo() {
+  branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+  remote=$(git config --get "branch.$branch.remote" 2>/dev/null || true)
+  [ -n "$remote" ] && [ "$remote" != "." ] || remote=origin
+  remote_url=$(git remote get-url "$remote" 2>/dev/null) || return 1
+
+  case "$remote_url" in
+    git@*:*/*)
+      github_host=${remote_url#git@}
+      github_host=${github_host%%:*}
+      github_repo=${remote_url#*:}
+      ;;
+    ssh://git@*/*)
+      github_host=${remote_url#ssh://git@}
+      github_host=${github_host%%/*}
+      github_repo=${remote_url#ssh://git@*/}
+      ;;
+    https://*/*)
+      github_host=${remote_url#https://}
+      github_host=${github_host%%/*}
+      github_repo=${remote_url#https://*/}
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  github_repo=${github_repo%.git}
+  github_owner=${github_repo%%/*}
+  github_name=${github_repo#*/}
+  [ -n "$github_owner" ] && [ "$github_name" != "$github_repo" ]
+}
+
+mode=${1:-}
+case "$mode" in
+  commits|prs)
+    shift
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+
+if [ "$mode" = prs ]; then
+  command -v gh >/dev/null 2>&1 || {
+    echo "git plpr には GitHub CLI（gh）が必要です" >&2
+    exit 1
+  }
+  resolve_github_repo || {
+    echo "GitHubリポジトリをリモートURLから特定できません" >&2
+    exit 1
+  }
+  gh auth token --hostname "$github_host" >/dev/null 2>&1 || {
+    echo "$github_host に gh でログインしてください" >&2
+    exit 1
+  }
+fi
+
+before=$(git rev-parse --verify HEAD 2>/dev/null) || {
+  git pull --no-stat "$@"
+  exit $?
+}
+
+git pull --no-stat "$@" || exit $?
+after=$(git rev-parse --verify HEAD 2>/dev/null) || exit 1
+
+[ "$before" != "$after" ] || exit 0
+
+commits=$(git rev-list --first-parent --reverse "$before..$after") || exit 1
+
+if [ "$mode" = commits ]; then
+  count=$(printf '%s\n' "$commits" | awk 'NF { count++ } END { print count + 0 }')
+  printf '\n取り込んだコミット（%s件）:\n' "$count"
+  git --no-pager log --first-parent --reverse --format='  - %s' "$before..$after"
+  exit $?
+fi
+
+query='query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){'
+index=0
+for commit in $commits; do
+  query="$query c$index:object(oid:\"$commit\"){... on Commit{messageHeadline associatedPullRequests(first:10){nodes{number title}}}}"
+  index=$((index + 1))
+done
+query="$query}}"
+
+summary=$(
+  gh api --hostname "$github_host" graphql \
+    -F owner="$github_owner" \
+    -F repo="$github_name" \
+    -f query="$query" \
+    --jq '
+      .data.repository
+      | to_entries
+      | reduce .[] as $commit (
+          {seen: {}, lines: []};
+          ($commit.value.associatedPullRequests.nodes // []) as $prs
+          | if ($prs | length) == 0 then
+              .lines += ["  - PRなし: \($commit.value.messageHeadline)"]
+            else
+              reduce $prs[] as $pr (.;
+                ($pr.number | tostring) as $number
+                | if .seen[$number] then .
+                  else
+                    .seen[$number] = true
+                    | .lines += ["  - #\($pr.number) \($pr.title)"]
+                  end
+              )
+            end
+        )
+      | .lines[]
+    '
+) || {
+  echo "PR情報を取得できませんでした（pullは完了しています）" >&2
+  exit 1
+}
+
+count=$(printf '%s\n' "$summary" | awk 'NF { count++ } END { print count + 0 }')
+printf '\n取り込んだPR・直接コミット（%s件）:\n%s\n' "$count" "$summary"
