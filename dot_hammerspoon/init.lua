@@ -205,6 +205,67 @@ local function showHotkeyHelp()
 end
 
 -- =============================================================================
+-- Capsomnia: 蓋を閉じている間のスリープ防止 (ctrl + alt + S)
+-- =============================================================================
+-- 蓋閉じ・バッテリー時の制御はCapsomniaに任せ、同アプリが監視するCaps Lockを操作する。
+-- hs.caffeinateやpmsetを別途操作すると、Capsomniaの状態と食い違うため使わない。
+local capsomniaCheckTimer = nil
+local capsomniaCheckTask = nil
+local capsomniaRequest = 0
+
+local function stopCapsomniaCheck()
+	capsomniaRequest = capsomniaRequest + 1
+	if capsomniaCheckTimer then
+		capsomniaCheckTimer:stop()
+		capsomniaCheckTimer = nil
+	end
+	if capsomniaCheckTask then
+		capsomniaCheckTask:terminate()
+		capsomniaCheckTask = nil
+	end
+end
+
+local function toggleCapsomnia()
+	if #hs.application.applicationsForBundleID("com.github.fuji-mak.capsomnia") == 0 then
+		hs.alert.show("Capsomniaを起動してから、もう一度切り替えてください")
+		return
+	end
+
+	stopCapsomniaCheck()
+	local request = capsomniaRequest
+	local enabled = not hs.hid.capslock.get()
+	if hs.hid.capslock.set(enabled) ~= enabled then
+		hs.alert.show("Caps Lockの状態を変更できませんでした")
+		return
+	end
+
+	-- Capsomniaの監視間隔は250ms。実際のスリープ設定を確認してから結果を表示する。
+	capsomniaCheckTimer = hs.timer.doAfter(1, function()
+		capsomniaCheckTimer = nil
+		capsomniaCheckTask = hs.task.new("/usr/bin/pmset", function(exitCode, stdout)
+			if request ~= capsomniaRequest then
+				return
+			end
+			capsomniaCheckTask = nil
+			local state = stdout:match("SleepDisabled%s+(%d+)")
+			if exitCode == 0 and state == (enabled and "1" or "0") then
+				hs.alert.show(enabled and "Capsomnia ON：蓋を閉じても処理を継続" or "Capsomnia OFF：通常のスリープに戻しました")
+			else
+				hs.alert.show("Capsomniaの切り替えを確認できません。メニューバーの状態を確認してください")
+			end
+		end, { "-g" })
+		if not capsomniaCheckTask or not capsomniaCheckTask:start() then
+			capsomniaCheckTask = nil
+			hs.alert.show("スリープ設定を確認できませんでした")
+		end
+	end)
+end
+
+bindWithHelp({ "ctrl", "alt" }, "S", "電源", "蓋閉じ時のスリープ防止を切り替え（Capsomnia）", toggleCapsomnia, {
+	searchTerms = { "移動", "スリープ", "Capsomnia", "Caps Lock", "keep awake" },
+})
+
+-- =============================================================================
 -- ウィンドウ管理 (ctrl + alt + 矢印/Enter, ctrl + alt + M)
 -- =============================================================================
 -- 次のモニターへ移動
@@ -1125,6 +1186,7 @@ end, { searchTerms = { "アプリ登録", "ウィンドウ", "URL", "管理" } }
 appShortcutManager:start()
 
 hs.shutdownCallback = function()
+	stopCapsomniaCheck()
 	holdToQuit:stop()
 	chromeTabs:stop()
 	githubRepos:stop()
