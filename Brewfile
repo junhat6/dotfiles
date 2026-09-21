@@ -110,7 +110,7 @@ cask "slack"
 # Open-source code editor
 cask "visual-studio-code"
 # GPU-accelerated cross-platform terminal emulator and multiplexer
-cask "wezterm"
+cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
 go "golang.org/x/tools/cmd/goimports"
