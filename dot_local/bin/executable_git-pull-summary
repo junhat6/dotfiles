@@ -63,26 +63,27 @@ if [ "$mode" = prs ]; then
     echo "$github_host に gh でログインしてください" >&2
     exit 1
   }
+  set -- --no-stat "$@"
 fi
 
 before=$(git rev-parse --verify HEAD 2>/dev/null) || {
-  git pull --no-stat "$@"
+  git pull "$@"
   exit $?
 }
 
-git pull --no-stat "$@" || exit $?
+git pull "$@" || exit $?
 after=$(git rev-parse --verify HEAD 2>/dev/null) || exit 1
 
 [ "$before" != "$after" ] || exit 0
 
-commits=$(git rev-list --first-parent --reverse "$before..$after") || exit 1
-
 if [ "$mode" = commits ]; then
-  count=$(printf '%s\n' "$commits" | awk 'NF { count++ } END { print count + 0 }')
+  count=$(git rev-list --count "$before..$after") || exit 1
   printf '\n取り込んだコミット（%s件）:\n' "$count"
-  git --no-pager log --first-parent --reverse --format='  - %s' "$before..$after"
+  git --no-pager log --reverse --format='  - %s' "$before..$after"
   exit $?
 fi
+
+commits=$(git rev-list --first-parent --reverse "$before..$after") || exit 1
 
 query='query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){'
 index=0
