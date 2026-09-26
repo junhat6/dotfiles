@@ -508,14 +508,6 @@ end
 -- =============================================================================
 -- URLランチャー (alt + 数字, alt + L)
 -- =============================================================================
-local pinnedLinks = {
-	{
-		key = "1",
-		title = "Idea Boost: Open PRs",
-		url = "https://github.com/engineer-first/idea-boost/pulls?q=sort%3Aupdated-desc+is%3Apr+state%3Aopen",
-	},
-}
-
 local chromeBundleID = "com.google.Chrome"
 local maxChromeHistoryChoices = 50
 local dynamicSlotsSettingsKey = "urlLauncherDynamicSlotsV1"
@@ -539,7 +531,7 @@ local function loadDynamicSlots()
 	end
 
 	local slots = {}
-	for slotNumber = 2, 9 do
+	for slotNumber = 1, 9 do
 		local slotKey = tostring(slotNumber)
 		local storedSlot = storedSlots[slotKey]
 		if type(storedSlot) == "table" and isWebURL(storedSlot.url) then
@@ -556,7 +548,7 @@ end
 
 local function saveDynamicSlot(slotKey, title, url)
 	slotKey = tostring(slotKey)
-	if not slotKey:match("^[2-9]$") or not isWebURL(url) then
+	if not slotKey:match("^[1-9]$") or not isWebURL(url) then
 		return false
 	end
 
@@ -579,7 +571,7 @@ end
 
 local function clearDynamicSlot(slotKey)
 	slotKey = tostring(slotKey)
-	if not slotKey:match("^[2-9]$") then
+	if not slotKey:match("^[1-9]$") then
 		return false
 	end
 
@@ -603,12 +595,6 @@ local function openURLInChrome(url, preferredWindowID)
 	chromeTabs:openURL(url, preferredWindowID)
 end
 
-for _, link in ipairs(pinnedLinks) do
-	bindWithHelp({ "alt" }, link.key, "URL", link.title .. "を開く", function()
-		openURLInChrome(link.url)
-	end, { searchTerms = { link.title, link.url, "固定URL" } })
-end
-
 local function registerCurrentChromeTab(slotKey)
 	chromeTabs:currentTab(function(tab, errorMessage)
 		if not tab then
@@ -624,7 +610,7 @@ local function registerCurrentChromeTab(slotKey)
 end
 
 -- 動的スロットのホットキーは初期化時に一度だけ登録する。
-for slotNumber = 2, 9 do
+for slotNumber = 1, 9 do
 	local slotKey = tostring(slotNumber)
 	bindWithHelp({ "alt" }, slotKey, "URL", function()
 		local slot = loadDynamicSlots()[slotKey]
@@ -800,19 +786,8 @@ local function urlLauncherChoices(snapshot, tabsLoading)
 		})
 	end
 
-	for _, link in ipairs(pinnedLinks) do
-		table.insert(choices, {
-			text = "⌥" .. link.key .. "  " .. link.title,
-			subText = "登録済み・固定 (Alt + " .. link.key .. ") — " .. link.url,
-			title = link.title,
-			url = link.url,
-			source = "pinned",
-		})
-		visibleURLs[link.url] = true
-	end
-
 	local slots = loadDynamicSlots()
-	for slotNumber = 2, 9 do
+	for slotNumber = 1, 9 do
 		local slotKey = tostring(slotNumber)
 		local slot = slots[slotKey]
 		if slot then
@@ -902,7 +877,7 @@ urlLauncher:rightClickCallback(function(row)
 
 	if isWebURL(choice.url) then
 		table.insert(menuItems, { title = "-" })
-		for slotNumber = 2, 9 do
+		for slotNumber = 1, 9 do
 			local slotKey = tostring(slotNumber)
 			table.insert(menuItems, {
 				title = "Alt + " .. slotKey .. "に登録",
