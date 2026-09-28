@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# 各 PC の Homebrew パッケージ一覧（共通 Brewfile とは別に保存）
+Brewfile.local
+
 # Ruby LSP (自動生成)
 .ruby-lsp/
 

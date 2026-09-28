@@ -1,5 +1,6 @@
 # dotfiles リポジトリ管理ファイル（ホームへ展開しない）
 Brewfile
+Brewfile.local
 README.md
 install.sh
 .ruby-lsp
