@@ -53,6 +53,8 @@ source ~/.zshrc
 
 `claude/` と `Codex/` は両 vault で Git の管理対象外です。個人 Mac の記録は個人 vault に保存し、Remotely Save で Dropbox 経由で iPhone に同期します。会社 Mac の記録は会社 vault に保存し、Dropbox は使いません。会社用の記録を GitHub でも共有したい場合は、機密情報を含む可能性を確認してから Git の除外設定を変更してください。
 
+会社 Mac を切り替えるときは、先に既存の `com.claude.obsidian-sync` LaunchAgent を停止し、個人 vault を `reader`、会社 vault を `writer` に設定します。その後 dotfiles を更新して `chezmoi apply ~/.claude/hooks/watch-and-save.sh` を実行し、LaunchAgent を再読み込みします。旧 vault に既に保存されたセッションノートは自動で一括移動しないので、内容を確認してから必要なものだけ移してください。
+
 以前 `claude/` に生成した Codex のセッション別ノートは、同期処理の起動時に `Codex/` へ移動します。
 
 旧方式の `日付.md` と `日付/ブランチ.md` はそのまま残ります。新方式では最初に検出した最近のセッションを先頭からセッション別ノートに記録するため、切替前の集約ノートと一時的に内容が重複します。
