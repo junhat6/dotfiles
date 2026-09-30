@@ -45,6 +45,18 @@ source ~/.zshrc
 
 `install.sh` は chezmoi を使って各ファイルを `$HOME` へ展開します。適用前に差分を表示します。ホーム側で変更したファイルがあると chezmoi が上書きの確認を求めることがあります。Obsidian 同期と Brewfile.local 記録用の LaunchAgent も読み込みます。
 
+### Claude / Codex セッションの Obsidian 記録
+
+`dot_claude/hooks/watch-and-save.sh` は Claude Code と Codex のローカル JSONL を監視します。`~/ghq/github.com/junhat6/` にある2つの vault の GitHub 接続先と Obsidian Git の `disablePush: false` を確認し、この Mac の書き手 vault を自動選択します。個人 Mac では個人 vault、会社 Mac では会社 vault です。両 vault の設定が揃っていない場合や、書き手が重複する場合は、誤った vault に書かないよう起動を止めます。Claude は `<vault>/claude/<repo>/<セッション開始日>/`、Codex は `<vault>/Codex/<repo>/<セッション開始日>/` に保存します。各日付フォルダの中は `<開始時刻> <タイトル> [Claude|Codex] <ID>.md` というセッション別ノートです。同じセッションを翌日再開しても、開始日の同じノートに続けます。ブランチ、エージェント、セッション ID を記録し、Issue が解決できた場合はリンクも付けます。
+
+タイトルは Claude の `custom-title` / `ai-title`、Codex のローカルセッション DB の `name` を優先します。タイトルがまだ無い間は初回プロンプトまたは仮題を使い、後からタイトルが付いたらファイル名と見出しを更新します。AI に別途タイトル生成を依頼しません。`OBSIDIAN_DIR`、`CODEX_OBSIDIAN_DIR`、`SESSION_DIR`、`CODEX_SESSION_DIR`、`CODEX_STATE_DB`、`SYNC_STATE_DIR` で各パスを変更できます。手動で `OBSIDIAN_DIR` を指定した場合は自動選択しません。
+
+`claude/` と `Codex/` は両 vault で Git の管理対象外です。個人 Mac の記録は個人 vault に保存し、Remotely Save で Dropbox 経由で iPhone に同期します。会社 Mac の記録は会社 vault に保存し、Dropbox は使いません。会社用の記録を GitHub でも共有したい場合は、機密情報を含む可能性を確認してから Git の除外設定を変更してください。
+
+以前 `claude/` に生成した Codex のセッション別ノートは、同期処理の起動時に `Codex/` へ移動します。
+
+旧方式の `日付.md` と `日付/ブランチ.md` はそのまま残ります。新方式では最初に検出した最近のセッションを先頭からセッション別ノートに記録するため、切替前の集約ノートと一時的に内容が重複します。
+
 ## chezmoi の使い方
 
 ```bash

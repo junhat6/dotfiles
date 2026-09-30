@@ -1,13 +1,11 @@
 #!/bin/bash
 # Watch Claude Code / Codex sessions and sync to Obsidian in real-time (append mode)
-# Supports multiple concurrent sessions with project/date/branch organization
+# Supports multiple concurrent sessions with project/date/session organization
 #
-# 出力構造（Claude / Codex 共通の1つのツリーに統合）:
-#   main/master での作業: <OBSIDIAN_DIR>/<repo>/<日付>.md
-#   ブランチでの作業:     <OBSIDIAN_DIR>/<repo>/<日付>/<ラベル>.md
-#     ラベルは Issue 番号を含むブランチ (feature/104 等) なら gh CLI で
-#     「104 <Issueタイトル>」に解決し、それ以外はブランチ名をそのまま使う。
-#     Orca IDE 等で worktree を並列に動かしてもブランチ単位で会話が分かれる。
+# 出力構造:
+#   Claude: <OBSIDIAN_DIR>/<repo>/<開始日>/<開始時刻> <タイトル> [Claude] <ID>.md
+#   Codex:  <CODEX_OBSIDIAN_DIR>/<repo>/<開始日>/<開始時刻> <タイトル> [Codex] <ID>.md
+#   ブランチと Issue はノートのメタデータに記録する。
 #
 # ソースごとの抽出方法:
 #   Claude: ~/.claude/projects/**/*.jsonl
@@ -22,7 +20,44 @@
 # launchd 起動時は locale が C になり cut -c などが multibyte を壊すため明示する
 export LC_ALL=en_US.UTF-8
 
-OBSIDIAN_DIR="${OBSIDIAN_DIR:-$HOME/ghq/github.com/junhat6/my-vault/claude}"
+# 2つの vault のうち、この Mac で GitHub に push する側へ保存する。
+# 書き手が未設定／重複している間は誤った vault に書かずに停止する。
+if [ -z "${OBSIDIAN_DIR:-}" ]; then
+    WRITER_VAULT=$(python3 - "$HOME/ghq/github.com/junhat6" <<'PY'
+import json
+import pathlib
+import subprocess
+import sys
+
+base = pathlib.Path(sys.argv[1])
+vaults = []
+for setup in sorted(base.glob("*/setup/obsidian-git-role.py")):
+    vault = setup.parent.parent
+    settings = vault / ".obsidian/plugins/obsidian-git/data.json"
+    if not settings.is_file():
+        continue
+    try:
+        origin = subprocess.check_output(
+            ["git", "-C", str(vault), "remote", "get-url", "origin"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        role = json.loads(settings.read_text()).get("disablePush")
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        continue
+    vaults.append((vault, origin, role))
+if len(vaults) != 2 or len({origin for _, origin, _ in vaults}) != 2:
+    sys.exit("Expected two distinct configured Obsidian vaults before session capture; set OBSIDIAN_DIR explicitly to override.")
+writers = [vault for vault, _, role in vaults if role is False]
+readers = [vault for vault, _, role in vaults if role is True]
+if len(writers) != 1 or len(readers) != 1:
+    sys.exit("Expected one writable and one read-only Obsidian vault. Run setup/obsidian-git-role.py in both vaults or set OBSIDIAN_DIR explicitly.")
+print(writers[0])
+PY
+    ) || exit 1
+    OBSIDIAN_DIR="$WRITER_VAULT/claude"
+fi
+CODEX_OBSIDIAN_DIR="${CODEX_OBSIDIAN_DIR:-$(dirname "$OBSIDIAN_DIR")/Codex}"
 SESSION_DIR="${SESSION_DIR:-$HOME/.claude/projects}"
 CODEX_SESSION_DIR="${CODEX_SESSION_DIR:-$HOME/.codex/sessions}"
 SYNC_STATE_DIR="${SYNC_STATE_DIR:-$HOME/.claude/sync-state}"  # セッションごとの同期状態を保存
@@ -30,8 +65,9 @@ LOG_DIR="$HOME/.claude/logs"                # LaunchAgentのStandardOut/ErrorPat
 MAX_LOG_BYTES=$((10 * 1024 * 1024))         # このサイズを超えたら切り詰める
 LOG_KEEP_LINES=5000                         # 切り詰め後に残す行数
 TITLE_CACHE_DIR="$SYNC_STATE_DIR/issue-titles"  # Issue タイトルのキャッシュ
+CODEX_STATE_DB="${CODEX_STATE_DB:-$HOME/.codex/state_5.sqlite}"
 
-mkdir -p "$OBSIDIAN_DIR" "$SYNC_STATE_DIR" "$TITLE_CACHE_DIR"
+mkdir -p "$OBSIDIAN_DIR" "$CODEX_OBSIDIAN_DIR" "$SYNC_STATE_DIR" "$TITLE_CACHE_DIR"
 
 # ghqオーナー一覧をキャッシュ（新規cloneを拾えるようループ内で定期リフレッシュする）
 refresh_ghq_owners() {
@@ -139,7 +175,7 @@ resolve_repo_slug() {
 
 # ファイル名・Obsidianリンクを壊す文字を除去して60文字に切り詰める
 sanitize_label() {
-    printf '%s' "$1" | tr '/\\:|#^[]?*"<>' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' | cut -c1-60
+    printf '%s' "$1" | tr '\n\r\t' '   ' | tr '/\\:|#^[]?*"<>' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' | cut -c1-60
 }
 
 # ブランチ名中の Issue 番号からタイトルを取得する。
@@ -195,6 +231,90 @@ get_session_hash() {
     echo "$session_file" | md5 | cut -c1-12
 }
 
+# ソースの最初の timestamp をローカル日時へ変換する。日付は再開後も変えない。
+get_session_start() {
+    local timestamp
+    timestamp=$(head -100 "$1" | jq -R -r '(try fromjson catch empty) | .timestamp // empty' 2>/dev/null | head -1)
+    python3 - "$timestamp" "$1" <<'PY'
+import datetime
+import os
+import sys
+
+try:
+    started = datetime.datetime.fromisoformat(sys.argv[1].replace("Z", "+00:00"))
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=datetime.timezone.utc)
+    started = started.astimezone()
+except ValueError:
+    started = datetime.datetime.fromtimestamp(os.path.getmtime(sys.argv[2]))
+print(f"{started.year}年{started.month}月{started.day}日\t{started:%H%M}\t{started:%Y-%m-%d}")
+PY
+}
+
+get_codex_title() {
+    local session_id="$1" session_file="$2" title=""
+    # Codex アプリの表示名。name がまだ無ければ title（初回プロンプト）を使う。
+    if [[ "$session_id" =~ ^[0-9a-f-]{36}$ ]] && [ -f "$CODEX_STATE_DB" ] && command -v sqlite3 >/dev/null 2>&1; then
+        title=$(sqlite3 -readonly "$CODEX_STATE_DB" \
+            "SELECT COALESCE(NULLIF(name, ''), NULLIF(title, ''), '') FROM threads WHERE id = '$session_id' LIMIT 1;" 2>/dev/null)
+    fi
+    if [ -z "$title" ]; then
+        title=$(head -100 "$session_file" | jq -R -r '
+            (try fromjson catch empty) |
+            if .type == "event_msg" and .payload.type == "user_message" then
+                .payload.message // empty
+            elif .type == "response_item" and .payload.type == "message" and .payload.role == "user" then
+                .payload.content[]? | select(.type == "input_text") |
+                .text // empty |
+                select(test("^\\s*<(environment_context|codex_internal_context|system-reminder|system_reminder)\\b"; "i") | not)
+            else empty end' 2>/dev/null | head -1)
+    fi
+    printf '%s' "$title"
+}
+
+update_note_heading() {
+    python3 - "$1" "$2" <<'PY'
+import os
+import sys
+import tempfile
+
+path, title = sys.argv[1:]
+fd, temporary = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".session-title-")
+try:
+    with open(path, encoding="utf-8") as source, os.fdopen(fd, "w", encoding="utf-8") as target:
+        changed = False
+        for line in source:
+            if not changed and line.startswith("# "):
+                target.write(f"# {title}\n")
+                changed = True
+            else:
+                target.write(line)
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
+get_claude_title() {
+    local previous_type="$1" session_file="$2" last_line="$3" current_lines="$4"
+    local custom ai
+    custom=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r '
+        (try fromjson catch empty) | select(.type == "custom-title") | .customTitle // empty' 2>/dev/null | tail -1)
+    if [ -n "$custom" ]; then
+        printf 'custom\t%s\n' "$custom"
+        return
+    fi
+    if [ "$previous_type" = "custom" ]; then
+        return
+    fi
+    ai=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r '
+        (try fromjson catch empty) | select(.type == "ai-title") | .aiTitle // empty' 2>/dev/null | tail -1)
+    if [ -n "$ai" ]; then
+        printf 'ai\t%s\n' "$ai"
+    fi
+}
+
 # フォーマット別: チャンクから cwd/branch/repo_url を TSV 3列で抽出する jq フィルタ
 META_JQ_CLAUDE='(try fromjson catch empty) | select(.cwd) | [.cwd, (.gitBranch // ""), ""] | @tsv'
 META_JQ_CODEX='(try fromjson catch empty) | select(.type == "session_meta") | [.payload.cwd, (.payload.git.branch // ""), (.payload.git.repository_url // "")] | @tsv'
@@ -202,14 +322,17 @@ META_JQ_CODEX='(try fromjson catch empty) | select(.type == "session_meta") | [.
 sync_session() {
     local session_file="$1"
     local format="$2"   # claude | codex
-    local TODAY=$(date +%Y年%-m月%-d日)
-    # システムのローカルタイムゾーンに依存せず「今日のローカル0時」をUTCに変換する
-    local TODAY_START_UTC=$(TZ=UTC date -j -f "%s" "$(date -v0H -v0M -v0S +%s)" +%Y-%m-%dT%H:%M:%S 2>/dev/null)
 
     # セッション固有の同期状態ファイル
     local session_hash=$(get_session_hash "$session_file")
-    local LAST_LINE_FILE="${SYNC_STATE_DIR}/${session_hash}.line"
-    local META_FILE="${SYNC_STATE_DIR}/${session_hash}.meta"
+    # 旧集約ノートとカーソルを分離し、切替時に全会話を新しいノートへ記録する。
+    local STATE_PREFIX="${SYNC_STATE_DIR}/${session_hash}.v2"
+    local LAST_LINE_FILE="${STATE_PREFIX}.cursor"
+    local META_FILE="${STATE_PREFIX}.meta"
+    local NOTE_FILE="${STATE_PREFIX}.note"
+    local START_FILE="${STATE_PREFIX}.start"
+    local TITLE_FILE="${STATE_PREFIX}.title"
+    local TITLE_TYPE_FILE="${STATE_PREFIX}.title-type"
 
     # Get last synced line number for THIS session
     # ファイルが空/破損している場合は0にフォールバックする（不正値のまま比較すると
@@ -222,12 +345,16 @@ sync_session() {
             last_line="$raw_last_line"
         fi
     fi
+    if [ -f "$NOTE_FILE" ] && [ ! -f "$(cat "$NOTE_FILE")" ]; then
+        # 既存ノートが無い場合は、本文を失わないよう最初から再構築する。
+        last_line=0
+    fi
 
     # Count current lines in session file
     local current_lines=$(wc -l < "$session_file" | tr -d ' ')
 
     # Only process new lines (append mode - no overwriting)
-    if [ "$current_lines" -le "$last_line" ]; then
+    if [ "$current_lines" -lt "$last_line" ] || { [ "$current_lines" -eq "$last_line" ] && [ "$format" != "codex" ]; }; then
         return
     fi
 
@@ -266,16 +393,59 @@ sync_session() {
         project_name=$(get_project_name "$session_file")
     fi
 
-    # main/master → <repo>/<日付>.md、それ以外 → <repo>/<日付>/<ラベル>.md
-    local label
-    label=$(get_branch_label "$project_name" "$branch" "$cwd" "$repo_url")
-    local project_dir OUTPUT_FILE
-    if [ -n "$label" ]; then
-        project_dir="${OBSIDIAN_DIR}/${project_name}/${TODAY}"
-        OUTPUT_FILE="${project_dir}/${label}.md"
+    local start_info
+    if [ -f "$START_FILE" ]; then
+        start_info=$(cat "$START_FILE")
     else
-        project_dir="${OBSIDIAN_DIR}/${project_name}"
-        OUTPUT_FILE="${project_dir}/${TODAY}.md"
+        start_info=$(get_session_start "$session_file")
+        printf '%s\n' "$start_info" > "$START_FILE"
+    fi
+    local session_date start_time created_at
+    IFS=$'\t' read -r session_date start_time created_at <<< "$start_info"
+
+    local session_id agent
+    if [ "$format" = "codex" ]; then
+        session_id=$(head -1 "$session_file" | jq -r '.payload.id // empty' 2>/dev/null)
+        agent="Codex"
+    else
+        session_id=$(basename "$session_file" .jsonl)
+        agent="Claude"
+    fi
+    [ -n "$session_id" ] || session_id="$session_hash"
+
+    local title="" title_type="" title_update=""
+    [ -f "$TITLE_FILE" ] && title=$(cat "$TITLE_FILE")
+    [ -f "$TITLE_TYPE_FILE" ] && title_type=$(cat "$TITLE_TYPE_FILE")
+    if [ "$format" = "codex" ]; then
+        title_update=$(get_codex_title "$session_id" "$session_file")
+        [ -n "$title_update" ] && title="$title_update"
+    else
+        # 初回は全行、以後は差分からタイトル変更を探す。
+        title_update=$(get_claude_title "$title_type" "$session_file" "$last_line" "$current_lines")
+        if [ -n "$title_update" ]; then
+            title_type=${title_update%%$'\t'*}
+            title=${title_update#*$'\t'}
+            printf '%s\n' "$title_type" > "$TITLE_TYPE_FILE"
+        fi
+    fi
+    [ -n "$title" ] || title="無題のセッション"
+    title=$(sanitize_label "$title")
+    [ -n "$title" ] || title="無題のセッション"
+    printf '%s\n' "$title" > "$TITLE_FILE"
+
+    local output_root="$OBSIDIAN_DIR"
+    [ "$format" = "codex" ] && output_root="$CODEX_OBSIDIAN_DIR"
+    local project_dir="${output_root}/${project_name}/${session_date}"
+    local short_id="${session_id:0:8}"
+    local OUTPUT_FILE="${project_dir}/${start_time} ${title} [${agent}] ${short_id}.md"
+    if [ -f "$NOTE_FILE" ]; then
+        local previous_note
+        previous_note=$(cat "$NOTE_FILE")
+        if [ "$previous_note" != "$OUTPUT_FILE" ] && [ -f "$previous_note" ] && [ ! -e "$OUTPUT_FILE" ]; then
+            mkdir -p "$project_dir"
+            mv "$previous_note" "$OUTPUT_FILE"
+            update_note_heading "$OUTPUT_FILE" "$title"
+        fi
     fi
 
     # current_lines算出後にファイルが追記される可能性があるため、tailではなく
@@ -284,26 +454,38 @@ sync_session() {
     # それ以降の行が全て失われないようにする
     local new_content jq_status
     if [ "$format" = "codex" ]; then
-        # Codex: event_msg の user_message / agent_message が会話本文。
-        # environment_context 等は response_item 側にしか入らないため除外フィルタ不要
-        new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r --arg today_start "$TODAY_START_UTC" '
-        (try fromjson catch empty) |
-        select(.type == "event_msg") |
-        select((.timestamp // "9999") >= $today_start) |
-        if .payload.type == "user_message" then
-            "**ユーザー**: " + (.payload.message | rtrimstr("\n")) + "\n"
-        elif .payload.type == "agent_message" then
-            "**Codex**: " + (.payload.message | rtrimstr("\n")) + "\n"
-        else
-            empty
-        end
-        ')
+        # 現行 Codex は response_item.message、旧形式は event_msg に会話がある。
+        local codex_chat_source="event_msg"
+        if head -100 "$session_file" | jq -R -e '
+            (try fromjson catch empty) |
+            select(.type == "response_item" and .payload.type == "message" and .payload.role == "user")' >/dev/null 2>&1; then
+            codex_chat_source="response_item"
+        fi
+        new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r --arg source "$codex_chat_source" '
+            (try fromjson catch empty) |
+            if $source == "response_item" then
+                select(.type == "response_item" and .payload.type == "message") |
+                if .payload.role == "user" then
+                    .payload.content[]? | select(.type == "input_text") |
+                    select(.text | test("^\\s*<(environment_context|codex_internal_context|system-reminder|system_reminder)\\b"; "i") | not) |
+                    "**ユーザー**: " + (.text | rtrimstr("\n")) + "\n"
+                elif .payload.role == "assistant" then
+                    .payload.content[]? | select(.type == "output_text") |
+                    "**Codex**: " + (.text | rtrimstr("\n")) + "\n"
+                else empty end
+            else
+                select(.type == "event_msg") |
+                if .payload.type == "user_message" then
+                    "**ユーザー**: " + (.payload.message | rtrimstr("\n")) + "\n"
+                elif .payload.type == "agent_message" then
+                    "**Codex**: " + (.payload.message | rtrimstr("\n")) + "\n"
+                else empty end
+            end')
         jq_status=$?
     else
-        new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r --arg today_start "$TODAY_START_UTC" '
+        new_content=$(head -n "$current_lines" "$session_file" | tail -n +$((last_line + 1)) | jq -R -r '
         (try fromjson catch empty) |
         select(.type == "user" or .type == "assistant") |
-        select((.timestamp // "9999") >= $today_start) |
         if .type == "user" then
             (.message.content // .content // "") as $content |
             if ($content | type) == "string" then
@@ -346,21 +528,28 @@ sync_session() {
     if [ -n "$new_content" ]; then
         mkdir -p "$project_dir"
         if [ ! -f "$OUTPUT_FILE" ]; then
-            if [ -n "$label" ]; then
-                echo "# ${TODAY} - ${project_name} (${branch})" > "$OUTPUT_FILE"
-                # Issue タイトルに解決できたラベルなら冒頭に Issue リンクを置く
+            {
+                echo "---"
+                echo "tags: [ai-session, ${format}]"
+                echo "created: ${created_at}"
+                echo "agent: ${agent}"
+                printf 'session_id: %s\n' "$session_id"
+                [ -n "$branch" ] && printf 'branch: %s\n' "$(printf '%s' "$branch" | jq -Rsa .)"
+                echo "---"
+                echo ""
+                echo "# ${title}"
+                echo ""
+                local label
+                label=$(get_branch_label "$project_name" "$branch" "$cwd" "$repo_url")
                 if [[ "$label" =~ ^([0-9]+)[[:space:]] ]]; then
                     local num="${BASH_REMATCH[1]}"
                     local slug_file="$TITLE_CACHE_DIR/${project_name}#${num}.slug"
                     if [ -f "$slug_file" ]; then
-                        echo "" >> "$OUTPUT_FILE"
-                        echo "Issue: [#${num}](https://github.com/$(cat "$slug_file")/issues/${num})" >> "$OUTPUT_FILE"
+                        echo "Issue: [#${num}](https://github.com/$(cat "$slug_file")/issues/${num})"
+                        echo ""
                     fi
                 fi
-            else
-                echo "# ${TODAY} - ${project_name}" > "$OUTPUT_FILE"
-            fi
-            echo "" >> "$OUTPUT_FILE"
+            } > "$OUTPUT_FILE"
         fi
 
         printf '%s\n' "$new_content" >> "$OUTPUT_FILE"
@@ -368,6 +557,8 @@ sync_session() {
 
         # Git commit はObsidian Gitプラグインに任せる
     fi
+
+    printf '%s\n' "$OUTPUT_FILE" > "$NOTE_FILE"
 
     # Update last synced line for THIS session
     echo "$current_lines" > "$LAST_LINE_FILE"
@@ -416,6 +607,32 @@ run_sync_cycle() {
     done < <(find_codex_sessions)
 }
 
+# 旧版で claude/ に置いた Codex のセッション別ノートだけを Codex/ へ移す。
+# 同期状態のパスも同時に更新し、次の追記が元のノートへ続くようにする。
+migrate_codex_notes() {
+    local pointer old relative target
+    while IFS= read -r pointer; do
+        old=$(cat "$pointer")
+        case "$old" in
+            "$OBSIDIAN_DIR"/*"[Codex]"*.md) ;;
+            *) continue ;;
+        esac
+        relative=${old#"$OBSIDIAN_DIR"/}
+        target="$CODEX_OBSIDIAN_DIR/$relative"
+        if [ -f "$old" ] && [ ! -e "$target" ]; then
+            mkdir -p "$(dirname "$target")"
+            mv "$old" "$target" || continue
+            printf '%s\n' "$target" > "$pointer"
+        elif [ -f "$target" ] && [ ! -f "$old" ]; then
+            printf '%s\n' "$target" > "$pointer"
+        elif [ -f "$old" ] && [ -e "$target" ]; then
+            echo "[ERROR] Codex note already exists at both paths: $old / $target" >&2
+        fi
+    done < <(find "$SYNC_STATE_DIR" -name '*.v2.note' -type f -print 2>/dev/null)
+}
+
+migrate_codex_notes
+
 # --once: 1回同期して終了（テスト・手動同期用）
 if [ "${1:-}" = "--once" ]; then
     run_sync_cycle
@@ -423,7 +640,8 @@ if [ "${1:-}" = "--once" ]; then
 fi
 
 echo "Watching for Claude Code / Codex session changes (multi-session mode)..."
-echo "Saving to: $OBSIDIAN_DIR/<project-name>/<date>[/<branch-label>].md"
+echo "Saving Claude to: $OBSIDIAN_DIR/<project-name>/<session-start-date>/<time> <title> [Claude] <id>.md"
+echo "Saving Codex to: $CODEX_OBSIDIAN_DIR/<project-name>/<session-start-date>/<time> <title> [Codex] <id>.md"
 
 # Initial cleanup
 cleanup_old_state
