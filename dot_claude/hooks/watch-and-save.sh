@@ -14,8 +14,9 @@
 #     session_meta 行の .payload.cwd / .payload.git.branch / .payload.git.repository_url を利用
 #     会話は event_msg の user_message / agent_message から取る
 #
-# usage: watch-and-save.sh [--once]
+# usage: watch-and-save.sh [--once | --check-destination <vault-directory> [owner/repo]]
 #   --once: 1回だけ同期して終了（テスト・手動同期用）
+#   --check-destination: ノートを書かずに保存先を検証して終了
 
 # launchd 起動時は locale が C になり cut -c などが multibyte を壊すため明示する
 export LC_ALL=en_US.UTF-8
@@ -66,6 +67,32 @@ MAX_LOG_BYTES=$((10 * 1024 * 1024))         # このサイズを超えたら切�
 LOG_KEEP_LINES=5000                         # 切り詰め後に残す行数
 TITLE_CACHE_DIR="$SYNC_STATE_DIR/issue-titles"  # Issue タイトルのキャッシュ
 CODEX_STATE_DB="${CODEX_STATE_DB:-$HOME/.codex/state_5.sqlite}"
+
+if [ "${1:-}" = "--check-destination" ]; then
+    if [ -z "${2:-}" ] || [ ! -d "$2" ]; then
+        echo "Usage: watch-and-save.sh --check-destination <existing-vault-directory>" >&2
+        exit 2
+    fi
+    expected=$(cd "$2" && pwd -P) || exit 2
+    claude_root=$(cd "$(dirname "$OBSIDIAN_DIR")" && pwd -P) || exit 2
+    codex_root=$(cd "$(dirname "$CODEX_OBSIDIAN_DIR")" && pwd -P) || exit 2
+    if [ "$claude_root" != "$expected" ] || [ "$codex_root" != "$expected" ] || \
+       [ "$(basename "$OBSIDIAN_DIR")" != "claude" ] || \
+       [ "$(basename "$CODEX_OBSIDIAN_DIR")" != "Codex" ]; then
+        printf 'Wrong destination. Claude: %s\nCodex: %s\nExpected vault: %s\n' \
+            "$OBSIDIAN_DIR" "$CODEX_OBSIDIAN_DIR" "$expected" >&2
+        exit 1
+    fi
+    if [ -n "${3:-}" ]; then
+        actual_origin=$(git -C "$expected" remote get-url origin 2>/dev/null) || exit 1
+        case "${actual_origin%.git}" in
+            *"github.com/${3}" | *"github.com:${3}") ;;
+            *) printf 'Wrong Git origin: %s (expected %s)\n' "$actual_origin" "$3" >&2; exit 1 ;;
+        esac
+    fi
+    printf 'OK: Claude -> %s\nOK: Codex  -> %s\n' "$OBSIDIAN_DIR" "$CODEX_OBSIDIAN_DIR"
+    exit 0
+fi
 
 mkdir -p "$OBSIDIAN_DIR" "$CODEX_OBSIDIAN_DIR" "$SYNC_STATE_DIR" "$TITLE_CACHE_DIR"
 
