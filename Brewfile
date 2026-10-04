@@ -1,9 +1,7 @@
-tap "supabase/tap"
+tap "stablyai/orca", trusted: { casks: ["orca"] }
 tap "yakitrak/yakitrak", trusted: true
 # Improved shell history for zsh, bash, fish and nushell
 brew "atuin"
-# Official Amazon AWS command-line interface
-brew "awscli"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
 # Manage your dotfiles across multiple diverse machines, securely
@@ -30,63 +28,63 @@ brew "fd"
 brew "ffmpeg"
 # Command-line fuzzy finder written in Go
 brew "fzf"
-# Fuzzy completion selection for zsh
-brew "fzf-tab"
 # GitHub command-line tool
 brew "gh"
 # Remote repository management made easy
 brew "ghq"
-# Syntax-highlighting pager for Git diffs
+# Access GitHub's .gitignore boilerplates
+brew "gibo"
+# Syntax-highlighting pager for git and diff output
 brew "git-delta"
+# Git extension for versioning large files
+brew "git-lfs"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
-# Agent multiplexer that lives in your terminal
-brew "herdr"
-# Tools and libraries to manipulate images in select formats
-brew "imagemagick"
+# CLI for Drive, Gmail, Calendar, Sheets, Docs, Chat, Admin, and more
+brew "googleworkspace-cli"
 # Lazier way to manage everything docker
 brew "lazydocker"
 # Simple terminal UI for git commands
 brew "lazygit"
 # YAML Parser
 brew "libyaml"
-# Easily convert Marp Markdown files into static HTML/CSS, PDF, PPT and images
-brew "marp-cli"
+# Curses-based tool for viewing and analyzing log files
+brew "lnav"
 # Polyglot runtime manager (asdf rust clone)
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Package compiler and linker metadata toolkit
-brew "pkgconf"
-# PDF rendering library (based on the xpdf-3.0 code base)
-brew "poppler"
+# Rsync for cloud storage
+brew "rclone"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
+# Safe, concurrent, practical language
+brew "rust"
+# Rust toolchain installer
+brew "rustup"
 # Cross-shell prompt for astronauts
 brew "starship"
+# Organize software neatly under a single directory tree (e.g. /usr/local)
+brew "stow"
+# Simplified and community-driven man pages
+brew "tldr"
 # Terminal multiplexer
 brew "tmux"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
-# History suggestions accepted with the right arrow
-brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
-# Supabase CLI
-brew "supabase/tap/supabase", trusted: true
 brew "yakitrak/yakitrak/notesmd-cli", link: false, trusted: true
 # AI dictation app
 cask "amical"
 # User-friendly GUI app for Homebrew
 cask "applite"
-# Japanese input method
-cask "azookey"
 # Utility that prevents the system from going to sleep
 cask "caffeine"
-# Free and open-source web browser
-cask "chromium"
+# Two-panel file manager
+cask "commander-one"
 # Universal database tool and SQL client
 cask "dbeaver-community"
 # Voice and text chat software
@@ -103,8 +101,6 @@ cask "hammerspoon"
 cask "karabiner-elements"
 # Blocks all Keyboard and TouchBar input
 cask "keyboardcleantool"
-# Find shortcuts for any installed application
-cask "keyclu"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
 # Collaboration platform for API development
@@ -117,8 +113,8 @@ cask "visual-studio-code"
 cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
-go "github.com/air-verse/air"
 go "golang.org/x/tools/cmd/goimports"
 go "golang.org/x/tools/gopls"
 go "honnef.co/go/tools/cmd/staticcheck"
-go "github.com/swaggo/swag/cmd/swag"
+cargo "mdbook-plantuml"
+npm "@google/gemini-cli"
