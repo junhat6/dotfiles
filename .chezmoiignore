@@ -11,3 +11,10 @@ install.sh
 # OSS (fujibee/agmsg) が install.sh で自動生成・更新するファイル。
 # 実体は ~/ghq/github.com/fujibee/agmsg 側の管理下にあるためdotfilesでは追跡しない
 .claude/commands/agmsg.md
+
+# リポジトリ専用の検証・セットアップ
+scripts
+.github
+.gitconfig.local
+.gitconfig.work
+.zshrc.local

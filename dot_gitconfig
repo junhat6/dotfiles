@@ -42,7 +42,23 @@
     defaultBranch = main
 
 [merge]
-    conflictstyle = diff3
+    conflictstyle = zdiff3
 
 [diff]
     colorMoved = default
+
+[core]
+    pager = delta
+[interactive]
+    diffFilter = delta --color-only
+[delta]
+    navigate = true
+    line-numbers = true
+[rerere]
+    enabled = true
+    # 再利用した解決も、差分とテストを確認してから git add する
+    autoUpdate = false
+
+# 端末固有の includeIf は Git 管理外のファイルへ保存する
+[include]
+    path = ~/.gitconfig.local

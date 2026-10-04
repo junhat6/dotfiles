@@ -12,7 +12,9 @@ dotfiles/
 │   ├── ghostty/      # Ghostty ターミナル設定
 │   ├── karabiner/    # Karabiner-Elements 設定
 │   ├── lazygit/      # lazygit 設定
+│   ├── mise/         # 共通ランタイムのバージョン指定
 │   ├── nvim/         # Neovim (LazyVim)
+│   ├── zsh/          # 用途別のシェル設定
 │   └── wezterm/      # WezTerm ターミナル設定
 ├── dot_gitconfig     # .gitconfig
 ├── dot_hammerspoon/  # Hammerspoon (macOS 自動化)
@@ -24,6 +26,7 @@ dotfiles/
 ├── Brewfile          # 各 PC で共通して使う Homebrew パッケージ一覧
 ├── Brewfile.local    # この PC のインストール済み一覧（自動生成・Git 管理外）
 ├── install.sh        # セットアップスクリプト
+├── scripts/          # 構文確認・macOS 設定・会社用 Git 名義の登録
 └── .chezmoiignore    # chezmoi 管理対象外リスト
 ```
 
@@ -32,7 +35,7 @@ dotfiles/
 ## インストール
 
 ```bash
-git clone https://github.com/JunichiHattori/dotfiles.git ~/dotfiles
+git clone https://github.com/junhat6/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
 # Homebrew パッケージを一括インストール
@@ -44,6 +47,27 @@ source ~/.zshrc
 ```
 
 `install.sh` は chezmoi を使って各ファイルを `$HOME` へ展開します。適用前に差分を表示します。ホーム側で変更したファイルがあると chezmoi が上書きの確認を求めることがあります。Obsidian 同期と Brewfile.local 記録用の LaunchAgent も読み込みます。
+
+必要な段階だけ再実行できます。引数なしの動作は従来どおり、チェック・設定適用・LaunchAgent 登録です。複数の段階は下記の順で実行します。
+
+```bash
+./install.sh --check         # 依存と構文を確認
+./install.sh --packages      # brew bundle
+./install.sh --apply         # 設定だけ適用
+./install.sh --launchagents  # 常駐処理だけ再登録
+./install.sh --all --dry-run # 全段階の実行予定を表示（書き込みなし）
+bash scripts/check.sh       # CI と同じ構文確認
+```
+
+端末に固有の PATH などは `~/.zshrc.local` に保存します。これは同期されません。共通ランタイムの指定は `dot_config/mise/config.toml` にあります。プロジェクト固有の版は各 repo の `mise.toml` で指定します。ホーム側のグローバル設定を変更した場合は、`chezmoi re-add ~/.config/mise/config.toml` で dotfiles に取り込んでください。
+
+Finder の拡張子表示・パスバーは必要な端末で明示的に適用します。初回の元の値をローカルに保存します。
+
+```bash
+bash scripts/macos-defaults.sh --apply
+bash scripts/macos-defaults.sh --check
+bash scripts/macos-defaults.sh --restore
+```
 
 ### Claude / Codex セッションの Obsidian 記録
 
@@ -93,12 +117,52 @@ brew bundle check --file=Brewfile
 
 ## Git ユーザー情報の更新
 
-`dot_gitconfig` を直接編集して chezmoi で反映してください。
+### 個人用の名義
+
+共通の個人用名義は `dot_gitconfig` の `[user]` を編集して chezmoi で反映します。
 
 ```bash
 chezmoi edit ~/.gitconfig
 chezmoi apply
 ```
+
+### 会社 Mac での初回設定
+
+会社用名義は端末ごとに設定します。通常の dotfiles セットアップ後、dotfiles リポジトリ内で次を実行してください。`COMMIT_NAME` と `WORK_EMAIL` は会社で使う名前・メールアドレスに置き換えます。実際の会社メールは公開リポジトリに記載しません。
+
+```bash
+bash scripts/setup-git-work.sh speee "COMMIT_NAME" "WORK_EMAIL"
+```
+
+このコマンドは `~/.gitconfig.work` に会社の名前・メールを保存し、`~/.gitconfig.local` に条件付き読み込みを設定します。`~/ghq/github.com/speee/` 配下のリポジトリと、そのリポジトリから作った worktree で会社用名義が有効になります。判定はリポジトリの保存場所によるため、別の場所に clone した場合は `~/.gitconfig.local` の `gitdir` 条件を合わせてください。
+
+会社用ファイルは Git 管理・chezmoi 同期の対象外です。別の Mac に dotfiles を導入しても自動ではコピーされないため、その Mac でも上のコマンドを実行してください。これらのファイルは `chezmoi add` / `re-add` で取り込まないでください。
+
+### 会社用の名前・メールを変更する場所
+
+| ファイル | 用途 |
+| --- | --- |
+| `~/.gitconfig.work` | 会社用の `[user]` の `name` / `email`。会社メールの変更先 |
+| `~/.gitconfig.local` | 会社用名義を使うディレクトリの条件 |
+| `dot_gitconfig` | 共通の個人用名義と Git 設定 |
+
+会社用メールの変更は、この端末の `~/.gitconfig.work` に対して行います。直接編集しても、次のコマンドで更新しても構いません。保存後すぐに有効になり、chezmoi の適用は不要です。
+
+```bash
+git config --file "$HOME/.gitconfig.work" user.email "NEW_WORK_EMAIL"
+git config --file "$HOME/.gitconfig.work" user.name "NEW_COMMIT_NAME"
+```
+
+設定後は会社リポジトリに移動して、有効な名義と読み込み元を確認してください。個人リポジトリでも同じコマンドで確認できます。
+
+```bash
+git config --show-origin --get user.name
+git config --show-origin --get user.email
+```
+
+既存 repo のローカル `user.name` / `user.email` が設定されていると、そちらが優先されます。期待した名義にならない場合は、上記の読み込み元を確認してください。
+
+GitHub Actions の構文確認は、この変更を push した後に有効になります。ローカルでは `bash scripts/check.sh` で同じチェックを実行できます。
 
 ## macOS キーリピートをターミナル上で変更するコマンド
 

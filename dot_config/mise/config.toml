@@ -1,0 +1,12 @@
+[tools]
+go = "1.26.4"
+node = "26.10.0"
+"npm:@anthropic-ai/claude-code" = { version = "latest", minimum_release_age = "0s", allow_builds = ["@anthropic-ai/claude-code"] }
+"npm:@openai/codex" = { version = "latest", minimum_release_age = "0s" }
+"npm:cf" = "latest"
+opencode = { version = "latest", minimum_release_age = "0s" }
+python = "3.11.17"
+ruby = "3.2.9"
+
+[settings]
+legacy_version_file = true

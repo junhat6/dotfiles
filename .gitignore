@@ -9,3 +9,8 @@ Brewfile.local
 
 # Claude Code プロジェクトローカル設定
 .claude/
+
+# 端末固有の情報はホーム側だけで管理
+.gitconfig.local
+.gitconfig.work
+.zshrc.local

@@ -30,10 +30,14 @@ brew "fd"
 brew "ffmpeg"
 # Command-line fuzzy finder written in Go
 brew "fzf"
+# Fuzzy completion selection for zsh
+brew "fzf-tab"
 # GitHub command-line tool
 brew "gh"
 # Remote repository management made easy
 brew "ghq"
+# Syntax-highlighting pager for Git diffs
+brew "git-delta"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Agent multiplexer that lives in your terminal
@@ -66,6 +70,8 @@ brew "tmux"
 brew "uv"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
+# History suggestions accepted with the right arrow
+brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
 # Supabase CLI
