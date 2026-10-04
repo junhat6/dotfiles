@@ -506,7 +506,7 @@ for desktopNumber = 1, 9 do
 end
 
 -- =============================================================================
--- URLランチャー (alt + 数字, alt + L)
+-- URLランチャー (alt + 数字, alt + shift + L)
 -- =============================================================================
 local chromeBundleID = "com.google.Chrome"
 local maxChromeHistoryChoices = 50
@@ -939,10 +939,10 @@ local function showURLLauncher()
 	end)
 end
 
-bindWithHelp({ "alt" }, "L", "URL", "URLランチャーを開く", showURLLauncher)
+bindWithHelp({ "alt", "shift" }, "L", "URL", "URLランチャーを開く", showURLLauncher)
 
 -- =============================================================================
--- ウィンドウ選択 (alt + W/,/.)
+-- ウィンドウ選択 (alt + shift + W/,/.)
 -- =============================================================================
 local function windowLabel(win)
 	local app = win:application()
@@ -990,12 +990,12 @@ local function showWindowSwitcher()
 	windowChooser:show()
 end
 
-bindWithHelp({ "alt" }, "W", "ウィンドウ切り替え", "ウィンドウ検索を開く", showWindowSwitcher)
+bindWithHelp({ "alt", "shift" }, "W", "ウィンドウ切り替え", "ウィンドウ検索を開く", showWindowSwitcher)
 
 -- よく戻るウィンドウを記憶し、任意のアプリから復帰する
 local markedWindowID = nil
 
-bindWithHelp({ "alt" }, ",", "ウィンドウ切り替え", "現在のウィンドウを記憶", function()
+bindWithHelp({ "alt", "shift" }, ",", "ウィンドウ切り替え", "現在のウィンドウを記憶", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -1004,7 +1004,7 @@ bindWithHelp({ "alt" }, ",", "ウィンドウ切り替え", "現在のウィン�
 	hs.alert.show("記憶しました: " .. windowLabel(win))
 end)
 
-bindWithHelp({ "alt" }, ".", "ウィンドウ切り替え", "記憶したウィンドウへ戻る", function()
+bindWithHelp({ "alt", "shift" }, ".", "ウィンドウ切り替え", "記憶したウィンドウへ戻る", function()
 	local markedWindow = markedWindowID and hs.window.get(markedWindowID)
 	if not markedWindow then
 		markedWindowID = nil
@@ -1103,8 +1103,8 @@ addHelpEntry({ "cmd" }, "Q", "アプリ終了", "0.8秒長押しでアプリを�
 	hs.alert.show("終了するには⌘Qを0.8秒長押し")
 end, { searchTerms = { "長押し", "誤操作防止", "HoldToQuit" } })
 
--- Alt + H自体を忘れても開けるよう、メニューバーにも入口を置く。
-bindWithHelp({ "alt" }, "H", "ヘルプ", "Hammerspoonショートカット一覧を開く", showHotkeyHelp, {
+-- Alt + Shift + H自体を忘れても開けるよう、メニューバーにも入口を置く。
+bindWithHelp({ "alt", "shift" }, "H", "ヘルプ", "Hammerspoonショートカット一覧を開く", showHotkeyHelp, {
 	searchTerms = { "ヘルプ", "一覧", "検索" },
 })
 
@@ -1123,7 +1123,7 @@ local githubRepos = GitHubRepos.new({
 	end,
 })
 
-bindWithHelp({ "ctrl", "alt" }, "G", "GitHub", "GitHubリポジトリを検索", function()
+bindWithHelp({ "alt", "shift" }, "G", "GitHub", "GitHubリポジトリを検索", function()
 	githubRepos:show()
 end, { searchTerms = { "repository", "repo", "リポジトリ", "GitHub検索" } })
 
@@ -1131,10 +1131,10 @@ local appShortcutManager = AppShortcuts.new({
 	settingsKey = "appShortcutBindingsV1",
 	initializedKey = "appShortcutBindingsV1Initialized",
 	reservedKeys = {
-		p = "Hammerspoon Palette",
-		w = "ウィンドウ検索",
-		l = "URLランチャー",
-		h = "ショートカット一覧",
+		h = "矢印キー（←）",
+		j = "矢印キー（↓）",
+		k = "矢印キー（↑）",
+		l = "矢印キー（→）",
 	},
 	showHelp = showHotkeyHelp,
 })
@@ -1152,7 +1152,7 @@ appShortcutManager:setPaletteCallback(function(currentApp)
 	commandPalette:show(currentApp)
 end)
 
-bindWithHelp({ "alt" }, "P", "パレット", "Hammerspoon Paletteを開く", function()
+bindWithHelp({ "alt", "shift" }, "P", "パレット", "Hammerspoon Paletteを開く", function()
 	-- chooserを開く前に、現在前面にいるアプリを退避する。
 	local currentApp = appShortcutManager:captureFrontmostApp()
 	commandPalette:show(currentApp)

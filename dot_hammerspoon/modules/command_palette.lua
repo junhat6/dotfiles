@@ -56,17 +56,17 @@ function CommandPalette:buildChoices(currentApp)
 		},
 		{
 			text = "ウィンドウを検索",
-			subText = "Alt + W",
+			subText = "Alt + Shift + W",
 			actionID = "windowSwitcher",
 		},
 		{
 			text = "URLを検索",
-			subText = "Alt + L",
+			subText = "Alt + Shift + L",
 			actionID = "urlLauncher",
 		},
 		{
 			text = "GitHubリポジトリを検索",
-			subText = "Ctrl + Alt + G",
+			subText = "Alt + Shift + G",
 			actionID = "githubRepos",
 		},
 		{

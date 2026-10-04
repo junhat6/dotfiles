@@ -173,6 +173,24 @@ git config --show-origin --get user.email
 
 GitHub Actions の構文確認は、この変更を push した後に有効になります。ローカルでは `bash scripts/check.sh` で同じチェックを実行できます。
 
+## macOS キーボード操作
+
+Alt（Option）+ H/J/K/L はそれぞれ ←/↓/↑/→。Tabを押しながら使ってもAltとして操作できます。Shift・Command・Control・Fnを併用した組み合わせは矢印へ変換しません。
+
+アプリ起動と登録済みURLの番号キーはAlt、検索や一覧などの操作はAlt + Shiftに揃えます。クリップボード履歴はCommand + Shift + Vです。
+
+| キー | 操作 |
+| --- | --- |
+| Alt + Shift + H | ショートカット一覧 |
+| Alt + Shift + L | URLランチャー |
+| Alt + Shift + P | 統合パレット |
+| Alt + Shift + W | ウィンドウ検索 |
+| Alt + Shift + G | GitHubリポジトリ検索 |
+| Command + Shift + V | クリップボード履歴 |
+| Alt + Shift + , / . | ウィンドウを記憶 / 記憶したウィンドウへ戻る |
+
+Alt + H/J/K/L はアプリ起動に登録できません。以前のAmicalのAlt + K割り当ては設定の再読み込み時に削除します。
+
 ## macOS キーリピートをターミナル上で変更するコマンド
 
 ```bash

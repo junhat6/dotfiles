@@ -14,7 +14,6 @@ local DEFAULT_BINDINGS = {
 	{ key = "a", name = "Codex" },
 	{ key = "z", name = "zoom.us" },
 	{ key = "u", name = "Orca" },
-	{ key = "k", name = "Amical" },
 }
 
 local function trimmedString(value)
@@ -622,6 +621,11 @@ end
 
 function AppShortcuts:start()
 	self:migrateDefaultsOnce()
+	-- 新しく予約されたキーの旧アプリ割り当ても保存済み設定から削除する。
+	local storedSucceeded, stored = pcall(hs.settings.get, self.settingsKey)
+	if storedSucceeded and type(stored) == "table" then
+		self:saveBindings(stored)
+	end
 	self:rebuildHotkeys()
 	self.menubar = hs.menubar.new()
 	self.menubar:setTitle("⌨︎")
