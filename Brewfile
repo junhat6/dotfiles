@@ -2,16 +2,10 @@ tap "stablyai/orca", trusted: { casks: ["orca"] }
 tap "yakitrak/yakitrak", trusted: true
 # Improved shell history for zsh, bash, fish and nushell
 brew "atuin"
-# Clone of cat(1) with syntax highlighting and Git integration
-brew "bat"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
-# Cross-platform make
-brew "cmake"
 # Container runtimes on MacOS (and Linux) with minimal setup
 brew "colima", restart_service: :changed
-# Interactive Commitizen CLI that generate standardized commit messages
-brew "czg"
 # Pack, ship and run any application as a lightweight container
 brew "docker"
 # Docker CLI plugin for extended build capabilities with BuildKit
@@ -20,32 +14,16 @@ brew "docker-buildx"
 brew "docker-compose"
 # Platform keystore credential helper for Docker
 brew "docker-credential-helper"
-# Modern, maintained replacement for ls
-brew "eza"
-# Simple, fast and user-friendly alternative to find
-brew "fd"
 # Play, record, convert, and stream select audio and video codecs
 brew "ffmpeg"
 # Command-line fuzzy finder written in Go
 brew "fzf"
-# GitHub command-line tool
-brew "gh"
-# Remote repository management made easy
-brew "ghq"
 # Access GitHub's .gitignore boilerplates
 brew "gibo"
-# Syntax-highlighting pager for git and diff output
-brew "git-delta"
 # Git extension for versioning large files
 brew "git-lfs"
-# Open source programming language to build simple/reliable/efficient software
-brew "go"
-# CLI for Drive, Gmail, Calendar, Sheets, Docs, Chat, Admin, and more
-brew "googleworkspace-cli"
 # Lazier way to manage everything docker
 brew "lazydocker"
-# Simple terminal UI for git commands
-brew "lazygit"
 # YAML Parser
 brew "libyaml"
 # Curses-based tool for viewing and analyzing log files
@@ -56,12 +34,6 @@ brew "mise"
 brew "neovim"
 # Rsync for cloud storage
 brew "rclone"
-# Search tool like grep and The Silver Searcher
-brew "ripgrep"
-# Safe, concurrent, practical language
-brew "rust"
-# Rust toolchain installer
-brew "rustup"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Organize software neatly under a single directory tree (e.g. /usr/local)
@@ -70,8 +42,6 @@ brew "stow"
 brew "tldr"
 # Terminal multiplexer
 brew "tmux"
-# Extremely fast Python package installer and resolver, written in Rust
-brew "uv"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # Fish shell like syntax highlighting for zsh
@@ -113,8 +83,3 @@ cask "visual-studio-code"
 cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
-go "golang.org/x/tools/cmd/goimports"
-go "golang.org/x/tools/gopls"
-go "honnef.co/go/tools/cmd/staticcheck"
-cargo "mdbook-plantuml"
-npm "@google/gemini-cli"

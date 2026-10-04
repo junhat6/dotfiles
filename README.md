@@ -43,6 +43,9 @@ brew bundle
 
 # dotfiles をホームディレクトリへ展開
 ./install.sh
+
+# mise の共通ランタイム・CLI をインストール
+mise install
 source ~/.zshrc
 ```
 
@@ -59,7 +62,7 @@ source ~/.zshrc
 bash scripts/check.sh       # CI と同じ構文確認
 ```
 
-端末に固有の PATH などは `~/.zshrc.local` に保存します。これは同期されません。共通ランタイムの指定は `dot_config/mise/config.toml` にあります。プロジェクト固有の版は各 repo の `mise.toml` で指定します。ホーム側のグローバル設定を変更した場合は、`chezmoi re-add ~/.config/mise/config.toml` で dotfiles に取り込んでください。
+端末に固有の PATH などは `~/.zshrc.local` に保存します。これは同期されません。共通ランタイムの指定は `dot_config/mise/config.toml` にあります。 Node・Go・Rust・uv と開発 CLI（gh・ghq・lazygit・ripgrep・fd・bat・eza・delta・CMake・czg・Gemini CLI・gog・goimports・gopls・staticcheck・mdbook-plantuml）は mise で管理し、GUI アプリ・ネイティブライブラリ・mise 自体は Homebrew で管理します。Rust の rustup は mise のバックエンドが準備します。ログインシェルでは `dot_zprofile` の shims、対話シェルでは `dot_zshrc` の activate により mise を優先します。プロジェクト固有の版は各 repo の `mise.toml` で指定します。変更は正本の `dot_config/mise/config.toml` に書き、`chezmoi apply ~/.config/mise/config.toml` → `mise install` の順で反映してください。
 
 Finder の拡張子表示・パスバーは必要な端末で明示的に適用します。初回の元の値をローカルに保存します。
 
@@ -114,6 +117,12 @@ brew bundle --file=Brewfile
 # Brewfile にあって未インストールのものを確認
 brew bundle check --file=Brewfile
 ```
+
+### mise へ移したツールと Homebrew の整理
+
+上記の開発 CLI は `dot_config/mise/config.toml` に版を記録します。Google Workspace の CLI は `gws` から `gog`（公式配布 `openclaw/gogcli`）へ統一します。gog の Google アカウント認証は端末ごとの設定で、資格情報は dotfiles に入れません。初回は `gog auth --help` を参照してください。
+
+移行済みツールを Homebrew から削除するときは、mise 側の起動と `brew uses --installed <formula>` を確認してから対象だけを `brew uninstall` します。`brew bundle cleanup` による一括削除は、この PC 固有のパッケージまで消すため使いません。Homebrew 側のグローバル npm に入れた Gemini CLI も、mise 版を確認してから旧 Node の npm で削除します。
 
 ## Git ユーザー情報の更新
 

@@ -60,7 +60,7 @@ end
 
 function GitHubRepos.new(options)
 	local self = setmetatable({}, GitHubRepos)
-	self.ghPath = options.ghPath or "/opt/homebrew/bin/gh"
+	self.ghPath = options.ghPath or os.getenv("HOME") .. "/.local/share/mise/shims/gh"
 	self.openURL = options.openURL or hs.urlevent.openURL
 	self.cacheSeconds = options.cacheSeconds or 300
 	self.cachedChoices = nil

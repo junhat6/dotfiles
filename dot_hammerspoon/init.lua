@@ -1116,7 +1116,7 @@ local CommandPalette = require("modules.command_palette")
 local GitHubRepos = require("modules.github_repos")
 
 local githubRepos = GitHubRepos.new({
-	ghPath = "/opt/homebrew/bin/gh",
+	ghPath = os.getenv("HOME") .. "/.local/share/mise/shims/gh",
 	cacheSeconds = 300,
 	openURL = function(url)
 		openURLInChrome(url)
