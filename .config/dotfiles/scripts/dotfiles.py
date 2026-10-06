@@ -13,7 +13,6 @@ from xml.parsers.expat import ExpatError
 
 MANIFEST = '.config/dotfiles/ownership.json'
 FORBIDDEN = ['.claude/settings.local.json', '.gitconfig.local', '.gitconfig.work', '.zshrc.local', '.config/nvim/lazy-lock.json', '.config/nvim/lazyvim.json', '.config/dotfiles/Brewfile.local', '.config/ghostty/*', '.eval-loop/*', 'Library/LaunchAgents/*', '.claude/projects/*', '.claude/logs/*', '.claude/plugins/*', '.claude/history*', '.codex/*', '.ssh/*', '.gnupg/*']
-REQUIRED_NVIM = {'.config/nvim/init.lua', '.config/nvim/lua/config/lazy.lua', '.config/nvim/lua/plugins/colorscheme.lua'}
 
 
 def matches(path, patterns):
@@ -58,8 +57,6 @@ class Repository:
                 raise ValueError('forbidden shared path: ' + path)
             if path.startswith('.claude/') and path not in {'.claude/CLAUDE.md', '.claude/settings.json', '.claude/statusline-command.sh'} and not path.startswith(('.claude/commands/', '.claude/rules/', '.claude/hooks/')):
                 raise ValueError('Claude runtime cannot be shared: ' + path)
-            if path.startswith('.config/nvim/') and path not in REQUIRED_NVIM:
-                raise ValueError('only three authored nvim files permitted: ' + path)
         for item in m['generated']:
             if set(item) != {'template', 'output'} or item['template'] not in m['shared'] or not item['output'].startswith('Library/LaunchAgents/') or Path(item['output']).name != item['output'].split('/')[-1] or '..' in PurePosixPath(item['output']).parts:
                 raise ValueError('invalid generated ownership')
@@ -201,12 +198,36 @@ def main():
     check.add_argument('--source', action='store_true', help='checkout validation: no generated HOME outputs/discovery')
     add = sub.add_parser('add')
     add.add_argument('paths', nargs='+')
+    files = sub.add_parser('files', help='list approved shared files for terminal/editor pickers')
+    files.add_argument('--changed', action='store_true')
+    files.add_argument('--json', action='store_true')
+    preview = sub.add_parser('preview', help='preview staged/unstaged changes for a picker key')
+    preview.add_argument('key')
+    preview.add_argument('--plain', action='store_true')
+    edit = sub.add_parser('edit', help='search shared files with diff preview and open in Neovim')
+    edit.add_argument('--changed', action='store_true')
+    edit.add_argument('--query', default='')
     sub.add_parser('render')
     boot = sub.add_parser('bootstrap-local')
     boot.add_argument('--managed-settings', default='/Library/Application Support/ClaudeCode/managed-settings.json')
     args = parser.parse_args()
     repo = Repository(args.root, args.backend, getattr(args, 'revision', None))
     try:
+        if args.command in {'files', 'preview', 'edit'}:
+            from picker import main as picker_main
+            picker_args = ['--root', str(repo.root), '--backend', repo.backend,
+                           'list' if args.command == 'files' else args.command]
+            if getattr(args, 'changed', False):
+                picker_args.append('--changed')
+            if getattr(args, 'json', False):
+                picker_args.append('--json')
+            if args.command == 'preview':
+                picker_args.append(args.key)
+                if args.plain:
+                    picker_args.append('--plain')
+            if args.command == 'edit' and args.query:
+                picker_args.extend(['--query', args.query])
+            return picker_main(picker_args)
         if args.command == 'bootstrap-local':
             bootstrap_local(repo.root, Path(args.managed_settings))
             return 0

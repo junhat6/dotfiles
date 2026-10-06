@@ -24,6 +24,37 @@ Bootstrap は `yadm gitconfig core.hooksPath ~/.config/dotfiles/git-hooks` を�
 
 `--check` はシェル/Git 構文・所有権と一時 HOME による統合テストを実行し、HOME を変更しません。`--apply` は bootstrap 処理、`--packages` は共通 Brewfile、`--launchagents` は常駐処理、`--all --dry-run` は実行予定のみ表示します。
 
+## 設定を探す・差分を見る（ターミナル / Neovim）
+
+`dedit` は共有設定を検索し、ステージ済み・未ステージの差分を分けてプレビューします。変更がないファイルは内容を表示。認証・ローカル専用設定は候補に入りません。削除されたファイルは差分を見られますが、Enter で勝手に作り直しません。
+
+```bash
+dedit                   # 全共有設定を検索して Neovim で開く
+dedit --changed         # 変更がある共有設定から選ぶ
+dedit --query wezterm   # 検索語を入れた状態で開く
+dlg                     # dotfiles の lazygit
+```
+
+|入口 / 操作|動作|
+|---|---|
+|ターミナル `Ctrl-X` → `Ctrl-D`|dedit を直接開く（2キーを順に押す）|
+|既存 `Ctrl-Q` → `[dotfiles] shared settings`|dedit を開く。通常のリポジトリ選択・移動も継続|
+|選択画面 `Ctrl-S` / `Ctrl-A`|変更ファイル / 全共有ファイルに切り替え|
+|選択画面 `Ctrl-/`|プレビューを表示・非表示（端末により Ctrl-_ と同じコード）|
+|選択画面 `Ctrl-G`|dotfiles の lazygit を開く|
+|Neovim `Space f d` / `Space f Shift-D`|差分プレビュー付きの共有設定 / 変更設定の検索|
+|Neovim `Space g y`|dotfiles 専用 lazygit を開く|
+|Neovim `Space g h p`|現在の変更の差分をインライン表示（LazyVim 標準）|
+|Neovim `]h` / `[h`|変更箇所を次 / 前へ移動（LazyVim 標準）|
+
+通常の `lg` / `v` と、Neovim の通常プロジェクト用 Git 操作はそのままです。ショートカットから設定を開いて戻っても、入力途中のシェルコマンド・カーソル・作業ディレクトリを保持します。新しいターミナルで読み込まれ、既存のターミナルでは `source ~/.zshrc`。Neovim は開き直します。
+
+Neovim は既存 Gitsigns の `worktrees` 設定で yadm を接続します。通常の Git リポジトリが検出できる場合はそちらが優先されます。Git の場所を Neovim 全体の環境変数に書き換えず、バッファごとに両方を扱います。設定検索と lazygit は既存 Snacks を使用し、端末と Neovim の検索は同じ `.config/dotfiles/scripts/picker.py` の共有一覧・プレビューを使います。追加の Git プラグインは導入していません。
+
+`dotfiles files --json` / `dotfiles files --changed --json` はエディタ用の共有ファイル一覧、`dotfiles preview KEY --plain` はその候補の差分です。候補の key は不透明な識別子で、任意のパスを指定してローカル情報を読む入口にはなりません。新しい共有ファイルは引き続き ownership.json と .gitignore に個別登録します。
+
+fzf のプレビューは幅100未満なら下、広い端末なら右に出します。全変更とファイル選択は都度更新されます。ステージ/未ステージ表示は Git の内容の違いで、編集者が人/AIかの識別ではありません。未保存のエディタ内容を外部変更で強制上書きする仕組みは追加していません。
+
 ## 日常操作と所有権
 
 ```bash
@@ -43,7 +74,7 @@ HOME の `.gitignore` は既定で全パスを除外し、共有ファイルだ�
 
 pre-commit/pre-push は実際の Git INDEX のパス・manifest・JSON を検証するため、`yadm add -f` した local ファイルや、stage 後に作業ファイルだけを直した不正設定も拒否します。pre-push は stdin で渡された各 branch tip の committed tree も検証します。LaunchAgent の drift と新規共有候補も検知します。自動 add・commit・push は行いません。Git hooks は `--no-verify` 等で回避可能で、任意の AI に認識を強制する仕組みではありません。既存共有編集の追跡と明示的な所有権検査を機械で支えます。
 
-共有設定は `.zshrc`, `.zprofile`, `.gitconfig`, `.tmux.conf` と `.config/`, `.claude/`, `.hammerspoon/` の manifest にある個別ファイルです。Neovim の authored 設定は `init.lua`, `lua/config/lazy.lua`, `lua/plugins/colorscheme.lua` の3つのみ。LazyVim 標準と Catppuccin Latte を使用し、`lazy-lock.json` / `lazyvim.json` はローカル生成物です。以前の `lazyvim.json` に extras が残る端末では、バックアップ後にその extras を空にして標準構成に戻します。Ghostty・Gemini CLI・opencode は共通設定から削除済みです。
+共有設定は `.zshrc`, `.zprofile`, `.gitconfig`, `.tmux.conf` と `.config/`, `.claude/`, `.hammerspoon/` の manifest にある個別ファイルです。Neovim は標準 bootstrap・配色に、共有設定検索と Git 連携用の `lua/plugins/dotfiles.lua`, `lua/dotfiles/init.lua` を加えた5ファイルです。LazyVim 標準と Catppuccin Latte を使用し、`lazy-lock.json` / `lazyvim.json` はローカル生成物です。以前の `lazyvim.json` に extras が残る端末では、バックアップ後にその extras を空にして標準構成に戻します。Ghostty・Gemini CLI・opencode は共通設定から削除済みです。
 
 Claude の共通 `settings.json` は共有 UI/plugin 設定のみ。`settings.local.json` の permissions・defaultMode・host hooks は共有しません。端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
 

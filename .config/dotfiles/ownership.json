@@ -52,7 +52,12 @@
     ".tmux.conf",
     ".zprofile",
     ".zshrc",
-    "README.md"
+    "README.md",
+    ".config/dotfiles/scripts/picker.py",
+    ".config/dotfiles/tests/test_picker.py",
+    ".config/dotfiles/tests/test_nvim.py",
+    ".config/nvim/lua/plugins/dotfiles.lua",
+    ".config/nvim/lua/dotfiles/init.lua"
   ],
   "local": [
     ".claude/settings.local.json",

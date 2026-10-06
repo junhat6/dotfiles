@@ -7,25 +7,46 @@ setopt AUTO_PUSHD PUSHD_IGNORE_DUPS PUSHD_SILENT PUSHDMINUS  # cd をスタッ�
 
 # === ghq - Git リポジトリ管理 ===
 # fzf でリポジトリ選択して移動 (Ctrl-Q) — 訪問履歴に関係なく ghq 管理下の全リポジトリ + ~/.config 配下の独立リポジトリが対象
+# ドットファイル選択後も入力中のコマンドとカーソルを維持する。
+dotfiles-edit-widget() {
+  local saved_buffer="$BUFFER" saved_cursor="$CURSOR" saved_pwd="$PWD"
+  zle -I
+  dedit
+  cd -- "$saved_pwd"
+  BUFFER="$saved_buffer"
+  CURSOR="$saved_cursor"
+  zle reset-prompt
+}
+zle -N dotfiles-edit-widget
+bindkey '^X^D' dotfiles-edit-widget
+
 fzf-ghq-widget() {
-  local root selected config_dirs=()
-  root="$(ghq root)"
+  local root selected dir config_dirs=()
+  local saved_buffer="$BUFFER" saved_cursor="$CURSOR" saved_pwd="$PWD"
+  root="$(ghq root)" || return
 
   for dir in "$HOME"/.config/*/; do
     [[ -d "${dir}.git" ]] && config_dirs+=("${dir#$HOME/}")
   done
 
   selected=$(
-    { ghq list; printf '%s\n' "${config_dirs[@]}"; } | fzf \
-      --preview 'eza -lah --icons --git "'"$root"'/{}" 2>/dev/null || eza -lah --icons --git "'"$HOME"'/{}" 2>/dev/null' \
+    { ghq list; (( ${#config_dirs} )) && printf '%s\n' "${config_dirs[@]}"; print -r -- '[dotfiles] shared settings'; } | \
+      DOTFILES_GHQ_ROOT="$root" DOTFILES_HOME="$HOME" fzf \
+      --preview 'if [ {} = "[dotfiles] shared settings" ]; then printf "%s\n" "Shared settings: Enter opens dedit"; else eza -lah --icons --git "$DOTFILES_GHQ_ROOT"/{} 2>/dev/null || eza -lah --icons --git "$DOTFILES_HOME"/{} 2>/dev/null; fi' \
       --preview-window=right:60%
-  ) || return
+  ) || { BUFFER="$saved_buffer"; CURSOR="$saved_cursor"; zle reset-prompt; return; }
 
-  if [[ -d "$root/$selected" ]]; then
-    cd "$root/$selected"
+  if [[ "$selected" == '[dotfiles] shared settings' ]]; then
+    zle -I
+    dedit
+    cd -- "$saved_pwd"
+  elif [[ -d "$root/$selected" ]]; then
+    cd -- "$root/$selected"
   elif [[ -d "$HOME/$selected" ]]; then
-    cd "$HOME/$selected"
+    cd -- "$HOME/$selected"
   fi
+  BUFFER="$saved_buffer"
+  CURSOR="$saved_cursor"
   zle reset-prompt
 }
 zle -N fzf-ghq-widget
