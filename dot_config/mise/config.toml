@@ -23,7 +23,8 @@ cmake = "4.4.3"
 "cargo:mdbook-plantuml" = "2.0.0"
 
 "npm:@anthropic-ai/claude-code" = { version = "latest", minimum_release_age = "0s", allow_builds = ["@anthropic-ai/claude-code"] }
-"npm:@openai/codex" = { version = "latest", minimum_release_age = "0s" }
+# Codex 本体と OS 別バイナリの公開時差を避けるため、公開後 1 時間待つ。
+"npm:@openai/codex" = { version = "latest", minimum_release_age = "1h" }
 "npm:cf" = "latest"
 opencode = { version = "latest", minimum_release_age = "0s" }
 python = "3.11.17"
