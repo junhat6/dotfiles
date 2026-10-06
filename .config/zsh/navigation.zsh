@@ -18,7 +18,9 @@ dotfiles-edit-widget() {
   zle reset-prompt
 }
 zle -N dotfiles-edit-widget
-bindkey '^X^D' dotfiles-edit-widget
+# WezTerm と競合せず、未読込のシェルでも EOF にならない Ctrl-]。
+bindkey -r '^X^D'
+bindkey '^]' dotfiles-edit-widget
 
 fzf-ghq-widget() {
   local root selected dir config_dirs=()

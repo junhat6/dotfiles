@@ -37,7 +37,7 @@ dlg                     # dotfiles の lazygit
 
 |入口 / 操作|動作|
 |---|---|
-|ターミナル `Ctrl-X` → `Ctrl-D`|dedit を直接開く（2キーを順に押す）|
+|ターミナル `Ctrl-]`|dedit を直接開く（Ctrl と `]` を同時に押す）|
 |既存 `Ctrl-Q` → `[dotfiles] shared settings`|dedit を開く。通常のリポジトリ選択・移動も継続|
 |選択画面 `Ctrl-S` / `Ctrl-A`|変更ファイル / 全共有ファイルに切り替え|
 |選択画面 `Ctrl-/`|プレビューを表示・非表示（端末により Ctrl-_ と同じコード）|
@@ -47,7 +47,7 @@ dlg                     # dotfiles の lazygit
 |Neovim `Space g h p`|現在の変更の差分をインライン表示（LazyVim 標準）|
 |Neovim `]h` / `[h`|変更箇所を次 / 前へ移動（LazyVim 標準）|
 
-通常の `lg` / `v` と、Neovim の通常プロジェクト用 Git 操作はそのままです。ショートカットから設定を開いて戻っても、入力途中のシェルコマンド・カーソル・作業ディレクトリを保持します。新しいターミナルで読み込まれ、既存のターミナルでは `source ~/.zshrc`。Neovim は開き直します。
+通常の `lg` / `v` と、Neovim の通常プロジェクト用 Git 操作はそのままです。ショートカットから設定を開いて戻っても、入力途中のシェルコマンド・カーソル・作業ディレクトリを保持します。新しいターミナルで読み込まれ、既存のターミナルでは `source ~/.zshrc`。Neovim は開き直します。WezTerm は `Ctrl-]` をシェルへ明示的に送り、設定の自動再読み込みで反映します。旧 `Ctrl-X` → `Ctrl-D` はシェル再読み込み時に解除します。Karabiner で物理 Control を Option に変更している場合、Control に割り当てた Caps Lock を押しながら `]` を押します。
 
 Neovim は既存 Gitsigns の `worktrees` 設定で yadm を接続します。通常の Git リポジトリが検出できる場合はそちらが優先されます。Git の場所を Neovim 全体の環境変数に書き換えず、バッファごとに両方を扱います。設定検索と lazygit は既存 Snacks を使用し、端末と Neovim の検索は同じ `.config/dotfiles/scripts/picker.py` の共有一覧・プレビューを使います。追加の Git プラグインは導入していません。
 

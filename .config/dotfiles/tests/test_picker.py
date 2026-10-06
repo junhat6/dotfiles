@@ -177,5 +177,33 @@ class PickerTests(unittest.TestCase):
         self.assertIn('\x1b', picker.preview(self.repo, key))
 
 
+class ShortcutIntegrationTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('zsh'), 'zsh is required')
+    def test_reload_replaces_legacy_binding(self):
+        navigation = SCRIPTS.parents[2] / '.config/zsh/navigation.zsh'
+        result = subprocess.run(
+            ['zsh', '-f', '-ic',
+             'zoxide(){ :; }; bindkey -e; bindkey "^X^D" old-widget; '
+             'source "$1"; source "$1"; bindkey "^]"; bindkey "^X^D"',
+             'shortcut-check', str(navigation)],
+            capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"^]" dotfiles-edit-widget', result.stdout)
+        self.assertIn('"^X^D" undefined-key', result.stdout)
+
+    @unittest.skipUnless(shutil.which('wezterm'), 'WezTerm is required')
+    def test_wezterm_effective_binding_sends_matching_control_byte(self):
+        config = SCRIPTS.parents[2] / '.config/wezterm/wezterm.lua'
+        result = subprocess.run(
+            ['wezterm', '--config-file', str(config), 'show-keys', '--lua'],
+            capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        main_keys = result.stdout.split('key_tables =', 1)[0]
+        bindings = [line for line in main_keys.splitlines()
+                    if "key = ']'" in line and "mods = 'CTRL'" in line]
+        self.assertEqual(len(bindings), 1, result.stdout)
+        self.assertIn(r"act.SendString '\u{1d}'", bindings[0])
+
+
 if __name__ == '__main__':
     unittest.main()
