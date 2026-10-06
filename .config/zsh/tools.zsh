@@ -28,6 +28,17 @@ alias dc='docker compose'
 alias cc='claude --dangerously-skip-permissions'
 alias lg='lazygit'
 
+# === dotfiles (yadm) ===
+alias dlg='yadm enter lazygit'
+
+# 共有設定の一覧から選び、ホーム内の実ファイルを開く。
+dedit() {
+  setopt local_options pipe_fail
+  local dotfiles_path
+  dotfiles_path="$(yadm list -a | fzf --prompt='dotfiles > ')" || return
+  [[ -n "$dotfiles_path" ]] && nvim "$HOME/$dotfiles_path"
+}
+
 # === エディタ ===
 export EDITOR='nvim'
 alias v='nvim .'     # カレントディレクトリを開く
