@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+if [[ -x /usr/bin/python3 ]]; then PYTHON=/usr/bin/python3; else PYTHON=python3; fi
+exec "$PYTHON" "$ROOT/.config/dotfiles/scripts/dotfiles.py" --root "$ROOT" --backend git check --index

@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+if [[ -x /usr/bin/python3 ]]; then PYTHON=/usr/bin/python3; else PYTHON=python3; fi
+"$PYTHON" "$ROOT/.config/dotfiles/scripts/dotfiles.py" --root "$ROOT" --backend git check --index
+# Validate every branch tip being pushed, including non-HEAD refs. Deletions have no tree.
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [[ "$local_sha" =~ ^0+$ ]] && continue
+    "$PYTHON" "$ROOT/.config/dotfiles/scripts/dotfiles.py" --root "$ROOT" --backend git check --revision "$local_sha" --source
+done

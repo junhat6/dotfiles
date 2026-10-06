@@ -13,4 +13,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Check shell and Git configuration syntax
-        run: bash scripts/check.sh
+        run: bash .config/dotfiles/scripts/check.sh "$GITHUB_WORKSPACE"
