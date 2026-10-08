@@ -21,9 +21,9 @@ cmake = "4.4.3"
 "go:honnef.co/go/tools/cmd/staticcheck" = "0.7.0"
 "cargo:mdbook-plantuml" = "2.0.0"
 
-"npm:@anthropic-ai/claude-code" = { version = "latest", minimum_release_age = "0s", allow_builds = ["@anthropic-ai/claude-code"] }
-# Codex 本体と OS 別バイナリの公開時差を避けるため、公開後 1 時間待つ。
-"npm:@openai/codex" = { version = "latest", minimum_release_age = "1h" }
+"aqua:anthropics/claude-code" = { version = "latest", minimum_release_age = "0s" }
+# Codex は aqua 経由で Apple Silicon 用を取得し、公開後 1 時間待つ。
+"aqua:openai/codex" = { version = "latest", minimum_release_age = "1h", os = ["macos/arm64"] }
 "npm:cf" = "latest"
 python = "3.11.17"
 ruby = "3.2.9"
