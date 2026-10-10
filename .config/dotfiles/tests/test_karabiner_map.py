@@ -84,6 +84,22 @@ class KarabinerMap(unittest.TestCase):
         _, _, _, chords = MAP.model(self.config)
         self.assertEqual(next(c['to'] for c in chords if c['code'] == 'h'), 'right_arrow')
 
+    def test_word_navigation_preserves_output_modifiers_and_selection(self):
+        rules = self.config['profiles'][0]['complex_modifications']['rules']
+        rules.append({'manipulators': [
+            {'type': 'basic', 'from': {'key_code': key, 'modifiers': {'mandatory': ['option'], 'optional': ['caps_lock', 'shift']}},
+             'to': [{'key_code': arrow, 'modifiers': ['left_option']}]}
+            for key, arrow in [('n', 'left_arrow'), ('m', 'right_arrow')]]
+        })
+        _, _, _, chords = MAP.model(self.config)
+        word = next(c for c in chords if c['code'] == 'n')
+        self.assertEqual(word['to_modifiers'], ['left_option'])
+        self.assertIn('shift', word['optional'])
+        outputs = MAP.generate(json.dumps(self.config).encode())
+        self.assertIn('単語←', outputs[MAP.OUTPUTS[0]])
+        self.assertIn('Option + ←（単語←）', outputs[MAP.OUTPUTS[1]])
+        ET.fromstring(outputs[MAP.OUTPUTS[0]])
+
     def test_xml_escaping_and_reproducibility(self):
         self.config['profiles'][0]['name'] = '<test> & "profile"'
         source = json.dumps(self.config).encode()

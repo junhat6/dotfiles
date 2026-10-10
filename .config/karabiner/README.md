@@ -9,7 +9,7 @@
 
 **選択プロファイル：** Default profile
 
-**設定のSHA-256：** `f174600323e003f08a985ef84862760b55face59a7abdcaec1ccea5645873dc9`
+**設定のSHA-256：** `c1a811f6e6dc3aa87123b3732b9243ae3953fe89df9c841b9e5c7fd89c4999f2`
 
 ## 変更しているキー
 
@@ -18,10 +18,10 @@
 | Delete（後方削除） | 押す → 無効 |
 | Tab | 単押し → Tab ／ 併用 → 左Option |
 | Caps Lock | 単押し → Esc ／ 併用 → 左Control |
-| 左Control | 押す → 右Option |
 | 左Option | 押す → Delete（後方削除） |
 | 左Command | 単押し → 英数 ／ 併用 → 左Command |
 | 右Command | 押す → かな |
+| 右Option | 押す → Return |
 
 「単押し」は短く押して離したときの動作です。「併用」は押しながら別のキーを使ったときの修飾キー動作です。単押しはキーを離した時点で送信され、長く押した場合の判定時間はKarabinerの設定に従います。
 
@@ -33,10 +33,14 @@
 | Option + J | ↓ | Caps Lock |
 | Option + K | ↑ | Caps Lock |
 | Option + L | → | Caps Lock |
+| Option + N | Option + ←（単語←） | Caps Lock、Shift |
+| Option + M | Option + →（単語→） | Caps Lock、Shift |
 
 組み合わせの修飾キーは機能名です。物理キーの印字とは異なる場合があるため、上の表と合わせて確認してください。許可されていない追加の修飾キーを押した場合は、その組み合わせルールが適用されません。
 
 図や表に変更がないキーは、Karabinerでは再割り当てしていません。Fn／地球儀キーの単押し、メディアキー、macOSやアプリのショートカットは、それぞれの設定に従います。
+
+行頭・行末移動、単語移動、WezTermのLEADERは [Vim以外の文字編集](../dotfiles/README.md#vim以外の文字編集) を参照してください。Shiftを加えた選択操作は一般的な文章入力欄向けです。ターミナルの選択・編集はシェルやTUIアプリのキーバインドに従います。
 
 ## 更新方法（人・AIエージェント共通）
 

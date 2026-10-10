@@ -141,6 +141,29 @@ Karabinerの現在の物理キー割り当ては [キー配列図と表](../kara
 
 Alt（Option）+ H/J/K/L はそれぞれ ←/↓/↑/→。Tabを押しながら使ってもAltとして操作できます。Shift・Command・Control・Fnを併用した組み合わせは矢印へ変換しません。
 
+### Vim以外の文字編集
+
+Tab併用はOption、Caps Lock併用と左ControlはControlです。左OptionはDelete専用、右OptionはReturn専用です。日本語入力への切り替えは右Command、英数への切り替えは左Commandの単押しで行います。
+
+| 操作 | この配列で押すキー | 補足 |
+| --- | --- | --- |
+| 1文字左／右 | Tab + H / L | 通常の ← / → |
+| 上／下 | Tab + K / J | 通常の ↑ / ↓ |
+| 単語左／右 | Tab + N / M | Option + ← / → を出力 |
+| 行頭／行末 | Caps + A / E、または左Control + A / E | Control + A / E。文章入力欄では行または段落の境界へ移動 |
+| 単語単位で選択 | Tab + Shift + N / M | 一般的な文章入力欄向け。ターミナルではアプリに従う |
+| 直前の文字を削除 | 左Option | Delete（後方削除） |
+| 次の文字を削除 | Caps + D、またはFn + 左Option | Control + D / Fn + Delete。シェルの空行でControl + Dを押すと終了するため、文字編集時に使う |
+| 直前の単語を削除 | Tab + 左Option | Option + Delete。シェルではCaps + Wも使える |
+| カーソルから行末を削除 | Caps + K | シェルではControl + K |
+| 確定・改行 | 右Option、または通常のReturn | どちらもReturnを出力 |
+
+WezTermのLEADERは **Control + ;（Caps + ;）**。押して離した後、既存のH/J/K/Lなどでペインを操作します。Control + AはLEADERから外し、シェルの行頭移動に戻しています。Control + SpaceはmacOSの入力ソース切り替えと衝突するため使いません。tmuxは従来どおりControl + Bです。
+
+WezTermではOption + ← / →をMeta-b/fとしてシェルへ送り、zshの単語移動に揃えています。TUIアプリはそのアプリのキーバインドで処理します。Caps + Fはこのzsh設定ではディレクトリ検索なので、1文字右移動にはTab + Lを使います。
+
+アプリによって操作が異なります。日本語変換中はIME側のキー操作になる場合があります。[Appleの文字編集ショートカット](https://support.apple.com/en-us/102650)も参照してください。
+
 アプリ起動と登録済みURLの番号キーはAlt、検索や一覧などの操作はAlt + Shiftに揃えます。クリップボード履歴はCommand + Shift + Vです。
 
 | キー | 操作 |

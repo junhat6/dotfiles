@@ -76,14 +76,20 @@ config.default_cursor_style = "BlinkingBlock"
 config.send_composed_key_when_left_alt_is_pressed = false
 config.send_composed_key_when_right_alt_is_pressed = true
 
-config.leader = { key = "a", mods = "CTRL", timeout_milliseconds = 1000 }
+-- Ctrl-a / Ctrl-e はシェルの行頭・行末移動に使う。Caps + ; でLEADER。
+config.leader = { key = ";", mods = "CTRL", timeout_milliseconds = 1000 }
 
 config.keys = {
 	-- 共有設定検索（zsh の dotfiles-edit-widget）。シェルへ Ctrl-] を明示的に送る。
 	{ key = "]", mods = "CTRL", action = act.SendString("\x1d") },
 
+	-- macOSのOption+矢印をシェルの単語移動へ。KarabinerのTab+N/Mも同じ出力。
+	-- CSI 1;3D/C は現在のzshで未割り当てなので、EmacsのMeta-b/fを送る。
+	{ key = "LeftArrow", mods = "ALT", action = act.SendString("\x1bb") },
+	{ key = "RightArrow", mods = "ALT", action = act.SendString("\x1bf") },
+
 	-- =========================================================
-	-- LEADER (Ctrl-a) 系：マルチプレクサ操作
+	-- LEADER (Ctrl-;) 系：マルチプレクサ操作
 	-- =========================================================
 	-- ペイン分割：\ = 左右 / - = 上下
 	{ key = "\\", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },

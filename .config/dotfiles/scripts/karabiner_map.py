@@ -65,11 +65,14 @@ def require_fields(obj, allowed, context):
         raise ValueError(context + ': unsupported fields ' + ', '.join(sorted(unknown)) + '; extend the keymap renderer before changing this rule')
 
 
-def output(events):
+def output(events, allow_modifiers=False):
     if len(events) != 1:
         raise ValueError('keymap renderer requires one output event; extend it for sequences')
     event = events[0]
-    require_fields(event, {'key_code', 'lazy', 'repeat'}, 'to event')
+    allowed = {'key_code', 'lazy', 'repeat'}
+    if allow_modifiers:
+        allowed.add('modifiers')
+    require_fields(event, allowed, 'to event')
     code = event.get('key_code')
     if not isinstance(code, str):
         raise ValueError('keymap renderer requires a named key_code output')
@@ -104,11 +107,15 @@ def model(config):
             require_fields(mods, {'mandatory', 'optional'}, 'from modifiers')
             mandatory = [canonical(m) for m in mods.get('mandatory', [])]
             optional = [canonical(m) for m in mods.get('optional', [])]
-            held = output(manipulator.get('to', []))
+            held = output(manipulator.get('to', []), allow_modifiers=bool(mandatory))
             if mandatory:
                 if 'to_if_alone' in manipulator:
                     raise ValueError('extend the renderer for tap behavior on a chord')
-                chords.append({'code': code, 'mandatory': mandatory, 'optional': optional, 'to': held})
+                to_modifiers = manipulator['to'][0].get('modifiers', [])
+                if not isinstance(to_modifiers, list) or any(not isinstance(m, str) for m in to_modifiers):
+                    raise ValueError('to.modifiers must be a list of named modifiers')
+                chords.append({'code': code, 'mandatory': mandatory, 'optional': optional,
+                               'to': held, 'to_modifiers': [canonical(m) for m in to_modifiers]})
             else:
                 if code in singles:
                     raise ValueError('extend the renderer for multiple/contextual mappings of ' + code)
@@ -155,6 +162,14 @@ def key_label(code):
             'left_shift': '⇧', 'right_shift': '⇧', 'shift': '⇧'}.get(code, short(code))
 
 
+def destination(chord, compact=False):
+    mods = chord.get('to_modifiers', [])
+    if mods == ['left_option'] and chord['to'] in {'left_arrow', 'right_arrow'}:
+        word = '単語' + short(chord['to'])
+        return word if compact else 'Option + ' + short(chord['to']) + '（' + word + '）'
+    return ' + '.join([short(m) for m in mods] + [short(chord['to'])])
+
+
 def render_svg(profile, keys, bindings, chords, digest):
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc" fill="none" stroke-linecap="round" stroke-linejoin="round">',
              '<title id="title">MacBook US配列：Karabinerの現在の割り当て</title>',
@@ -189,7 +204,8 @@ def render_svg(profile, keys, bindings, chords, digest):
             label = ' / '.join(key_label(to) if len(actions) > 1 else short(to) for _, to in actions)
             text(x+width/2, y+39, label, 16, ink, anchor='middle')
         elif chord:
-            text(x+width/2, y+39, '+'.join(key_label(m) for m in chord['mandatory']) + ' → ' + short(chord['to']), 16, ink, anchor='middle')
+            label = destination(chord, compact=True) if chord.get('to_modifiers') else '+'.join(key_label(m) for m in chord['mandatory']) + ' → ' + short(chord['to'])
+            text(x+width/2, y+39, label, 16, ink, anchor='middle')
         if code in {'f', 'j'}:
             path('M %.2f %.2f h 12' % (x+width/2-6, y+height-6), ink)
         parts.append('</g>')
@@ -197,18 +213,19 @@ def render_svg(profile, keys, bindings, chords, digest):
         text(x, y, '右上Delete' if code == 'delete_or_backspace' else name(code), 20, weight=600)
         actions = bindings.get(code, [])
         if not actions:
-            text(x, y+28, 'Karabinerは変更なし', 16)
+            text(x, y+28, '通常のControl' if code == 'left_control' else 'Karabinerは変更なし', 16)
         for i, (when, to) in enumerate(actions):
             text(x, y+28*(i+1), when + ' → ' + short(to), 17)
     note('tab', 32, 174)
     note('caps_lock', 300, 174)
     note('delete_or_backspace', 974, 174)
-    text(566, 174, '組み合わせ', 20, weight=600)
+    title = 'Option＋キー（Tab併用でも操作）' if all(c['mandatory'] == ['option'] for c in chords) else '組み合わせ'
+    text(566, 174, title, 19, weight=600)
     for i, chord in enumerate(chords):
-        value = ' + '.join([name(m) for m in chord['mandatory']] + [name(chord['code'])]) + ' → ' + short(chord['to'])
-        text(566, 201+i*23, value, 16)
-    if len(chords) > 4:
-        raise ValueError('more than four chords: extend SVG callout layout')
+        value = ' + '.join([name(m) for m in chord['mandatory']] + [name(chord['code'])]) + ' → ' + destination(chord, compact=True)
+        text(566+(i//4)*200, 201+(i%4)*23, value, 16)
+    if len(chords) > 8:
+        raise ValueError('more than eight chords: extend SVG callout layout')
     # Outer leader lines keep the labels clear of the keys.
     for code, lane, endpoint, endpoint_y in [('tab', 20, 32, 250), ('caps_lock', 8, 300, 264)]:
         k = positions[code]
@@ -216,7 +233,8 @@ def render_svg(profile, keys, bindings, chords, digest):
         path('M %.2f %.2f H %s V %s H %s' % (left+3, cy, lane, endpoint_y, endpoint))
     k = positions['delete_or_backspace']
     path('M 1160 377 H 1188 V 247 H 974')
-    bottom_notes = [('fn', 32), ('left_control', 243), ('left_option', 454), ('left_command', 665), ('right_command', 936)]
+    bottom_notes = [('fn', 32), ('left_control', 216), ('left_option', 400),
+                    ('left_command', 584), ('right_command', 768), ('right_option', 952)]
     for i, (code, x) in enumerate(bottom_notes):
         k = positions[code]
         cx = left+(k['x']+k['units']/2)*unit
@@ -246,11 +264,12 @@ def render_readme(profile, bindings, chords, digest):
     for chord in chords:
         origin = ' + '.join([name(m) for m in chord['mandatory']] + [name(chord['code'])])
         extra = 'すべて' if 'any' in chord['optional'] else '、'.join(name(m) for m in chord['optional']) or 'なし'
-        lines.append('| ' + origin + ' | ' + name(chord['to']) + ' | ' + extra + ' |')
+        lines.append('| ' + origin + ' | ' + destination(chord) + ' | ' + extra + ' |')
     if not chords:
         lines.append('| なし | — | — |')
     lines += ['', '組み合わせの修飾キーは機能名です。物理キーの印字とは異なる場合があるため、上の表と合わせて確認してください。許可されていない追加の修飾キーを押した場合は、その組み合わせルールが適用されません。', '',
               '図や表に変更がないキーは、Karabinerでは再割り当てしていません。Fn／地球儀キーの単押し、メディアキー、macOSやアプリのショートカットは、それぞれの設定に従います。', '',
+              '行頭・行末移動、単語移動、WezTermのLEADERは [Vim以外の文字編集](../dotfiles/README.md#vim以外の文字編集) を参照してください。Shiftを加えた選択操作は一般的な文章入力欄向けです。ターミナルの選択・編集はシェルやTUIアプリのキーバインドに従います。', '',
               '## 更新方法（人・AIエージェント共通）', '',
               '1. `karabiner.json` を編集します。',
               '2. リポジトリのルート（yadmの場合はHOME）で再生成します。', '',

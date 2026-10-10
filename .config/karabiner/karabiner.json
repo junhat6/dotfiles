@@ -41,6 +41,57 @@
             ]
           },
           {
+            "description": "Option + N/M: move by word; Shift extends selection in text fields",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "n",
+                  "modifiers": {
+                    "mandatory": [
+                      "option"
+                    ],
+                    "optional": [
+                      "caps_lock",
+                      "shift"
+                    ]
+                  }
+                },
+                "to": [
+                  {
+                    "key_code": "left_arrow",
+                    "modifiers": [
+                      "left_option"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "m",
+                  "modifiers": {
+                    "mandatory": [
+                      "option"
+                    ],
+                    "optional": [
+                      "caps_lock",
+                      "shift"
+                    ]
+                  }
+                },
+                "to": [
+                  {
+                    "key_code": "right_arrow",
+                    "modifiers": [
+                      "left_option"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "description": "Tap Tab for tab or Hold for Alt",
             "manipulators": [
               {
@@ -116,16 +167,16 @@
       "selected": true,
       "simple_modifications": [
         {
-          "from": { "key_code": "left_control" },
-          "to": [{ "key_code": "right_option" }]
-        },
-        {
           "from": { "key_code": "left_option" },
           "to": [{ "key_code": "delete_or_backspace" }]
         },
         {
           "from": { "key_code": "delete_or_backspace" },
           "to": [{ "key_code": "vk_none" }]
+        },
+        {
+          "from": { "key_code": "right_option" },
+          "to": [{ "key_code": "return_or_enter" }]
         }
       ],
       "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
