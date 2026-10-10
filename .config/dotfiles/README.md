@@ -143,7 +143,7 @@ Alt（Option）+ H/J/K/L はそれぞれ ←/↓/↑/→。Tabを押しながら
 
 ### Vim以外の文字編集
 
-Tab併用はOption、Caps Lock併用と左ControlはControlです。左OptionはDelete専用、右OptionはReturn専用です。日本語入力への切り替えは右Command、英数への切り替えは左Commandの単押しで行います。
+Tab併用と左OptionはOption、Caps Lock併用と左ControlはControlです。右ShiftはDelete専用、右OptionはReturn専用です。右上のDeleteは無効です。日本語入力への切り替えは右Command、英数への切り替えは左Commandの単押しで行います。
 
 | 操作 | この配列で押すキー | 補足 |
 | --- | --- | --- |
@@ -152,9 +152,9 @@ Tab併用はOption、Caps Lock併用と左ControlはControlです。左Optionは
 | 単語左／右 | Tab + N / M | Option + ← / → を出力 |
 | 行頭／行末 | Caps + A / E、または左Control + A / E | Control + A / E。文章入力欄では行または段落の境界へ移動 |
 | 単語単位で選択 | Tab + Shift + N / M | 一般的な文章入力欄向け。ターミナルではアプリに従う |
-| 直前の文字を削除 | 左Option | Delete（後方削除） |
-| 次の文字を削除 | Caps + D、またはFn + 左Option | Control + D / Fn + Delete。シェルの空行でControl + Dを押すと終了するため、文字編集時に使う |
-| 直前の単語を削除 | Tab + 左Option | Option + Delete。シェルではCaps + Wも使える |
+| 直前の文字を削除 | 右Shift | Delete（後方削除） |
+| 次の文字を削除 | Caps + D、またはFn + 右Shift | Control + D / Fn + Delete。シェルの空行でControl + Dを押すと終了するため、文字編集時に使う |
+| 直前の単語を削除 | 左Option + 右Shift、またはTab + 右Shift | Option + Delete。シェルではCaps + Wも使える |
 | カーソルから行末を削除 | Caps + K | シェルではControl + K |
 | 確定・改行 | 右Option、または通常のReturn | どちらもReturnを出力 |
 
@@ -163,6 +163,8 @@ WezTermのLEADERは **Control + ;（Caps + ;）**。押して離した後、既�
 WezTermではOption + ← / →をMeta-b/fとしてシェルへ送り、zshの単語移動に揃えています。TUIアプリはそのアプリのキーバインドで処理します。Caps + Fはこのzsh設定ではディレクトリ検索なので、1文字右移動にはTab + Lを使います。
 
 アプリによって操作が異なります。日本語変換中はIME側のキー操作になる場合があります。[Appleの文字編集ショートカット](https://support.apple.com/en-us/102650)も参照してください。
+
+Emacs標準の単語移動は `M-b`（単語左）と `M-f`（単語右）です。`M-` はMeta修飾キーで、一般的にはAlt/Option、またはEscを押して離してから文字キーを押します。ブラウザの文章入力欄ではEmacsの全キーが共通ではなく、Mac標準のOption + ← / →や、この配列のTab + N/Mを使います。HammerspoonのOption + B/Fはアプリ起動用なので、EmacsのMeta-b/fを使いたい場合はそちらの割り当ても確認してください。
 
 アプリ起動と登録済みURLの番号キーはAlt、検索や一覧などの操作はAlt + Shiftに揃えます。クリップボード履歴はCommand + Shift + Vです。
 

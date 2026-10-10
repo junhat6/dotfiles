@@ -9,7 +9,7 @@
 
 **選択プロファイル：** Default profile
 
-**設定のSHA-256：** `c1a811f6e6dc3aa87123b3732b9243ae3953fe89df9c841b9e5c7fd89c4999f2`
+**設定のSHA-256：** `cf91daa2d265e45656100a3f9953805185e9661748383c350c7bb61f8d9abfb5`
 
 ## 変更しているキー
 
@@ -18,7 +18,7 @@
 | Delete（後方削除） | 押す → 無効 |
 | Tab | 単押し → Tab ／ 併用 → 左Option |
 | Caps Lock | 単押し → Esc ／ 併用 → 左Control |
-| 左Option | 押す → Delete（後方削除） |
+| 右Shift | 押す → Delete（後方削除） |
 | 左Command | 単押し → 英数 ／ 併用 → 左Command |
 | 右Command | 押す → かな |
 | 右Option | 押す → Return |

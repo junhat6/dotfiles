@@ -213,7 +213,8 @@ def render_svg(profile, keys, bindings, chords, digest):
         text(x, y, '右上Delete' if code == 'delete_or_backspace' else name(code), 20, weight=600)
         actions = bindings.get(code, [])
         if not actions:
-            text(x, y+28, '通常のControl' if code == 'left_control' else 'Karabinerは変更なし', 16)
+            defaults = {'left_control': '通常のControl', 'left_option': '通常のOption'}
+            text(x, y+28, defaults.get(code, 'Karabinerは変更なし'), 16)
         for i, (when, to) in enumerate(actions):
             text(x, y+28*(i+1), when + ' → ' + short(to), 17)
     note('tab', 32, 174)
@@ -233,6 +234,11 @@ def render_svg(profile, keys, bindings, chords, digest):
         path('M %.2f %.2f H %s V %s H %s' % (left+3, cy, lane, endpoint_y, endpoint))
     k = positions['delete_or_backspace']
     path('M 1160 377 H 1188 V 247 H 974')
+    if 'right_shift' in bindings:
+        # The right edge has room for a Shift callout above the Option notes.
+        cy = top + positions['right_shift']['row']*pitch + 25
+        path('M 1160 %s H 1188 V 673 H 974' % cy)
+        note('right_shift', 974, 698)
     bottom_notes = [('fn', 32), ('left_control', 216), ('left_option', 400),
                     ('left_command', 584), ('right_command', 768), ('right_option', 952)]
     for i, (code, x) in enumerate(bottom_notes):
