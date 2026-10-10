@@ -137,6 +137,8 @@ GitHub Actions も同じ検証を実行します。テストは一時 HOME の G
 
 ## macOS キーボード操作
 
+Karabinerの現在の物理キー割り当ては [キー配列図と表](../karabiner/README.md) を参照してください。`karabiner.json` を編集したら `python3 ~/.config/dotfiles/scripts/karabiner_map.py` で図と表を再生成します。`dotfiles check` とGitHub Actionsで再生成漏れを検知します。
+
 Alt（Option）+ H/J/K/L はそれぞれ ←/↓/↑/→。Tabを押しながら使ってもAltとして操作できます。Shift・Command・Control・Fnを併用した組み合わせは矢印へ変換しません。
 
 アプリ起動と登録済みURLの番号キーはAlt、検索や一覧などの操作はAlt + Shiftに揃えます。クリップボード履歴はCommand + Shift + Vです。

@@ -98,15 +98,14 @@
             ]
           },
           {
-            "description": "Tap Right Command for かな or Hold for Fn",
+            "description": "Right Command for かな (Japanese input only)",
             "manipulators": [
               {
                 "from": {
                   "key_code": "right_command",
                   "modifiers": { "optional": ["any"] }
                 },
-                "to": [{ "key_code": "fn", "lazy": true }],
-                "to_if_alone": [{ "key_code": "japanese_kana" }],
+                "to": [{ "key_code": "japanese_kana", "repeat": false }],
                 "type": "basic"
               }
             ]
@@ -121,8 +120,12 @@
           "to": [{ "key_code": "right_option" }]
         },
         {
-          "from": { "key_code": "right_shift" },
+          "from": { "key_code": "left_option" },
           "to": [{ "key_code": "delete_or_backspace" }]
+        },
+        {
+          "from": { "key_code": "delete_or_backspace" },
+          "to": [{ "key_code": "vk_none" }]
         }
       ],
       "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }

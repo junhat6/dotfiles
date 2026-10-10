@@ -87,3 +87,10 @@
 !/.config/dotfiles/tests/test_nvim.py
 !/.config/nvim/lua/plugins/dotfiles.lua
 !/.config/nvim/lua/dotfiles/init.lua
+
+# Karabiner source-derived keyboard documentation
+!/.config/dotfiles/scripts/karabiner_map.py
+!/.config/dotfiles/tests/test_karabiner_map.py
+!/.config/karabiner/AGENTS.md
+!/.config/karabiner/README.md
+!/.config/karabiner/keymap.svg

@@ -76,6 +76,28 @@ class OwnershipIntegration(unittest.TestCase):
         path.write_bytes(original)
         self.assertNotEqual(self.git('commit', '-qm', 'invalid staged mode', success=False).returncode, 0)
 
+    def test_staged_keymap_drift_rejected_with_valid_worktree(self):
+        path = self.root / '.config/karabiner/karabiner.json'
+        original = path.read_bytes()
+        data = json.loads(original)
+        data['profiles'][0]['name'] = 'Changed profile'
+        path.write_text(json.dumps(data))
+        self.git('add', str(path))
+        path.write_bytes(original)
+        result = self.git('commit', '-qm', 'stale staged keymap', success=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('stale keymap', result.stderr.decode())
+
+    def test_committed_keymap_drift_rejected(self):
+        path = self.root / '.config/karabiner/keymap.svg'
+        path.write_text(path.read_text() + '\n')
+        self.git('add', str(path))
+        # The fixture bypasses its hook to model an old/inconsistent pushed tree.
+        self.git('-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'fixture drift')
+        result = self.cli('check', '--revision', 'HEAD', '--source', success=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('stale keymap', result.stderr.decode())
+
     def test_invalid_shell_index_rejected_with_valid_worktree(self):
         path = self.root / '.zshrc'
         original = path.read_bytes()

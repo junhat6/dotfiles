@@ -143,6 +143,19 @@ class Repository:
                     errors.append('removed packages in Brewfile')
             except (OSError, ValueError, ExpatError, plistlib.InvalidFileException, subprocess.CalledProcessError) as exc:
                 errors.append('invalid or missing shared file: ' + path + ': ' + str(exc))
+        keymap_script = '.config/dotfiles/scripts/karabiner_map.py'
+        if keymap_script in m['shared']:
+            try:
+                # Use the same tree for generator, config, and generated documents:
+                # never validate staged/committed content against unstaged files.
+                namespace = {'__name__': 'karabiner_map', '__file__': str(self.root / keymap_script)}
+                exec(compile(self.content(keymap_script, index), keymap_script, 'exec'), namespace)
+                expected = namespace['generate'](self.content(namespace['CONFIG'], index))
+                for path, text in expected.items():
+                    if self.content(path, index) != text.encode():
+                        errors.append('stale keymap: ' + path + ' (run python3 .config/dotfiles/scripts/karabiner_map.py)')
+            except (OSError, ValueError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError) as exc:
+                errors.append('invalid keymap: ' + str(exc))
         if discover:
             errors.extend('new candidate (register deliberately or exclude): ' + x for x in self.candidates(m))
         if generated:
