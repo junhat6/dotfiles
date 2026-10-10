@@ -173,10 +173,6 @@
         {
           "from": { "key_code": "delete_or_backspace" },
           "to": [{ "key_code": "vk_none" }]
-        },
-        {
-          "from": { "key_code": "right_option" },
-          "to": [{ "key_code": "return_or_enter" }]
         }
       ],
       "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }

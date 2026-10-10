@@ -143,7 +143,7 @@ Alt（Option）+ H/J/K/L はそれぞれ ←/↓/↑/→。Tabを押しながら
 
 ### Vim以外の文字編集
 
-Tab併用と左OptionはOption、Caps Lock併用と左ControlはControlです。右ShiftはDelete専用、右OptionはReturn専用です。右上のDeleteは無効です。日本語入力への切り替えは右Command、英数への切り替えは左Commandの単押しで行います。
+Tab併用と左右OptionはOption、Caps Lock併用と左ControlはControlです。右ShiftはDelete専用です。Returnは元のキーを使い、右上のDeleteは無効です。日本語入力への切り替えは右Command、英数への切り替えは左Commandの単押しで行います。
 
 | 操作 | この配列で押すキー | 補足 |
 | --- | --- | --- |
@@ -156,7 +156,7 @@ Tab併用と左OptionはOption、Caps Lock併用と左ControlはControlです。
 | 次の文字を削除 | Caps + D、またはFn + 右Shift | Control + D / Fn + Delete。シェルの空行でControl + Dを押すと終了するため、文字編集時に使う |
 | 直前の単語を削除 | 左Option + 右Shift、またはTab + 右Shift | Option + Delete。シェルではCaps + Wも使える |
 | カーソルから行末を削除 | Caps + K | シェルではControl + K |
-| 確定・改行 | 右Option、または通常のReturn | どちらもReturnを出力 |
+| 確定・改行 | 通常のReturn | 元のキーを使用 |
 
 WezTermのLEADERは **Control + ;（Caps + ;）**。押して離した後、既存のH/J/K/Lなどでペインを操作します。Control + AはLEADERから外し、シェルの行頭移動に戻しています。Control + SpaceはmacOSの入力ソース切り替えと衝突するため使いません。tmuxは従来どおりControl + Bです。
 

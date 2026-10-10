@@ -213,7 +213,7 @@ def render_svg(profile, keys, bindings, chords, digest):
         text(x, y, '右上Delete' if code == 'delete_or_backspace' else name(code), 20, weight=600)
         actions = bindings.get(code, [])
         if not actions:
-            defaults = {'left_control': '通常のControl', 'left_option': '通常のOption'}
+            defaults = {'left_control': '通常のControl', 'left_option': '通常のOption', 'right_option': '通常のOption'}
             text(x, y+28, defaults.get(code, 'Karabinerは変更なし'), 16)
         for i, (when, to) in enumerate(actions):
             text(x, y+28*(i+1), when + ' → ' + short(to), 17)
