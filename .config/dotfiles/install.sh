@@ -3,16 +3,16 @@
 set -euo pipefail
 SUPPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SUPPORT/../.." && pwd)"
-CHECK=false PACKAGES=false APPLY=false AGENTS=false DRY_RUN=false
-usage() { echo 'Usage: install.sh [--check] [--packages] [--apply] [--launchagents] [--all] [--dry-run]'; }
+CHECK=false PACKAGES=false APPLY=false AGENTS=false DRY_RUN=false AUTO_UPDATE=false
+usage() { echo 'Usage: install.sh [--check] [--packages] [--apply] [--launchagents] [--auto-update] [--all] [--dry-run]'; }
 for arg in "$@"; do
     case "$arg" in
         --check) CHECK=true ;; --packages) PACKAGES=true ;; --apply) APPLY=true ;;
-        --launchagents) AGENTS=true ;; --all) CHECK=true; PACKAGES=true; APPLY=true; AGENTS=true ;;
+        --launchagents) AGENTS=true ;; --auto-update) AUTO_UPDATE=true ;; --all) CHECK=true; PACKAGES=true; APPLY=true; AGENTS=true ;;
         --dry-run) DRY_RUN=true ;; -h|--help) usage; exit 0 ;; *) usage >&2; exit 2 ;;
     esac
 done
-if ! $CHECK && ! $PACKAGES && ! $APPLY && ! $AGENTS; then CHECK=true; APPLY=true; fi
+if ! $CHECK && ! $PACKAGES && ! $APPLY && ! $AGENTS && ! $AUTO_UPDATE; then CHECK=true; APPLY=true; fi
 run() { if $DRY_RUN; then printf '[dry-run]'; printf ' %q' "$@"; printf '\n'; else "$@"; fi; }
 if [[ -x /usr/bin/python3 ]]; then PYTHON=/usr/bin/python3; else PYTHON=python3; fi
 if $CHECK; then run bash "$SUPPORT/scripts/check.sh" "$ROOT"; fi
@@ -37,4 +37,8 @@ if $AGENTS; then
         run launchctl unload "$agent" || true
         run launchctl load -w "$agent"
     done
+fi
+
+if $AUTO_UPDATE; then
+    run "$PYTHON" "$SUPPORT/scripts/dotfiles.py" --root "$ROOT" auto-update enable
 fi

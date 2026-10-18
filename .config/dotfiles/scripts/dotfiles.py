@@ -105,6 +105,10 @@ class Repository:
             for entry in self.git('ls-files', '--stage', '-z').split(b'\0'):
                 if entry and entry.split(b' ', 1)[0] not in {b'100644', b'100755'}:
                     errors.append('non-regular index entry: ' + entry.decode())
+        if self.revision:
+            for entry in self.git('ls-tree', '-r', '-z', self.revision).split(b'\0'):
+                if entry and entry.split(b' ', 1)[0] not in {b'100644', b'100755'}:
+                    errors.append('non-regular committed entry: ' + entry.decode())
         for path in m['shared']:
             try:
                 data = self.content(path, index)
@@ -220,12 +224,18 @@ def main():
     edit = sub.add_parser('edit', help='search shared files with diff preview and open in Neovim')
     edit.add_argument('--changed', action='store_true')
     edit.add_argument('--query', default='')
+    sub.add_parser('update', help='fetch origin/main and fast-forward HOME without overwriting local edits')
+    auto = sub.add_parser('auto-update', help='manage per-machine macOS automatic updates')
+    auto.add_argument('action', choices=['enable', 'disable', 'status'])
     sub.add_parser('render')
     boot = sub.add_parser('bootstrap-local')
     boot.add_argument('--managed-settings', default='/Library/Application Support/ClaudeCode/managed-settings.json')
     args = parser.parse_args()
     repo = Repository(args.root, args.backend, getattr(args, 'revision', None))
     try:
+        if args.command in {'update', 'auto-update'}:
+            from sync import update, auto_update
+            return update(repo) if args.command == 'update' else auto_update(repo, args.action)
         if args.command in {'files', 'preview', 'edit'}:
             from picker import main as picker_main
             picker_args = ['--root', str(repo.root), '--backend', repo.backend,

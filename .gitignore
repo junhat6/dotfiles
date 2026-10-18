@@ -94,3 +94,8 @@
 !/.config/karabiner/AGENTS.md
 !/.config/karabiner/README.md
 !/.config/karabiner/keymap.svg
+
+# Remote following
+!/.config/dotfiles/scripts/sync.py
+!/.config/dotfiles/templates/com.junhat6.dotfiles-update.plist
+!/.config/dotfiles/tests/test_sync.py

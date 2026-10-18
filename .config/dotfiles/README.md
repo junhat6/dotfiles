@@ -11,6 +11,8 @@ yadm config yadm.auto-perms false
 yadm config yadm.auto-alt false
 yadm clone --no-bootstrap https://github.com/junhat6/dotfiles.git
 yadm bootstrap
+# この端末ではリモートに自動追従する（MacBook / Mac mini 共通の推奨設定）
+bash ~/.config/dotfiles/install.sh --auto-update
 bash ~/.config/dotfiles/install.sh --packages
 mise install
 source ~/.zshrc
@@ -77,6 +79,25 @@ pre-commit/pre-push は実際の Git INDEX のパス・manifest・JSON を検証
 共有設定は `.zshrc`, `.zprofile`, `.gitconfig`, `.tmux.conf` と `.config/`, `.claude/`, `.hammerspoon/` の manifest にある個別ファイルです。Neovim は標準 bootstrap・配色に、共有設定検索と Git 連携用の `lua/plugins/dotfiles.lua`, `lua/dotfiles/init.lua` を加えた5ファイルです。LazyVim 標準と Catppuccin Latte を使用し、`lazy-lock.json` / `lazyvim.json` はローカル生成物です。以前の `lazyvim.json` に extras が残る端末では、バックアップ後にその extras を空にして標準構成に戻します。Ghostty・Gemini CLI・opencode は共通設定から削除済みです。
 
 Claude の共通 `settings.json` は共有 UI/plugin 設定のみ。`settings.local.json` の permissions・defaultMode・host hooks は共有しません。端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
+
+## リモートへの自動追従
+
+各 Mac で一度 `dotfiles auto-update enable` を実行すると、ログイン時と15分ごとに `origin/main` を取り込み、HOME の共有設定へ直接反映します。普段はこれを有効にして使います。端末ごとの登録なので、別の Mac でも同じコマンドだけで設定できます。`bash ~/.config/dotfiles/install.sh --auto-update` でも登録できます。既存の `--apply` / `--all` は停止した自動更新を勝手に再開しません。
+
+```bash
+dotfiles update                 # 今すぐ取得・検証・反映（自動更新が無効でも利用可）
+dotfiles auto-update status     # 常駐登録・最終結果・エラーメッセージ・ログの場所
+dotfiles auto-update disable    # この端末だけ停止（再ログイン後も停止）
+dotfiles auto-update enable     # 開始 / 再開（繰り返し実行可）
+```
+
+自動更新は main ブランチを fast-forward できる場合だけ実行します。ステージ済みの変更、ローカル commit による分岐、main 以外の作業ブランチでは保留します。未ステージの編集は、リモートの変更ファイルと重ならない場合は保持して更新し、重なる場合は Git が上書きを拒否します。自動 stash・reset・merge commit・commit・push はしません。新規ローカルファイルとの衝突も上書きしません。リモートの所有権・設定構文を取り込み前に検証します。
+
+保留は `dotfiles auto-update status` と `~/Library/Application Support/dotfiles/update.log` で確認できます。編集を commit/push する、ステージを外す、main に戻るなど原因を解消して `dotfiles update` を実行すると再開します。ネットワークや認証の失敗は次の15分周期で再試行します。バックグラウンドでパスワード入力は待たず、初回の GitHub 認証は対話ターミナルで設定します。端末がスリープ中は更新できません。
+
+共有ファイルは HOME へ即時反映します。LaunchAgent の既存生成物も再生成します。実行中のシェルやアプリは必要に応じて再読み込み・再起動してください（シェルは `source ~/.zshrc`）。パッケージの追加・削除、macOS defaults、他の常駐処理の再起動は自動実行しません。`Brewfile` / mise の依存が変わった場合はそれぞれ手動でインストールします。
+
+自動更新を止める用途は、設定を試している間、プレゼン中など環境を固定したい間、main と異なる構成を検証する間です。既存の `.gitconfig.local` / `.zshrc.local` など端末専用ファイルは引き続き共有対象外です。macOS 以外は `dotfiles update` を利用でき、定期実行はその OS の scheduler へ登録します。macOS の登録はユーザー LaunchAgent `com.junhat6.dotfiles-update` で、期限なしで継続します。
 
 ## Brewfile と mise
 

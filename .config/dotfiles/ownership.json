@@ -62,7 +62,10 @@
     ".config/dotfiles/tests/test_karabiner_map.py",
     ".config/karabiner/AGENTS.md",
     ".config/karabiner/README.md",
-    ".config/karabiner/keymap.svg"
+    ".config/karabiner/keymap.svg",
+    ".config/dotfiles/scripts/sync.py",
+    ".config/dotfiles/templates/com.junhat6.dotfiles-update.plist",
+    ".config/dotfiles/tests/test_sync.py"
   ],
   "local": [
     ".claude/settings.local.json",

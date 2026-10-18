@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>Label</key><string>com.junhat6.dotfiles-update</string>
+    <key>ProgramArguments</key><array>
+        <string>/bin/bash</string><string>@HOME@/.local/bin/dotfiles</string><string>update</string>
+    </array>
+    <key>EnvironmentVariables</key><dict>
+        <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>StartInterval</key><integer>900</integer>
+    <key>RunAtLoad</key><true/>
+    <key>ProcessType</key><string>Background</string>
+    <key>StandardOutPath</key><string>@HOME@/Library/Application Support/dotfiles/update.log</string>
+    <key>StandardErrorPath</key><string>@HOME@/Library/Application Support/dotfiles/update.log</string>
+</dict></plist>
