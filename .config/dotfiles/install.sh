@@ -33,7 +33,7 @@ fi
 if $AGENTS; then
     [[ "$(uname -s)" == Darwin ]] || { echo 'LaunchAgents require macOS' >&2; exit 1; }
     run mkdir -p "$HOME/.claude/logs"
-    for agent in "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" "$HOME/Library/LaunchAgents/com.claude.brewfile-sync.plist"; do
+    for agent in "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" "$HOME/Library/LaunchAgents/com.claude.brewfile-sync.plist" "$HOME/Library/LaunchAgents/com.junhat6.homebrew-update.plist"; do
         run launchctl unload "$agent" || true
         run launchctl load -w "$agent"
     done

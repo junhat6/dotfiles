@@ -79,3 +79,6 @@ cask "visual-studio-code"
 cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
+
+# Official stable build; subsequent updates use Orca’s built-in updater.
+cask "stablyai/orca/orca"

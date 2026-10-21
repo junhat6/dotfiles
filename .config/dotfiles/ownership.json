@@ -76,7 +76,10 @@
     ".config/dotfiles/scripts/macos-personal.py",
     ".config/dotfiles/tests/test_macos_personal.py",
     "Mac-Settings-Apply.command",
-    "Mac-Settings-Restore.command"
+    "Mac-Settings-Restore.command",
+    ".config/dotfiles/scripts/homebrew-update.sh",
+    ".config/dotfiles/templates/com.junhat6.homebrew-update.plist",
+    ".config/dotfiles/tests/test_homebrew_update.py"
   ],
   "local": [
     ".claude/settings.local.json",
@@ -162,6 +165,10 @@
     {
       "template": ".config/dotfiles/templates/com.claude.obsidian-sync.plist",
       "output": "Library/LaunchAgents/com.claude.obsidian-sync.plist"
+    },
+    {
+      "template": ".config/dotfiles/templates/com.junhat6.homebrew-update.plist",
+      "output": "Library/LaunchAgents/com.junhat6.homebrew-update.plist"
     }
   ],
   "discovery_roots": [

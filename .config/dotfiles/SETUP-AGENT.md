@@ -87,3 +87,19 @@ Karabiner等でOSが再起動を案内したら「あとで」が選べる場合
 OSが「あとで」を許さず、先へ進む必須処理そのものが再起動を要求する場合や、認証失効・通信／インストール失敗は例外。実際に発生した理由だけ説明する。全macOS・全ドライバ版で再起動回数1回を保証するものではない。
 
 模擬実行は実際のsetup.shとmacos-personal.pyを動かし、defaults・pmset・sudo等のOS境界だけを置き換える。初回／再実行に加え、終盤の電源設定での認証失効・書き込み失敗も確認する。実機の権限ダイアログやOS再起動は実行しない。
+
+## OrcaとHomebrewの更新
+
+Orcaは公式の `stablyai/orca/orca` caskで初回導入する。既存のOrca.appがHomebrew管理外にある場合、強制上書き・削除・再インストールせず、既存インストールを報告して移行を別途扱う。通常更新はOrca内蔵アップデーター（標準は安定版）に任せる。更新目的でエージェントやデーモンを終了しない。内蔵更新によるアプリ再起動ではデーモンがセッションを保持するが、Mac自体の再起動は実行中プロセスを終了する。
+
+セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy-latest --no-quit` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
+
+Orca等の `auto_updates` caskはHomebrewの更新対象に含めず、各アプリの更新機能へ任せる。`--greedy`、強制終了、強制上書き、無人sudoは使わない。起動中のアプリは更新が保留される場合がある。CLIやサービスの更新は動作変更やサービス再起動を伴う可能性がある。
+
+内蔵アップデーターの有効状態はアプリごとに異なり、Homebrewの `auto_updates` 属性だけでは有効と断定しない。初回起動時にOrcaの更新設定を確認する。管理者認証や追加のOS許可が必要な更新は失敗・保留となるため、全更新が完全無人で完了する保証はない。
+
+確認: `launchctl print gui/$(id -u)/com.junhat6.homebrew-update`。結果は `~/.claude/logs/homebrew-update.log` の終了コードを確認する。手動で同じ処理を実行する場合は `bash ~/.config/dotfiles/scripts/homebrew-update.sh`。既存のbrewfile-syncは一覧保存、dotfiles-updateは設定同期であり、パッケージ更新ではない。
+
+参考: https://docs.brew.sh/Manpage / https://www.onorca.dev/docs/install / https://www.onorca.dev/docs/model/session-restore
+
+既存Macで設定を取り込んだ後は、`dotfiles render` を実行し、`mkdir -p ~/.claude/logs`、`launchctl enable gui/$(id -u)/com.junhat6.homebrew-update`、未登録なら `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junhat6.homebrew-update.plist` を実行する。dotfilesの自動同期だけでは、新しいLaunchAgentは登録されない。

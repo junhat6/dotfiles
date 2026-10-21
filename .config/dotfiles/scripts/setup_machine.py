@@ -137,7 +137,7 @@ def vaults(home, profile):
 
 
 def services(home, profile):
-    labels = ['com.claude.brewfile-sync']
+    labels = ['com.claude.brewfile-sync', 'com.junhat6.homebrew-update']
     if profile != 'none':
         destination = home / f'ghq/github.com/junhat6/my-vault-{profile}'
         run('bash', str(home / '.claude/hooks/watch-and-save.sh'), '--check-destination', str(destination), f'junhat6/my-vault-{profile}')
@@ -151,7 +151,8 @@ def services(home, profile):
             raise ValueError(f'Unexpected LaunchAgent: {plist}')
         if subprocess.run(['launchctl', 'print', target], capture_output=True).returncode != 0:
             run('launchctl', 'bootstrap', f'gui/{os.getuid()}', str(plist))
-        run('launchctl', 'kickstart', '-k', target)
+        if label != 'com.junhat6.homebrew-update':
+            run('launchctl', 'kickstart', '-k', target)
 
 
 def report(home, profile, run_dir):
