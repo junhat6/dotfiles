@@ -117,3 +117,5 @@
 !/.config/dotfiles/scripts/homebrew-update.sh
 !/.config/dotfiles/templates/com.junhat6.homebrew-update.plist
 !/.config/dotfiles/tests/test_homebrew_update.py
+
+!/.config/dotfiles/notifications.json

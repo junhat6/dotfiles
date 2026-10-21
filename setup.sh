@@ -185,6 +185,7 @@ if ! "$GH" auth status --hostname github.com >/dev/null 2>&1; then
 fi
 "$GH" auth status --hostname github.com >/dev/null 2>&1
 run git-credentials /usr/bin/python3 "$HELPER" credentials
+run notification-plan /usr/bin/python3 "$HELPER" notifications
 if ! $NO_UI; then
     PHASE=app-permissions; write_status waiting-for-user
     cat <<EOF
@@ -193,6 +194,7 @@ if ! $NO_UI; then
 ・公式アプリの「開く」確認はAIが操作できます。
 ・Karabiner: background services / Accessibility / input capture / Driver Extension。
 ・Hammerspoon: Accessibility / login launch / reload config。
+・通知: AIがnotifications.jsonの指定に従い、メッセージ／Game Centerの「通知を許可」をオフにして画面確認。追加の本人確認は不要。
 ・Obsidianとvaultは後で復元します。プラグイン等の追加同意が必要ならAIはこの時点で方針を確認します。
 ・Touch ID、GitHubの2FAなど本人認証だけユーザーが操作します。
 ・OSが再起動を案内しても「あとで」が選べる場合は保留し、残りの導入を続行します。

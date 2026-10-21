@@ -123,3 +123,13 @@ python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --
 ```
 
 参考: https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html
+
+## アプリ別の通知設定（追加確認不要）
+
+共有の希望値は `.config/dotfiles/notifications.json`。現在はメッセージ（`com.apple.iChat`）とGame Center（`com.apple.gamecenter`）の「通知を許可」をオフ。アプリ全体の通知を止めるので、バナーだけを「なし」にする設定ではない。その他のアプリ、通知全体、集中モードは変更しない。
+
+`notification-plan` が出たら序盤のGUIチェックポイントでエージェントがシステム設定 → 通知 → 各アプリを開く。マスタースイッチ（AX ID `allow-notifications`）を確認し、オンの場合だけオフへ変更。既にオフならクリックしない。メッセージは一覧に「重大」と表示されても、個別画面のマスタースイッチがオフなら目標達成。各アプリ画面でoffを確認してからチェックポイントのEnterを送る。ユーザーに追加の確認や操作を依頼しない。通知設定のための再起動は不要。
+
+macOSの内部ncprefsフラグはOS版・アプリによって画面と対応しない場合があるため、ビット値の推測や通知データベースのコピーは行わない。CLIのプラン表示は適用済みの証拠ではない。GUIが使えない／対象が存在しない場合は未適用として記録し、完了と報告しない。`--no-ui` では他のGUI設定と同じく後回しとなる。
+
+`dotfiles macos apply/restore` とそのボタンはDock・キーボード・消灯設定用。通知はエージェントのGUI工程で適用し、戻す際も該当アプリの「通知を許可」をGUIで変更する。

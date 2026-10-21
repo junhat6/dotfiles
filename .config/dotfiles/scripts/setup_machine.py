@@ -155,6 +155,23 @@ def services(home, profile):
             run('launchctl', 'kickstart', '-k', target)
 
 
+def notification_plan(home):
+    path = home / '.config/dotfiles/notifications.json'
+    document = json.loads(path.read_text())
+    if document.get('version') != 1 or document.get('method') != 'agent-system-settings':
+        raise ValueError('Unsupported notification preferences format')
+    apps = document.get('apps')
+    if not isinstance(apps, list) or not apps:
+        raise ValueError('Notification app preferences are required')
+    for app in apps:
+        if not isinstance(app.get('bundle_id'), str) or not isinstance(app.get('name'), str) or type(app.get('enabled')) is not bool:
+            raise ValueError('Invalid notification app preference')
+    for app in apps:
+        print('NOTIFICATION_PREFERENCE: ' + json.dumps(app, ensure_ascii=False))
+    print('AI: システム設定 → 通知で指定アプリの「通知を許可」を目標値へ設定し、画面で確認。追加確認・再起動不要。')
+    return apps
+
+
 def report(home, profile, run_dir):
     print('Installed dependencies verified. Profile:', profile)
     print('GitHub credentials: gh-managed local credential store; inspect with gh auth status.')
@@ -170,6 +187,7 @@ def report(home, profile, run_dir):
             print(f'App verification: {name}: {len(deferred)} deferred; details: {path}')
             for item in deferred:
                 print('APP_ATTENTION:', item.get('app', item['cask']), item['reason'])
+    print('Notification preferences require GUI verification at the early checkpoint; the CLI plan alone does not apply them.')
     print('App approvals are checked by the user/agent at the early GUI checkpoint.')
     print('No passwordless sudo rule or agent permission elevation was installed.')
     timings = run_dir / 'timings.tsv'
@@ -308,6 +326,7 @@ def main():
     sub.add_parser('checkout').add_argument('--backup', type=Path, required=True)
     sub.add_parser('prepare-local')
     sub.add_parser('credentials')
+    sub.add_parser('notifications')
     apps = sub.add_parser('prepare-apps')
     apps.add_argument('--report', type=Path, required=True)
     apps.add_argument('--cask', action='append')
@@ -326,6 +345,8 @@ def main():
         prepare_local(home)
     elif args.command == 'prepare-apps':
         prepare_apps(home, args.report, args.cask, args.check_only, brewfile=args.brewfile)
+    elif args.command == 'notifications':
+        notification_plan(home)
     elif args.command == 'credentials':
         credentials(home)
     elif args.command == 'vaults':

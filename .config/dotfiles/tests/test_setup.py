@@ -23,6 +23,24 @@ class MachineSetup(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
+    def test_notification_plan_preserves_exact_targets_and_is_read_only(self):
+        import shutil
+        target = self.home / '.config/dotfiles/notifications.json'
+        target.parent.mkdir(parents=True)
+        shutil.copy2(SOURCE / '.config/dotfiles/notifications.json', target)
+        before = target.read_bytes()
+        with patch.object(MODULE.subprocess, 'run') as run:
+            apps = MODULE.notification_plan(self.home)
+            run.assert_not_called()
+        self.assertEqual({app['bundle_id']: app['enabled'] for app in apps},
+                         {'com.apple.iChat': False, 'com.apple.gamecenter': False})
+        self.assertEqual(target.read_bytes(), before)
+        document = json.loads(before)
+        document['apps'][0]['enabled'] = 'false'
+        target.write_text(json.dumps(document))
+        with self.assertRaises(ValueError):
+            MODULE.notification_plan(self.home)
+
     def test_new_agent_permissions_are_not_elevated_and_existing_modes_survive(self):
         MODULE.prepare_local(self.home)
         target = self.home / '.claude/settings.local.json'
