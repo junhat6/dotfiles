@@ -1,6 +1,6 @@
 # Dotfiles
 
-新しいMacは、AIエージェントにこのURLと「セットアップして」と伝え、[1コマンドのセットアップ手順](.config/dotfiles/README.md)を使います。開始時に管理者認証を行い、基盤・優先アプリの導入後にGitHub認証とアプリの許可をまとめます。その後はエージェントが監視します。[エージェント向け手順](.config/dotfiles/SETUP-AGENT.md)。
+新しいMacは、AIエージェントにこのURLと「セットアップして」と伝え、[1コマンドのセットアップ手順](.config/dotfiles/README.md)を使います。開始時に管理者認証を行い、Homebrew直後に権限対象アプリだけ起動し、CLI準備中にもAIが許可設定を進めます。GitHub認証後はvaultや残りのアプリを導入します。その後はエージェントが監視します。[エージェント向け手順](.config/dotfiles/SETUP-AGENT.md)。
 
 [yadm で HOME の個別ファイルを直接追跡します。セットアップ・所有権・日常操作はこちら。](.config/dotfiles/README.md)
 

@@ -14,6 +14,19 @@ class RehearsalTests(unittest.TestCase):
         cls.results = {name: MODULE.rehearse(ROOT / 'setup.sh', name) for name in
                        ('fresh', 'existing', 'auth-loss', 'late-input', 'package-failure')}
 
+    def test_only_permission_apps_block_early_user_operations(self):
+        source = (ROOT / 'setup.sh').read_text()
+        apps = source.index('run permission-apps brew install --cask karabiner-elements hammerspoon')
+        foundation = source.index('run foundation brew install yadm mise')
+        checkpoint = source.index('    read -r _confirmation')
+        vaults = source.index('then run vaults ')
+        packages = source.index('run packages brew bundle')
+        self.assertLess(apps, foundation)
+        self.assertLess(checkpoint, vaults)
+        self.assertLess(vaults, packages)
+        self.assertNotIn('brew install --cask google-chrome', source)
+        self.assertLess(source.index('open -a "$app"'), foundation)
+
     def test_initial_user_attention_is_grouped_before_bulk(self):
         result = self.results['fresh']
         self.assertEqual((result['exit_code'], result['user_operations'], result['attention_groups']), (0, 5, 2))

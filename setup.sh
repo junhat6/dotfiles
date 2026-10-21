@@ -29,11 +29,11 @@ if $DRY_RUN; then
     cat <<EOF
 Profile: $PROFILE
 1. Authenticate sudo once; renew only while this setup lives; revoke on exit.
-2. Install Homebrew/CLT, yadm and mise; safely check out dotfiles with backups.
-3. Install GitHub CLI and priority apps before requesting more authentication.
-4. Authenticate GitHub; restore vaults ($PROFILE).
-5. Open the first-run apps; agent handles UI, user handles OS/2FA authentication.
-6. Install remaining Brewfile packages and mise tools with timed logs.
+2. Install Homebrew/CLT, then only Karabiner/Hammerspoon; launch for early approvals.
+3. Prepare yadm, mise, dotfiles and GitHub CLI while the agent handles app permissions.
+4. Authenticate GitHub using the existing browser (Safari is sufficient).
+5. Agent confirms OS approvals; user can leave after authentication.
+6. Restore vaults ($PROFILE), remaining Brewfile packages and mise tools with timed logs.
 7. Verify dependencies; enable validated services.
 8. Apply shared Dock/keyboard settings without prompting; advise logout/restart at the end.
 State: $STATE
@@ -139,8 +139,15 @@ if ! command -v brew >/dev/null 2>&1; then
     run homebrew-download /usr/bin/curl --fail --location --retry 3 https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o "$RUN_DIR/homebrew.sh"
     run homebrew env NONINTERACTIVE=1 /bin/bash "$RUN_DIR/homebrew.sh"
 fi
-run foundation brew install yadm mise
 export HOMEBREW_NO_AUTO_UPDATE=1
+# Only these apps need early macOS approvals. Launch them while CLI preparation
+# continues so the agent can handle GUI permissions during downloads.
+run permission-apps brew install --cask karabiner-elements hammerspoon
+if ! $NO_UI; then
+    for app in 'Karabiner-Elements' Hammerspoon; do open -a "$app" || true; done
+    echo '権限対象アプリを起動しました。AIはCLI準備中にOS権限設定を進めてください。'
+fi
+run foundation brew install yadm mise
 for setting in auto-private-dirs auto-perms auto-alt; do yadm config "yadm.$setting" false; done
 NEW_CLONE=false
 if ! yadm rev-parse --git-dir >/dev/null 2>&1; then
@@ -167,7 +174,6 @@ run local-permissions /usr/bin/python3 "$HELPER" prepare-local
 run bootstrap yadm bootstrap
 run mise-trust mise trust "$HOME/.config/mise/config.toml"
 run github-tool mise install gh
-run priority-apps brew install --cask google-chrome karabiner-elements hammerspoon obsidian wezterm@nightly
 GH=$(mise which gh)
 if ! "$GH" auth status --hostname github.com >/dev/null 2>&1; then
     PHASE=github-auth; write_status waiting-for-user
@@ -177,10 +183,7 @@ if ! "$GH" auth status --hostname github.com >/dev/null 2>&1; then
 fi
 "$GH" auth status --hostname github.com >/dev/null 2>&1
 run git-credentials /usr/bin/python3 "$HELPER" credentials
-if [[ $PROFILE != none ]]; then run vaults /usr/bin/python3 "$HELPER" vaults --profile "$PROFILE"; fi
 if ! $NO_UI; then
-    for app in 'Google Chrome' 'Karabiner-Elements' Hammerspoon; do open -a "$app" || true; done
-    if [[ $PROFILE != none ]]; then open -a Obsidian; fi
     PHASE=app-permissions; write_status waiting-for-user
     cat <<EOF
 
@@ -188,8 +191,7 @@ if ! $NO_UI; then
 ・公式アプリの「開く」確認はAIが操作できます。
 ・Karabiner: background services / Accessibility / input capture / Driver Extension。
 ・Hammerspoon: Accessibility / login launch / reload config。
-・Obsidian: ~/ghq/github.com/junhat6/my-vault-$PROFILE を開く。
-  既存プラグインを信頼する確認を済ませます（noneの場合は不要）。
+・Obsidianとvaultは後で復元します。プラグイン等の追加同意が必要ならAIはこの時点で方針を確認します。
 ・Touch ID、GitHubの2FAなど本人認証だけユーザーが操作します。
 ・ChatGPT自身の再起動が必要なら、再起動後にこのコマンドを再実行できます。
 
@@ -198,6 +200,7 @@ EOF
     read -r _confirmation
     echo '本人操作の確認が完了しました。以降はAIが監視し、完了・失敗・追加の本人操作が必要な場合だけお知らせします。'
 fi
+if [[ $PROFILE != none ]]; then run vaults /usr/bin/python3 "$HELPER" vaults --profile "$PROFILE"; fi
 run packages brew bundle install --no-upgrade --verbose --file="$HOME/.config/dotfiles/Brewfile"
 run runtimes mise install --yes
 run runtime-check mise ls --missing

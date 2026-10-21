@@ -131,7 +131,9 @@ class SetupSession(unittest.TestCase):
         code, stdout, records, current = self.invoke(LOSE_AUTH='1')
         self.assertEqual(code, 1, stdout)
         self.assertIn('Authentication renewal failed', stdout)
-        self.assertFalse(any(row[:3] == ['brew', 'install', '--cask'] for row in records))
+        # Permission apps now precede foundation, where this scenario loses auth.
+        self.assertFalse(any(row[:3] == ['brew', 'bundle', 'install'] for row in records))
+        self.assertFalse(any(row[0] == 'gh' for row in records))
 
     def test_termination_revokes_auth_and_releases_the_lock(self):
         code, stdout, records, current = self.invoke(stop_signal=signal.SIGTERM)

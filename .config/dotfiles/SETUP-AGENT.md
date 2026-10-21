@@ -17,10 +17,10 @@ setup_dir="$(mktemp -d)" && curl -fsSL https://raw.githubusercontent.com/junhat6
 `mktemp` で作った作業ディレクトリへダウンロードする。取得先はこのリポジトリの公式URLに限定し、可能ならcommit SHAを固定して内容を確認してから実行する。
 
 1. `sudo -v` の本人認証だけユーザーに依頼する。その後はスクリプト内で認証を維持する。sudoersやエージェントの承認設定を緩めたり、1Password・キーチェーンからMacのパスワードを取り出したりしない。
-2. Homebrew / CLT / yadm / miseの基盤導入を待つ。優先アプリのダウンロードも先に済ませ、その後GitHub認証とOS権限操作をまとめる。デバイスコードのEnterはエージェントが送信できる。既存アカウントでログインを進め、2FA・パスキーの本人確認はユーザーへ。追加権限や規約同意などは実行環境の確認ルールに従う。
-3. 優先アプリの導入が終わると `app-permissions` で待つ。公式配布アプリの通常の「開く」確認を代行する。Gatekeeper等の保護を全体無効化しない。
+2. Homebrew / CLTの直後にKarabinerとHammerspoonだけを導入・起動する。CLI側のyadm / mise / GitHub CLI準備と並行して、AIはOS権限設定を進める。Chromeの導入は待たず、GitHub認証には既存のSafariを使う。デバイスコードのEnterはエージェントが送信できる。既存アカウントでログインを進め、2FA・パスキーの本人確認はユーザーへ。追加権限や規約同意などは実行環境の確認ルールに従う。
+3. GitHub認証後に `app-permissions` で最終確認のため待つ。公式配布アプリの通常の「開く」確認を代行する。Gatekeeper等の保護を全体無効化しない。
 4. KarabinerのSetup画面でBackground Services / Accessibility / Capture Input Events / Driver Extensionを確認する。HammerspoonはAccessibilityとログイン時起動を設定し、設定を再読み込みしてエラーがないことを確認する。Touch ID等が要求されたときだけユーザーへ依頼する。
-5. Obsidianを初めて開く場合、「保管庫としてフォルダを開く」で `~/ghq/github.com/junhat6/my-vault-personal` または `my-vault-work` を登録する。既存プラグインの信頼確認は実行環境のルールに従う。iPhone/Dropbox連携の認証は別扱いで、勝手に別vaultへ同期しない。
+5. Obsidianとvaultのダウンロードは本人操作後へ回す。プラグイン有効化に追加同意が必要な環境では、このチェックポイントでユーザーに方針を確認しておく。導入後、AIがObsidianを初めて開く場合、「保管庫としてフォルダを開く」で `~/ghq/github.com/junhat6/my-vault-personal` または `my-vault-work` を登録する。既存プラグインの信頼確認は実行環境のルールに従う。iPhone/Dropbox連携の認証は別扱いで、勝手に別vaultへ同期しない。
 6. 初回許可が済んだら、**エージェントが待機中のシェルにEnterを送り**残りを続行する。ユーザーにTerminalを見張らせない。アプリ更新で新しい許可が必要になる例外は、実際に発生した時だけ説明する。
 7. 終了コード・`--status`・`timings.tsv`を確認する。GUIで確認していない権限を「完了」と報告しない。GitHub認証コードやtokenをログ・コミットへ含めない。
 
@@ -58,7 +58,13 @@ python3 ~/.config/dotfiles/scripts/rehearse_setup.py --output-dir /tmp/dotfiles-
 
 実際のsetup.shを一時HOMEとPTYで動かし、sudo・Homebrew・GitHub・アプリ操作を模擬実装へ置換する。初期状態、再実行、認証失効、想定外の入力要求、インストール失敗を確認する。実際の認証やインストールは行わない。
 
-初回モデルの本人操作は管理者認証1回、GitHub認証1フロー、OS許可3フロー。操作のまとまりは2回（開始時と、基盤・優先アプリ導入後）。OS許可数は仮定であり、実際のmacOSで要求される認証回数を保証しない。最初の5分で全操作が終わる保証もない。大量インストール開始後は通常の標準入力を閉じ、想定外の入力要求は待ち続けず失敗させる。/dev/ttyを直接使うプログラムやOSダイアログまではこの模擬テストで検証できないため、AIはプロセスとGUIを監視し、必要なときだけユーザーへ連絡する。
+初回モデルの本人操作は管理者認証1回、GitHub認証1フロー、OS許可3フロー。操作のまとまりは2回（開始時と、権限対象アプリ・GitHub CLI導入後）。OS許可数は仮定であり、実際のmacOSで要求される認証回数を保証しない。最初の5分で全操作が終わる保証もない。大量インストール開始後は通常の標準入力を閉じ、想定外の入力要求は待ち続けず失敗させる。/dev/ttyを直接使うプログラムやOSダイアログまではこの模擬テストで検証できないため、AIはプロセスとGUIを監視し、必要なときだけユーザーへ連絡する。
+
+### 本人操作を早める順番
+
+Homebrew/CLT → Karabiner/Hammerspoonだけ導入・起動 → GUI許可をAIが進めつつCLI基盤とGitHub CLI準備 → SafariでGitHub認証 → OS許可の最終確認 → ユーザー離席 → vault・Chrome・Obsidian・WezTerm・その他を導入。Hammerspoonはdotfiles反映後に設定を再読み込みする。Obsidianの登録やプラグイン設定もAIが後半に担当する。追加の本人認証が出た場合は実際に必要になった時だけ知らせる。
+
+本人操作を最初の5〜10分へ寄せる目標だが、Homebrew/CLTと権限対象アプリの取得時間は短縮を保証できない。模擬テストは順序の改善を検証し、所要時間は検証しない。
 
 ## 共通のMac設定（追加確認不要）
 
