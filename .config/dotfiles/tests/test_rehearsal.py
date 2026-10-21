@@ -25,7 +25,12 @@ class RehearsalTests(unittest.TestCase):
         self.assertLess(checkpoint, vaults)
         self.assertLess(vaults, packages)
         self.assertNotIn('brew install --cask google-chrome', source)
-        self.assertLess(source.index('open -a "$app"'), foundation)
+        verification = source.index('run early-app-verification ')
+        launch = source.index('open -a "$app"')
+        self.assertLess(foundation, verification)
+        self.assertLess(verification, launch)
+        self.assertLess(launch, source.index('run github-tool '))
+        self.assertLess(packages, source.index('run app-verification '))
 
     def test_initial_user_attention_is_grouped_before_bulk(self):
         result = self.results['fresh']

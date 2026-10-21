@@ -259,3 +259,23 @@ Orca等の `auto_updates` caskはHomebrewの更新対象に含めず、各アプ
 参考: https://docs.brew.sh/Manpage / https://www.onorca.dev/docs/install / https://www.onorca.dev/docs/model/session-restore
 
 既存Macで設定を取り込んだ後は、`dotfiles render` を実行し、`mkdir -p ~/.claude/logs`、`launchctl enable gui/$(id -u)/com.junhat6.homebrew-update`、未登録なら `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junhat6.homebrew-update.plist` を実行する。dotfilesの自動同期だけでは、新しいLaunchAgentは登録されない。
+
+## Brewfileアプリの初回確認を減らす検証工程
+
+Gatekeeperは常に有効のまま。`setup.sh` はbootstrap後、Karabiner/Hammerspoonを起動する前に優先アプリを検証し、Brewfileの一括導入後に対象アプリ全体を検証する。`install.sh --packages` にも同じ工程を含む。確認対象は指定Brewfileに文字列で明記されたcaskのみで、再実行時は既存の対象アプリも再検証する。Brewfile.localや一覧にないアプリは対象にしない。
+
+`brew info --json=v2 --cask` の `full_token` とインストール状態を照合し、app artifactの実際のtargetを使う。`stablyai/orca/orca` を裸の `orca` に置き換えない（別製品になる）。対象パスは `/Applications` 直下の `.app` だけ。pkg型のKarabinerとZoomはスクリプト内の明示的なアプリ対応表を使い、それ以外のpkgやフォントは自動推測せずスキップする。
+
+各アプリについて `codesign --verify --deep --strict` が成功し、キャッシュを使わない `spctl --assess --type execute` が成功し、出力に `source=Notarized Developer ID` がある場合だけ、アプリ内の `com.apple.quarantine` を削除する。バンドル内のシンボリックリンクは `xattr -s` によりリンク自体だけを扱い、リンク先はたどらない。他の拡張属性は変更しない。署名が有効でも公証を確認できない場合、通信エラー、属性削除権限不足などは `deferred` として理由を記録する。検証失敗では削除処理へ進まない。削除中の失敗では一部の属性が削除済みの場合があるため、`deferred` を成功扱いしない。
+
+Gatekeeperが無効な場合は処理を停止する（勝手に有効化・無効化しない）。アプリ単位の保留は他のインストールを妨げず、通常の初回確認で扱う。アクセシビリティ、入力監視、フルディスクアクセス、ドライバ許可は別であり、この処理では付与しない。公証は完全な安全性の保証ではない。
+
+ログ: セットアップ実行ディレクトリの `app-verification-early.json` / `app-verification.json` と時刻付きの検証ログ。AIは `deferred` を確認して未完了項目を報告する。`install.sh --packages` では `~/.local/state/dotfiles/app-verification.json`。
+
+属性を変更しない検証だけの実行:
+
+```bash
+python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --report ~/.local/state/dotfiles/app-verification-check.json
+```
+
+参考: https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html

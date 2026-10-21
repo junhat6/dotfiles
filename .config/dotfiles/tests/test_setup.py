@@ -157,5 +157,115 @@ class MachineSetup(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
 
 
+class AppVerification(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.home = Path(self.temp.name)
+        self.appdir = self.home / 'Applications'
+        self.appdir.mkdir()
+        self.app = self.appdir / 'Example.app'
+        self.app.mkdir()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def result(self, stdout='', stderr='', code=0):
+        return subprocess.CompletedProcess([], code, stdout, stderr)
+
+    def test_only_literal_brewfile_casks_and_fully_qualified_orca(self):
+        p = self.home / 'Brewfile'
+        p.write_text('tap "stablyai/orca"\ncask "stablyai/orca/orca"\n# cask "unlisted"\n')
+        self.assertEqual(MODULE.brewfile_casks(p), ['stablyai/orca/orca'])
+        p.write_text('cask ENV["APP"]\n')
+        with self.assertRaises(ValueError):
+            MODULE.brewfile_casks(p)
+        metadata = dict(full_token='orca', installed='1', artifacts=[{'app':['Example.app'], 'target':str(self.app)}])
+        with self.assertRaises(ValueError):
+            MODULE.app_targets('stablyai/orca/orca', metadata, self.appdir)
+
+    def test_targets_reject_external_paths_and_symlinks(self):
+        metadata = dict(full_token='example', installed='1', artifacts=[{'app':['Example.app'], 'target':str(self.app)}])
+        self.assertEqual(MODULE.app_targets('example', metadata, self.appdir), [self.app])
+        metadata['artifacts'][0]['target'] = str(self.home / 'Other.app')
+        with self.assertRaises(ValueError):
+            MODULE.app_targets('example', metadata, self.appdir)
+        link = self.appdir / 'Link.app'
+        link.symlink_to(self.app)
+        metadata['artifacts'][0]['target'] = str(link)
+        with self.assertRaises(ValueError):
+            MODULE.app_targets('example', metadata, self.appdir)
+
+    def test_signature_and_explicit_notarization_are_both_required(self):
+        with patch.object(MODULE.subprocess, 'run', side_effect=[self.result(), self.result(stderr='accepted\nsource=Notarized Developer ID\n')]) as call:
+            MODULE.check_app(self.app)
+            self.assertEqual(call.call_args_list[0].args[0][0], '/usr/bin/codesign')
+            self.assertIn('--strict', call.call_args_list[0].args[0])
+            self.assertEqual(call.call_args_list[1].args[0][0], '/usr/sbin/spctl')
+        with patch.object(MODULE.subprocess, 'run', side_effect=[self.result(), self.result(stderr='source=Developer ID')]):
+            with self.assertRaises(ValueError):
+                MODULE.check_app(self.app)
+        with patch.object(MODULE.subprocess, 'run', return_value=self.result(code=1)) as call:
+            with self.assertRaises(ValueError):
+                MODULE.check_app(self.app)
+            self.assertEqual(call.call_count, 1)
+
+    @unittest.skipUnless(os.uname().sysname == 'Darwin', 'macOS xattr integration')
+    def test_only_quarantine_removed_without_following_bundle_symlinks(self):
+        binary = self.app / 'binary'
+        binary.write_text('test')
+        outside = self.home / 'private'
+        outside.mkdir()
+        (self.app / 'external').symlink_to(outside, target_is_directory=True)
+        for path in [self.app, binary, outside]:
+            subprocess.run(['/usr/bin/xattr', '-w', 'com.apple.quarantine', 'test', str(path)], check=True)
+        subprocess.run(['/usr/bin/xattr', '-w', 'test.keep', 'preserved', str(self.app)], check=True)
+        self.assertEqual(MODULE.clear_app_quarantine(self.app), 2)
+        self.assertEqual(subprocess.check_output(['/usr/bin/xattr', '-p', 'com.apple.quarantine', str(outside)], text=True).strip(), 'test')
+        self.assertEqual(subprocess.check_output(['/usr/bin/xattr', '-p', 'test.keep', str(self.app)], text=True).strip(), 'preserved')
+        self.assertEqual(MODULE.clear_app_quarantine(self.app), 0)
+
+    def setup_brewfile(self):
+        p = self.home / '.config/dotfiles/Brewfile'
+        p.parent.mkdir(parents=True)
+        p.write_text('cask "example"\n')
+        return dict(casks=[dict(full_token='example', installed='1', artifacts=[{'app':['Example.app'], 'target':str(self.app)}])])
+
+    def test_failed_verification_never_removes_attributes_and_is_reported(self):
+        metadata = self.setup_brewfile()
+        report = self.home / 'report.json'
+        with patch('platform.system', return_value='Darwin'), patch.object(MODULE.subprocess, 'run', side_effect=[self.result('assessments enabled\n'), self.result(json.dumps(metadata))]), patch.object(MODULE, 'check_app', side_effect=ValueError('not notarized')), patch.object(MODULE, 'clear_app_quarantine') as clear:
+            MODULE.prepare_apps(self.home, report, appdir=self.appdir)
+            clear.assert_not_called()
+        self.assertEqual(json.loads(report.read_text())['apps'][0]['status'], 'deferred')
+
+    def test_gatekeeper_disabled_and_unlisted_selection_fail_before_mutation(self):
+        self.setup_brewfile()
+        with patch('platform.system', return_value='Darwin'), patch.object(MODULE.subprocess, 'run', return_value=self.result('assessments disabled\n')), patch.object(MODULE, 'clear_app_quarantine') as clear:
+            with self.assertRaises(ValueError):
+                MODULE.prepare_apps(self.home, self.home / 'report.json', appdir=self.appdir)
+            with self.assertRaises(ValueError):
+                MODULE.prepare_apps(self.home, self.home / 'report.json', selected=['unlisted'], appdir=self.appdir)
+            clear.assert_not_called()
+
+    def test_changed_bundle_during_verification_is_deferred(self):
+        metadata = self.setup_brewfile()
+        report = self.home / 'report.json'
+        def change(app):
+            (app / 'new-file').write_text('changed')
+            os.utime(app, ns=(1, 1))
+        with patch('platform.system', return_value='Darwin'), patch.object(MODULE.subprocess, 'run', side_effect=[self.result('assessments enabled\n'), self.result(json.dumps(metadata))]), patch.object(MODULE, 'check_app', side_effect=change), patch.object(MODULE, 'clear_app_quarantine') as clear:
+            MODULE.prepare_apps(self.home, report, appdir=self.appdir)
+            clear.assert_not_called()
+        self.assertEqual(json.loads(report.read_text())['apps'][0]['status'], 'deferred')
+
+    def test_check_only_verifies_without_mutation(self):
+        metadata = self.setup_brewfile()
+        report = self.home / 'report.json'
+        with patch('platform.system', return_value='Darwin'), patch.object(MODULE.subprocess, 'run', side_effect=[self.result('assessments enabled\n'), self.result(json.dumps(metadata))]), patch.object(MODULE, 'check_app'), patch.object(MODULE, 'clear_app_quarantine') as clear:
+            MODULE.prepare_apps(self.home, report, check_only=True, appdir=self.appdir)
+            clear.assert_not_called()
+        self.assertEqual(json.loads(report.read_text())['apps'][0]['status'], 'verified')
+
+
 if __name__ == '__main__':
     unittest.main()

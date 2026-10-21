@@ -162,11 +162,144 @@ def report(home, profile, run_dir):
         destination = home / f'ghq/github.com/junhat6/my-vault-{profile}'
         print('Session destination:', destination)
         print('iPhone/Dropbox sync is separate; Remotely Save credentials are not restored.')
+    for name in ('app-verification-early.json', 'app-verification.json'):
+        path = run_dir / name
+        if path.exists():
+            records = json.loads(path.read_text())['apps']
+            deferred = [item for item in records if item['status'] == 'deferred']
+            print(f'App verification: {name}: {len(deferred)} deferred; details: {path}')
+            for item in deferred:
+                print('APP_ATTENTION:', item.get('app', item['cask']), item['reason'])
     print('App approvals are checked by the user/agent at the early GUI checkpoint.')
     print('No passwordless sudo rule or agent permission elevation was installed.')
     timings = run_dir / 'timings.tsv'
     if timings.exists():
         print('Stage / exit code / seconds:\n' + timings.read_text())
+
+
+# Package casks do not declare app artifacts. These are explicit bundle targets,
+# not a scan of /Applications or arbitrary package receipts.
+PACKAGE_APPS = {
+    'karabiner-elements': ['Karabiner-Elements.app', 'Karabiner-EventViewer.app'],
+    'zoom': ['zoom.us.app'],
+}
+
+
+def brewfile_casks(path):
+    import re
+    result = []
+    for line in path.read_text().splitlines():
+        if not re.match(r'^\s*cask\b', line):
+            continue
+        match = re.fullmatch(r'\s*cask\s+"([a-z0-9@+._/-]+)"\s*(?:#.*)?', line)
+        if not match or '..' in match[1].split('/'):
+            raise ValueError('Expected a literal cask entry: ' + line)
+        result.append(match[1])
+    return list(dict.fromkeys(result))
+
+
+def app_targets(cask, metadata, appdir):
+    # full_token is essential: bare "orca" is a different Homebrew cask.
+    if metadata.get('full_token') != cask or not metadata.get('installed'):
+        raise ValueError('Cask identity mismatch or not installed: ' + cask)
+    targets = []
+    for artifact in metadata.get('artifacts', []):
+        if 'app' not in artifact:
+            continue
+        target = artifact.get('target')
+        if not isinstance(target, str):
+            raise ValueError('Missing installed app target: ' + cask)
+        targets.append(Path(target))
+    if not targets and cask in PACKAGE_APPS:
+        targets = [appdir / name for name in PACKAGE_APPS[cask]]
+    for target in targets:
+        if target.parent != appdir or target.suffix != '.app':
+            raise ValueError('App target must be directly inside /Applications: ' + str(target))
+        no_symlinks(target, appdir)
+        if not target.is_dir():
+            raise ValueError('Installed app is missing: ' + str(target))
+    return targets
+
+
+def check_app(app):
+    # Signature integrity alone also accepts ad-hoc signatures; Gatekeeper's
+    # notarized Developer ID verdict is required separately, before any mutation.
+    env = dict(os.environ, LC_ALL='C', LANG='C')
+    for command in [
+        ['/usr/bin/codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)],
+        ['/usr/sbin/spctl', '--assess', '--type', 'execute', '--verbose=4',
+         '--ignore-cache', '--no-cache', str(app)],
+    ]:
+        result = subprocess.run(command, capture_output=True, text=True, env=env, timeout=180)
+        detail = (result.stdout + result.stderr).strip()
+        if result.returncode:
+            raise ValueError(detail or 'Verification failed: ' + command[0])
+    if 'source=Notarized Developer ID' not in detail.splitlines():
+        raise ValueError('Gatekeeper did not confirm Notarized Developer ID: ' + detail)
+
+
+def clear_app_quarantine(app):
+    # macOS's bundled Python has no os.listxattr. xattr -s operates on links
+    # themselves, not their referents, including during recursive traversal.
+    no_symlinks(app, app.parent)
+    def attributes():
+        result = subprocess.run(['/usr/bin/xattr', '-r', '-s', str(app)],
+                                capture_output=True, text=True, check=True, timeout=180)
+        return sum(line.endswith(': com.apple.quarantine') for line in result.stdout.splitlines())
+    count = attributes()
+    if count:
+        no_symlinks(app, app.parent)
+        subprocess.run(['/usr/bin/xattr', '-d', '-r', '-s', 'com.apple.quarantine', str(app)],
+                       capture_output=True, text=True, check=True, timeout=180)
+        if attributes():
+            raise ValueError('Quarantine attributes remain: ' + str(app))
+    return count
+
+
+def prepare_apps(home, report_path, selected=None, check_only=False, appdir=Path('/Applications'), brewfile=None):
+    import platform
+    if platform.system() != 'Darwin':
+        raise ValueError('App verification requires macOS')
+    allowed = brewfile_casks(brewfile or home / '.config/dotfiles/Brewfile')
+    if selected and not set(selected).issubset(allowed):
+        raise ValueError('Requested cask is not in the shared Brewfile')
+    env = dict(os.environ, LC_ALL='C', LANG='C', HOMEBREW_NO_AUTO_UPDATE='1')
+    status = subprocess.run(['/usr/sbin/spctl', '--status'], capture_output=True,
+                            text=True, env=env, timeout=30)
+    if status.returncode or status.stdout.strip() != 'assessments enabled':
+        raise ValueError('Gatekeeper is not enabled; no attributes were changed')
+    records = []
+    for cask in selected or allowed:
+        try:
+            result = subprocess.run(['brew', 'info', '--json=v2', '--cask', cask],
+                                    capture_output=True, text=True, env=env, timeout=180, check=True)
+            metadata = json.loads(result.stdout)['casks']
+            if len(metadata) != 1:
+                raise ValueError('Expected exactly one cask: ' + cask)
+            targets = app_targets(cask, metadata[0], appdir)
+            if not targets:
+                records.append(dict(cask=cask, status='skipped', reason='No supported app artifact (e.g. fonts)'))
+            for app in targets:
+                try:
+                    identity = app.stat()
+                    check_app(app)
+                    no_symlinks(app, appdir)
+                    if (app.stat().st_dev, app.stat().st_ino, app.stat().st_mtime_ns) != (identity.st_dev, identity.st_ino, identity.st_mtime_ns):
+                        raise ValueError('App changed during verification; deferred')
+                    count = 0 if check_only else clear_app_quarantine(app)
+                    records.append(dict(cask=cask, app=str(app), status='verified' if check_only else 'prepared', attributes_removed=count))
+                except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                    records.append(dict(cask=cask, app=str(app), status='deferred', reason=str(exc)))
+        except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+            records.append(dict(cask=cask, status='deferred', reason=str(exc)))
+    for record in records:
+        print('APP_VERIFICATION: ' + json.dumps(record, ensure_ascii=False))
+    no_symlinks(report_path, home)
+    write_json(report_path, {'check_only': check_only, 'apps': records}, home)
+    print('App verification report:', report_path)
+    # Rejected apps keep their quarantine and use the normal first-launch flow.
+    # Attribute-removal errors may leave partial changes; report them as deferred.
+    # A verification rejection must not prevent installing unrelated packages.
 
 
 def main():
@@ -175,6 +308,11 @@ def main():
     sub.add_parser('checkout').add_argument('--backup', type=Path, required=True)
     sub.add_parser('prepare-local')
     sub.add_parser('credentials')
+    apps = sub.add_parser('prepare-apps')
+    apps.add_argument('--report', type=Path, required=True)
+    apps.add_argument('--cask', action='append')
+    apps.add_argument('--check-only', action='store_true')
+    apps.add_argument('--brewfile', type=Path)
     for command in ('vaults', 'services', 'report'):
         child = sub.add_parser(command)
         child.add_argument('--profile', choices=('personal', 'work', 'none'), required=True)
@@ -186,6 +324,8 @@ def main():
         checkout(home, args.backup)
     elif args.command == 'prepare-local':
         prepare_local(home)
+    elif args.command == 'prepare-apps':
+        prepare_apps(home, args.report, args.cask, args.check_only, brewfile=args.brewfile)
     elif args.command == 'credentials':
         credentials(home)
     elif args.command == 'vaults':

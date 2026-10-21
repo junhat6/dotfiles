@@ -29,11 +29,11 @@ if $DRY_RUN; then
     cat <<EOF
 Profile: $PROFILE
 1. Authenticate sudo once; renew only while this setup lives; revoke on exit.
-2. Install Homebrew/CLT, then only Karabiner/Hammerspoon; launch for early approvals.
-3. Prepare yadm, mise, dotfiles and GitHub CLI while the agent handles app permissions.
+2. Install Homebrew/CLT, then only Karabiner/Hammerspoon.
+3. Prepare dotfiles; verify priority apps, clear quarantine only after signature/notarization pass, launch for approvals; prepare GitHub CLI.
 4. Authenticate GitHub using the existing browser (Safari is sufficient).
 5. Agent confirms OS approvals; user can leave after authentication.
-6. Restore vaults ($PROFILE), remaining Brewfile packages and mise tools with timed logs.
+6. Restore vaults ($PROFILE), remaining Brewfile packages; verify app signatures/notarization and prepare eligible apps; install mise tools with timed logs.
 7. Verify dependencies; enable validated services.
 8. Apply shared Dock/keyboard/display-sleep settings without prompting.
 9. Finish reports, then offer one final Mac restart for cached settings/pending driver activation.
@@ -141,13 +141,9 @@ if ! command -v brew >/dev/null 2>&1; then
     run homebrew env NONINTERACTIVE=1 /bin/bash "$RUN_DIR/homebrew.sh"
 fi
 export HOMEBREW_NO_AUTO_UPDATE=1
-# Only these apps need early macOS approvals. Launch them while CLI preparation
-# continues so the agent can handle GUI permissions during downloads.
+# Only these apps need early macOS approvals. Install first; launch only after
+# the checked-out verification helper has assessed their signature/notarization.
 run permission-apps brew install --cask karabiner-elements hammerspoon
-if ! $NO_UI; then
-    for app in 'Karabiner-Elements' Hammerspoon; do open -a "$app" || true; done
-    echo '権限対象アプリを起動しました。AIはCLI準備中にOS権限設定を進めてください。'
-fi
 run foundation brew install yadm mise
 for setting in auto-private-dirs auto-perms auto-alt; do yadm config "yadm.$setting" false; done
 NEW_CLONE=false
@@ -173,6 +169,11 @@ if $NEW_CLONE || [[ -f "$STATE/needs-checkout" ]]; then
 fi
 run local-permissions /usr/bin/python3 "$HELPER" prepare-local
 run bootstrap yadm bootstrap
+run early-app-verification /usr/bin/python3 "$HELPER" prepare-apps --report "$RUN_DIR/app-verification-early.json" --cask karabiner-elements --cask hammerspoon
+if ! $NO_UI; then
+    for app in 'Karabiner-Elements' Hammerspoon; do open -a "$app" || true; done
+    echo '権限対象アプリを起動しました。AIはCLI準備中にOS権限設定を進めてください。'
+fi
 run mise-trust mise trust "$HOME/.config/mise/config.toml"
 run github-tool mise install gh
 GH=$(mise which gh)
@@ -204,6 +205,7 @@ EOF
 fi
 if [[ $PROFILE != none ]]; then run vaults /usr/bin/python3 "$HELPER" vaults --profile "$PROFILE"; fi
 run packages brew bundle install --no-upgrade --verbose --file="$HOME/.config/dotfiles/Brewfile"
+run app-verification /usr/bin/python3 "$HELPER" prepare-apps --report "$RUN_DIR/app-verification.json"
 run runtimes mise install --yes
 run runtime-check mise ls --missing
 [[ -z $(mise ls --missing) ]] || { echo 'Some mise tools are missing.' >&2; exit 1; }

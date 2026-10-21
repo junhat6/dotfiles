@@ -16,7 +16,10 @@ if ! $CHECK && ! $PACKAGES && ! $APPLY && ! $AGENTS && ! $AUTO_UPDATE; then CHEC
 run() { if $DRY_RUN; then printf '[dry-run]'; printf ' %q' "$@"; printf '\n'; else "$@"; fi; }
 if [[ -x /usr/bin/python3 ]]; then PYTHON=/usr/bin/python3; else PYTHON=python3; fi
 if $CHECK; then run bash "$SUPPORT/scripts/check.sh" "$ROOT"; fi
-if $PACKAGES; then run brew bundle --file="$SUPPORT/Brewfile"; fi
+if $PACKAGES; then
+    run brew bundle --file="$SUPPORT/Brewfile"
+    run "$PYTHON" "$SUPPORT/scripts/setup_machine.py" prepare-apps --brewfile "$SUPPORT/Brewfile" --report "$HOME/.local/state/dotfiles/app-verification.json"
+fi
 if $APPLY; then
     # Clone/checkout is yadm's job. Bootstrap only configures repository hooks and local/generated files.
     if [[ "$ROOT" != "$HOME" ]]; then

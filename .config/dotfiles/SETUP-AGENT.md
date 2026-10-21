@@ -17,7 +17,7 @@ setup_dir="$(mktemp -d)" && curl -fsSL https://raw.githubusercontent.com/junhat6
 `mktemp` で作った作業ディレクトリへダウンロードする。取得先はこのリポジトリの公式URLに限定し、可能ならcommit SHAを固定して内容を確認してから実行する。
 
 1. `sudo -v` の本人認証だけユーザーに依頼する。その後はスクリプト内で認証を維持する。sudoersやエージェントの承認設定を緩めたり、1Password・キーチェーンからMacのパスワードを取り出したりしない。
-2. Homebrew / CLTの直後にKarabinerとHammerspoonだけを導入・起動する。CLI側のyadm / mise / GitHub CLI準備と並行して、AIはOS権限設定を進める。Chromeの導入は待たず、GitHub認証には既存のSafariを使う。デバイスコードのEnterはエージェントが送信できる。既存アカウントでログインを進め、2FA・パスキーの本人確認はユーザーへ。追加権限や規約同意などは実行環境の確認ルールに従う。
+2. Homebrew / CLTの直後にKarabinerとHammerspoonだけを導入する。dotfilesのbootstrap後に署名・公証を検証し、合格した対象アプリだけ隔離属性を削除して起動する。CLI側のyadm / mise / GitHub CLI準備と並行して、AIはOS権限設定を進める。Chromeの導入は待たず、GitHub認証には既存のSafariを使う。デバイスコードのEnterはエージェントが送信できる。既存アカウントでログインを進め、2FA・パスキーの本人確認はユーザーへ。追加権限や規約同意などは実行環境の確認ルールに従う。
 3. GitHub認証後に `app-permissions` で最終確認のため待つ。公式配布アプリの通常の「開く」確認を代行する。Gatekeeper等の保護を全体無効化しない。
 4. KarabinerのSetup画面でBackground Services / Accessibility / Capture Input Events / Driver Extensionを確認する。HammerspoonはAccessibilityとログイン時起動を設定し、設定を再読み込みしてエラーがないことを確認する。Touch ID等が要求されたときだけユーザーへ依頼する。
 5. Obsidianとvaultのダウンロードは本人操作後へ回す。プラグイン有効化に追加同意が必要な環境では、このチェックポイントでユーザーに方針を確認しておく。導入後、AIがObsidianを初めて開く場合、「保管庫としてフォルダを開く」で `~/ghq/github.com/junhat6/my-vault-personal` または `my-vault-work` を登録する。既存プラグインの信頼確認は実行環境のルールに従う。iPhone/Dropbox連携の認証は別扱いで、勝手に別vaultへ同期しない。
@@ -47,7 +47,7 @@ bash ~/setup.sh --status
 | GitHubログイン・2FA | 序盤へ集約。CLIの標準認証を使い、本人確認は代行しない |
 | アクセシビリティ・ドライバ許可 | 対象アプリを先に入れてまとめて操作。macOSが求める本人認証は必要 |
 | AI自身の操作権限 | 未許可のAIが自分に権限を付けることはできない。導入直後の許可と必要な再起動は事前操作として案内する |
-| 通常の初回「開く」 | 公式アプリについてエージェントが代行。quarantine削除やGatekeeper全体無効化はしない |
+| 通常の初回「開く」 | 公式アプリについてエージェントが代行。隔離属性の削除は下記の検証工程に限定し、Gatekeeper全体は無効化しない |
 | 実行中の表示 | 時刻付きの詳細出力、30秒ごとの生存表示、段階別の所要時間と終了コード |
 
 ## 現在のMacを変更しない模擬確認
@@ -62,7 +62,7 @@ python3 ~/.config/dotfiles/scripts/rehearse_setup.py --output-dir /tmp/dotfiles-
 
 ### 本人操作を早める順番
 
-Homebrew/CLT → Karabiner/Hammerspoonだけ導入・起動 → GUI許可をAIが進めつつCLI基盤とGitHub CLI準備 → SafariでGitHub認証 → OS許可の最終確認 → ユーザー離席 → vault・Chrome・Obsidian・WezTerm・その他を導入。Hammerspoonはdotfiles反映後に設定を再読み込みする。Obsidianの登録やプラグイン設定もAIが後半に担当する。追加の本人認証が出た場合は実際に必要になった時だけ知らせる。
+Homebrew/CLT → Karabiner/Hammerspoonだけ導入 → CLI基盤・dotfiles準備 → 署名・公証を検証して対象アプリを起動 → GUI許可をAIが進めつつGitHub CLI準備 → SafariでGitHub認証 → OS許可の最終確認 → ユーザー離席 → vault・Chrome・Obsidian・WezTerm・その他を導入。Hammerspoonはdotfiles反映後に設定を再読み込みする。Obsidianの登録やプラグイン設定もAIが後半に担当する。追加の本人認証が出た場合は実際に必要になった時だけ知らせる。
 
 本人操作を最初の5〜10分へ寄せる目標だが、Homebrew/CLTと権限対象アプリの取得時間は短縮を保証できない。模擬テストは順序の改善を検証し、所要時間は検証しない。
 
@@ -103,3 +103,23 @@ Orca等の `auto_updates` caskはHomebrewの更新対象に含めず、各アプ
 参考: https://docs.brew.sh/Manpage / https://www.onorca.dev/docs/install / https://www.onorca.dev/docs/model/session-restore
 
 既存Macで設定を取り込んだ後は、`dotfiles render` を実行し、`mkdir -p ~/.claude/logs`、`launchctl enable gui/$(id -u)/com.junhat6.homebrew-update`、未登録なら `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junhat6.homebrew-update.plist` を実行する。dotfilesの自動同期だけでは、新しいLaunchAgentは登録されない。
+
+## Brewfileアプリの初回確認を減らす検証工程
+
+Gatekeeperは常に有効のまま。`setup.sh` はbootstrap後、Karabiner/Hammerspoonを起動する前に優先アプリを検証し、Brewfileの一括導入後に対象アプリ全体を検証する。`install.sh --packages` にも同じ工程を含む。確認対象は指定Brewfileに文字列で明記されたcaskのみで、再実行時は既存の対象アプリも再検証する。Brewfile.localや一覧にないアプリは対象にしない。
+
+`brew info --json=v2 --cask` の `full_token` とインストール状態を照合し、app artifactの実際のtargetを使う。`stablyai/orca/orca` を裸の `orca` に置き換えない（別製品になる）。対象パスは `/Applications` 直下の `.app` だけ。pkg型のKarabinerとZoomはスクリプト内の明示的なアプリ対応表を使い、それ以外のpkgやフォントは自動推測せずスキップする。
+
+各アプリについて `codesign --verify --deep --strict` が成功し、キャッシュを使わない `spctl --assess --type execute` が成功し、出力に `source=Notarized Developer ID` がある場合だけ、アプリ内の `com.apple.quarantine` を削除する。バンドル内のシンボリックリンクは `xattr -s` によりリンク自体だけを扱い、リンク先はたどらない。他の拡張属性は変更しない。署名が有効でも公証を確認できない場合、通信エラー、属性削除権限不足などは `deferred` として理由を記録する。検証失敗では削除処理へ進まない。削除中の失敗では一部の属性が削除済みの場合があるため、`deferred` を成功扱いしない。
+
+Gatekeeperが無効な場合は処理を停止する（勝手に有効化・無効化しない）。アプリ単位の保留は他のインストールを妨げず、通常の初回確認で扱う。アクセシビリティ、入力監視、フルディスクアクセス、ドライバ許可は別であり、この処理では付与しない。公証は完全な安全性の保証ではない。
+
+ログ: セットアップ実行ディレクトリの `app-verification-early.json` / `app-verification.json` と時刻付きの検証ログ。AIは `deferred` を確認して未完了項目を報告する。`install.sh --packages` では `~/.local/state/dotfiles/app-verification.json`。
+
+属性を変更しない検証だけの実行:
+
+```bash
+python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --report ~/.local/state/dotfiles/app-verification-check.json
+```
+
+参考: https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html
