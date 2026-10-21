@@ -5,6 +5,10 @@ if [[ "${1:-}" == setup ]]; then
     shift
     exec /bin/bash "$ROOT/setup.sh" "$@"
 fi
+if [[ "${1:-}" == macos ]]; then
+    shift
+    exec /usr/bin/python3 "$ROOT/.config/dotfiles/scripts/macos-personal.py" "$@"
+fi
 # System Python avoids depending on mise being initialized during Git hooks/bootstrap.
 if [[ -x /usr/bin/python3 ]]; then PYTHON=/usr/bin/python3; else PYTHON=python3; fi
 exec "$PYTHON" "$ROOT/.config/dotfiles/scripts/dotfiles.py" --root "$ROOT" "$@"

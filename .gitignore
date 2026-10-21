@@ -109,3 +109,8 @@
 
 !/.config/dotfiles/scripts/rehearse_setup.py
 !/.config/dotfiles/tests/test_rehearsal.py
+
+!/.config/dotfiles/scripts/macos-personal.py
+!/.config/dotfiles/tests/test_macos_personal.py
+!/Mac-Settings-Apply.command
+!/Mac-Settings-Restore.command

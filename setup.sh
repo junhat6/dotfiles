@@ -34,7 +34,8 @@ Profile: $PROFILE
 4. Authenticate GitHub; restore vaults ($PROFILE).
 5. Open the first-run apps; agent handles UI, user handles OS/2FA authentication.
 6. Install remaining Brewfile packages and mise tools with timed logs.
-7. Verify dependencies; enable validated services; print remaining actions.
+7. Verify dependencies; enable validated services.
+8. Apply shared Dock/keyboard settings without prompting; advise logout/restart at the end.
 State: $STATE
 No sudoers, Gatekeeper, TCC database or agent permission settings are changed.
 EOF
@@ -205,7 +206,9 @@ run package-check brew bundle check --file="$HOME/.config/dotfiles/Brewfile"
 run dotfiles-check "$HOME/.local/bin/dotfiles" check
 run auto-update bash "$HOME/.config/dotfiles/install.sh" --auto-update
 run services /usr/bin/python3 "$HELPER" services --profile "$PROFILE"
+run macos-settings "$HOME/.local/bin/dotfiles" macos apply
 run report /usr/bin/python3 "$HELPER" report --profile "$PROFILE" --run-dir "$RUN_DIR"
 if $NO_UI; then PHASE=app-permissions; write_status attention-required; echo 'GUI permissions/first launch were deferred (--no-ui).'; exit 2; fi
 PHASE=complete; write_status complete
 echo 'セットアップ完了。認証情報・状態・バックアップは端末内だけに保存しました。'
+echo 'Dock・キーリピート設定は適用済みです。作業終了後にログアウト／ログイン、またはMacを再起動してください（自動再起動はしません）。'
