@@ -45,7 +45,7 @@ POWER_TARGETS = {'Battery Power': 10, 'AC Power': 0}
 POWER_FLAGS = {'Battery Power': '-b', 'AC Power': '-c'}
 
 
-def read_power():
+def read_power(setting='displaysleep'):
     text = subprocess.check_output(['/usr/bin/pmset', '-g', 'custom'], text=True)
     result, source = {}, None
     for line in text.splitlines():
@@ -53,10 +53,10 @@ def read_power():
             source = line.strip().rstrip(':')
         elif source in POWER_TARGETS:
             parts = line.split()
-            if len(parts) == 2 and parts[0] == 'displaysleep':
+            if len(parts) == 2 and parts[0] == setting:
                 result[source] = int(parts[1])
     if 'AC Power' not in result:
-        raise RuntimeError('Cannot read AC display-sleep setting; no settings were changed.')
+        raise RuntimeError('Cannot read AC power setting: ' + setting)
     return result
 
 
@@ -93,6 +93,32 @@ def power_settings(action, state):
             raise RuntimeError('Display-sleep verification failed: ' + source)
 
 
+def ac_sleep_settings(action, state):
+    current = read_power('sleep')['AC Power']
+    backup = state / 'ac-sleep-before.plist'
+    if action == 'status':
+        print(f'AC Power/sleep: {current} minutes (0=prevent automatic sleep)')
+        return
+    if action == 'restore':
+        if not backup.exists():
+            return  # Older backups never managed system sleep.
+        target = plistlib.loads(backup.read_bytes())['sleep']
+    else:
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if not backup.exists():
+            with backup.open('xb') as stream:
+                os.chmod(backup, 0o600)
+                plistlib.dump({'sleep': current}, stream)
+        target = 0
+    if current != target:
+        sudo = ['/usr/bin/sudo']
+        if os.environ.get('DOTFILES_SETUP_NONINTERACTIVE') == '1':
+            sudo.append('-n')
+        subprocess.run(sudo + ['/usr/bin/pmset', '-c', 'sleep', str(target)], check=True)
+    if read_power('sleep')['AC Power'] != target:
+        raise RuntimeError('AC automatic-sleep verification failed')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('apply', 'restore', 'status'), default='apply', nargs='?')
@@ -105,6 +131,7 @@ def main():
         if not backup.is_file():
             parser.error('No saved settings to restore.')
         saved = plistlib.loads(backup.read_bytes())
+        ac_sleep_settings('restore', state)
         power_settings('restore', state)
         for domain, keys in KEYS.items():
             current = read_domain(domain)
@@ -117,6 +144,7 @@ def main():
         current = {domain: read_domain(domain) for domain in KEYS}
         if args.action == 'status':
             power_settings('status', state)
+            ac_sleep_settings('status', state)
             for domain, keys in KEYS.items():
                 for key in keys:
                     value = current[domain].get(key, '(unset)')
@@ -136,6 +164,7 @@ def main():
                 os.chmod(backup, 0o600)
                 plistlib.dump(saved, stream)
         power_settings('apply', state)
+        ac_sleep_settings('apply', state)
         for domain, values in desired().items():
             for key, value in values.items():
                 write_value(domain, key, value)

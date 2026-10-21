@@ -38,13 +38,21 @@ if name=='defaults':
 if name=='pmset':
     path=root/'power.json'
     data=json.loads(path.read_text()) if path.exists() else {'Battery Power': 2, 'AC Power': 10}
+    sleep_path=root/'sleep.json'
+    sleep=json.loads(sleep_path.read_text()) if sleep_path.exists() else {'Battery Power': 1, 'AC Power': 1}
     if args==['-g','custom']:
-        for source,value in data.items(): print(source+':\n displaysleep '+str(value))
+        for source,value in data.items(): print(source+':\n displaysleep '+str(value)+'\n sleep '+str(sleep[source]))
     else:
         if scenario=='macos-write-failure': sys.exit(19)
-        assert args[1]=='displaysleep'
-        data['Battery Power' if args[0]=='-b' else 'AC Power']=int(args[2])
-        path.write_text(json.dumps(data))
+        source='Battery Power' if args[0]=='-b' else 'AC Power'
+        if args[1]=='displaysleep':
+            data[source]=int(args[2])
+            path.write_text(json.dumps(data))
+        elif args[1]=='sleep':
+            assert source=='AC Power'
+            sleep[source]=int(args[2])
+            sleep_path.write_text(json.dumps(sleep))
+        else: sys.exit(98)
     sys.exit(0)
 if name=='sudo':
     if '-n' in args and any('pmset' in arg for arg in args):
@@ -209,6 +217,7 @@ command() {
                 'transcript': b''.join(chunks).decode(errors='replace'),
                 'settings': json.loads((root / 'preferences.json').read_text()) if (root / 'preferences.json').exists() else {},
                 'power': json.loads((root / 'power.json').read_text()) if (root / 'power.json').exists() else {},
+                'sleep': json.loads((root / 'sleep.json').read_text()) if (root / 'sleep.json').exists() else {},
                 'calls': calls,
                 'scope': 'Synthetic approvals and compressed downloads; no real OS authentication or installation.',
             }

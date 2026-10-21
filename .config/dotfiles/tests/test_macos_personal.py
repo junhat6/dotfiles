@@ -29,7 +29,7 @@ class ProfileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as state, patch.dict(os.environ, {'XDG_STATE_HOME': state}), \
                 patch.object(mac.sys, 'platform', 'darwin'), patch.object(mac.os, 'geteuid', return_value=501), \
                 patch.object(mac, 'read_domain', side_effect=lambda d: copy.deepcopy(current[d])), \
-                patch.object(mac, 'power_settings'), patch.object(mac, 'write_value', side_effect=write), patch.object(mac.subprocess, 'run', side_effect=run):
+                patch.object(mac, 'power_settings'), patch.object(mac, 'ac_sleep_settings'), patch.object(mac, 'write_value', side_effect=write), patch.object(mac.subprocess, 'run', side_effect=run):
             for action in ('apply', 'apply'):
                 with patch.object(sys, 'argv', ['profile', action]):
                     mac.main()
@@ -79,4 +79,27 @@ class PowerTests(unittest.TestCase):
     def test_legacy_backup_restore_does_not_touch_power(self):
         with tempfile.TemporaryDirectory() as temporary, patch.object(mac, 'read_power', return_value={'AC Power': 0}), patch.object(mac.subprocess, 'run') as run:
             mac.power_settings('restore', Path(temporary))
+            run.assert_not_called()
+
+
+class ACSleepTests(unittest.TestCase):
+    def test_apply_restore_is_ac_only_and_preserves_first_backup(self):
+        current = {'Battery Power': 1, 'AC Power': 15}
+        commands = []
+        def run(args, **kwargs):
+            commands.append(args)
+            self.assertEqual(args[1:5], ['-n', '/usr/bin/pmset', '-c', 'sleep'])
+            current['AC Power'] = int(args[-1])
+        with tempfile.TemporaryDirectory() as temporary, patch.object(mac, 'read_power', side_effect=lambda setting: dict(current)), patch.object(mac.subprocess, 'run', side_effect=run), patch.dict(os.environ, {'DOTFILES_SETUP_NONINTERACTIVE': '1'}):
+            state = Path(temporary)
+            mac.ac_sleep_settings('apply', state)
+            mac.ac_sleep_settings('apply', state)
+            self.assertEqual(current, {'Battery Power': 1, 'AC Power': 0})
+            self.assertEqual(len(commands), 1)
+            mac.ac_sleep_settings('restore', state)
+            self.assertEqual(current, {'Battery Power': 1, 'AC Power': 15})
+
+    def test_old_backups_do_not_restore_unmanaged_sleep(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.object(mac, 'read_power', return_value={'AC Power': 0}), patch.object(mac.subprocess, 'run') as run:
+            mac.ac_sleep_settings('restore', Path(temporary))
             run.assert_not_called()

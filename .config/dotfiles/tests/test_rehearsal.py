@@ -76,7 +76,8 @@ class RehearsalTests(unittest.TestCase):
                 self.assertEqual(result['power'], {'Battery Power': 10, 'AC Power': 0})
                 calls = result['calls']
                 writes = [call for call in calls if call[0] == 'sudo' and any('pmset' in arg for arg in call[2])]
-                self.assertEqual(len(writes), 2)
+                self.assertEqual(len(writes), 3)
+                self.assertEqual(result['sleep'], {'Battery Power': 1, 'AC Power': 0})
                 self.assertTrue(all(call[2][0] == '-n' for call in writes))
                 self.assertEqual(result['user_operations_after_bulk'], 0)
                 text = result['transcript']
