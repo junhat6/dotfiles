@@ -133,3 +133,9 @@ python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --
 macOSの内部ncprefsフラグはOS版・アプリによって画面と対応しない場合があるため、ビット値の推測や通知データベースのコピーは行わない。CLIのプラン表示は適用済みの証拠ではない。GUIが使えない／対象が存在しない場合は未適用として記録し、完了と報告しない。`--no-ui` では他のGUI設定と同じく後回しとなる。
 
 `dotfiles macos apply/restore` とそのボタンはDock・キーボード・消灯設定用。通知はエージェントのGUI工程で適用し、戻す際も該当アプリの「通知を許可」をGUIで変更する。
+
+## デフォルトブラウザはChrome（インストール後・追加確認不要）
+
+希望値は `.config/dotfiles/browser.json`。序盤は既存Safariを使い、Chrome導入のために本人操作を待たせない。`packages` と `app-verification` の後に `browser-preference` が実行される。`BROWSER_PREFERENCE` が `pending-ui` なら、エージェントはシステム設定 → デスクトップとDock → デフォルトのWebブラウザ（新しいOSでは設定検索で探す）でGoogle Chromeを選び、選択値を画面で確認する。現在のAX IDは `default-web-browser`。既にGoogle Chromeなら変更不要。OSの通常のChromeへの切替確認も追加のユーザー確認なしで代行する。
+
+CLIは導入されたChromeのbundle IDを確認して作業対象を提示するだけで、ブラウザを変更済みと見なさない。CLIの残りのランタイム・サービス処理と並行してGUIを操作し、新たなEnter待ちは作らない。最終報告までに画面で確認する。Chrome未導入／識別子不一致／GUI操作不可なら未適用として報告し、他の導入は継続する。`--no-ui` は後回しで終了コード2。デフォルトブラウザ変更のためのMac再起動は不要。通知と同様、`dotfiles macos apply/restore` の対象には含まずエージェントのGUI工程で適用する。

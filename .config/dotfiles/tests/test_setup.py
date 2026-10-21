@@ -23,6 +23,22 @@ class MachineSetup(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
+    def test_browser_plan_waits_for_chrome_and_checks_its_identity(self):
+        import shutil
+        config = self.home / '.config/dotfiles/browser.json'
+        config.parent.mkdir(parents=True)
+        shutil.copy2(SOURCE / '.config/dotfiles/browser.json', config)
+        appdir = self.home / 'Applications'
+        with patch.object(MODULE.subprocess, 'run') as run:
+            self.assertEqual(MODULE.browser_plan(self.home, appdir)['status'], 'unavailable')
+            info = appdir / 'Google Chrome.app/Contents/Info.plist'
+            info.parent.mkdir(parents=True)
+            info.write_bytes(MODULE.plistlib.dumps({'CFBundleIdentifier': 'com.example.other'}))
+            self.assertEqual(MODULE.browser_plan(self.home, appdir)['status'], 'unavailable')
+            info.write_bytes(MODULE.plistlib.dumps({'CFBundleIdentifier': 'com.google.Chrome'}))
+            self.assertEqual(MODULE.browser_plan(self.home, appdir)['status'], 'pending-ui')
+            run.assert_not_called()
+
     def test_notification_plan_preserves_exact_targets_and_is_read_only(self):
         import shutil
         target = self.home / '.config/dotfiles/notifications.json'

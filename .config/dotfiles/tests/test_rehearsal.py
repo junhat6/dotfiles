@@ -91,3 +91,11 @@ class RehearsalTests(unittest.TestCase):
                 self.assertNotEqual(result['exit_code'], 0)
                 self.assertEqual(result['user_operations_after_bulk'], 0)
                 self.assertNotIn('FINAL_RESTART:', result['transcript'])
+
+
+    def test_browser_preference_runs_after_app_installation_without_more_input(self):
+        text = self.results['fresh']['transcript']
+        self.assertLess(text.index('DONE packages'), text.index('START browser-preference'))
+        self.assertLess(text.index('DONE app-verification'), text.index('START browser-preference'))
+        self.assertLess(text.index('DONE browser-preference'), text.index('FINAL_RESTART:'))
+        self.assertEqual(self.results['fresh']['user_operations_after_bulk'], 0)

@@ -155,6 +155,24 @@ def services(home, profile):
             run('launchctl', 'kickstart', '-k', target)
 
 
+def browser_plan(home, appdir=Path('/Applications')):
+    document = json.loads((home / '.config/dotfiles/browser.json').read_text())
+    if document.get('version') != 1 or document.get('method') != 'agent-system-settings' or document.get('bundle_id') != 'com.google.Chrome' or document.get('app_path') != '/Applications/Google Chrome.app':
+        raise ValueError('Unsupported default browser preference')
+    info = appdir / 'Google Chrome.app/Contents/Info.plist'
+    try:
+        identity = plistlib.loads(info.read_bytes())['CFBundleIdentifier']
+    except (OSError, KeyError, plistlib.InvalidFileException):
+        identity = None
+    record = dict(document, status='pending-ui' if identity == document['bundle_id'] else 'unavailable')
+    print('BROWSER_PREFERENCE: ' + json.dumps(record, ensure_ascii=False))
+    if record['status'] == 'pending-ui':
+        print('AI: デフォルトのWebブラウザをGoogle Chromeへ変更し、設定画面の選択値を確認。既にChromeなら変更不要。追加確認・再起動不要。')
+    else:
+        print('Chromeが未導入またはbundle ID不一致のため未適用。他のセットアップは続行し、完了と報告しない。')
+    return record
+
+
 def notification_plan(home):
     path = home / '.config/dotfiles/notifications.json'
     document = json.loads(path.read_text())
@@ -187,6 +205,7 @@ def report(home, profile, run_dir):
             print(f'App verification: {name}: {len(deferred)} deferred; details: {path}')
             for item in deferred:
                 print('APP_ATTENTION:', item.get('app', item['cask']), item['reason'])
+    print('Default browser: agent must verify Google Chrome in System Settings after package installation; the CLI plan alone does not apply it.')
     print('Notification preferences require GUI verification at the early checkpoint; the CLI plan alone does not apply them.')
     print('App approvals are checked by the user/agent at the early GUI checkpoint.')
     print('No passwordless sudo rule or agent permission elevation was installed.')
@@ -327,6 +346,7 @@ def main():
     sub.add_parser('prepare-local')
     sub.add_parser('credentials')
     sub.add_parser('notifications')
+    sub.add_parser('browser')
     apps = sub.add_parser('prepare-apps')
     apps.add_argument('--report', type=Path, required=True)
     apps.add_argument('--cask', action='append')
@@ -345,6 +365,8 @@ def main():
         prepare_local(home)
     elif args.command == 'prepare-apps':
         prepare_apps(home, args.report, args.cask, args.check_only, brewfile=args.brewfile)
+    elif args.command == 'browser':
+        browser_plan(home)
     elif args.command == 'notifications':
         notification_plan(home)
     elif args.command == 'credentials':

@@ -34,7 +34,7 @@ Profile: $PROFILE
 4. Authenticate GitHub using the existing browser (Safari is sufficient).
 5. Agent confirms OS approvals; user can leave after authentication.
 6. Restore vaults ($PROFILE), remaining Brewfile packages; verify app signatures/notarization and prepare eligible apps; install mise tools with timed logs.
-7. Verify dependencies; enable validated services.
+7. Agent sets Chrome as default after its installation; verify dependencies and enable services.
 8. Apply shared Dock/keyboard/display-sleep settings without prompting.
 9. Finish reports, then offer one final Mac restart for cached settings/pending driver activation.
 State: $STATE
@@ -208,6 +208,7 @@ fi
 if [[ $PROFILE != none ]]; then run vaults /usr/bin/python3 "$HELPER" vaults --profile "$PROFILE"; fi
 run packages brew bundle install --no-upgrade --verbose --file="$HOME/.config/dotfiles/Brewfile"
 run app-verification /usr/bin/python3 "$HELPER" prepare-apps --report "$RUN_DIR/app-verification.json"
+if ! $NO_UI; then run browser-preference /usr/bin/python3 "$HELPER" browser; fi
 run runtimes mise install --yes
 run runtime-check mise ls --missing
 [[ -z $(mise ls --missing) ]] || { echo 'Some mise tools are missing.' >&2; exit 1; }

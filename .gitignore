@@ -119,3 +119,5 @@
 !/.config/dotfiles/tests/test_homebrew_update.py
 
 !/.config/dotfiles/notifications.json
+
+!/.config/dotfiles/browser.json
