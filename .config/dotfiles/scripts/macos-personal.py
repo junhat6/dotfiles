@@ -65,7 +65,12 @@ def main():
         if args.action == 'status':
             for domain, keys in KEYS.items():
                 for key in keys:
-                    print(f'{domain}/{key}: {current[domain].get(key, "(unset)")}')
+                    value = current[domain].get(key, '(unset)')
+                    if key == 'persistent-apps' and isinstance(value, list):
+                        value = [tile.get('tile-data', {}).get('file-label') or
+                                 tile.get('tile-data', {}).get('file-data', {}).get('_CFURLString', '(unknown)')
+                                 for tile in value]
+                    print(f'{domain}/{key}: {value}')
             print('復元用バックアップ: ' + str(backup))
             return
         if not backup.exists():
