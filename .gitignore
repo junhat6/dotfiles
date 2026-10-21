@@ -99,3 +99,10 @@
 !/.config/dotfiles/scripts/sync.py
 !/.config/dotfiles/templates/com.junhat6.dotfiles-update.plist
 !/.config/dotfiles/tests/test_sync.py
+
+# One-command Mac setup
+!/setup.sh
+!/.config/dotfiles/SETUP-AGENT.md
+!/.config/dotfiles/scripts/setup_machine.py
+!/.config/dotfiles/tests/test_setup.py
+!/.config/dotfiles/tests/test_setup_session.py

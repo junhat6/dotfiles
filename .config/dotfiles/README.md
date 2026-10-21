@@ -2,7 +2,32 @@
 
 HOME の共有ファイルを yadm (Git) で直接追跡します。コピーや symlink を介さないため、エディタ・AI・atomic save で実体を変更しても `yadm diff` に現れます。既存 Git 履歴は引き継ぎます。
 
-## 初回セットアップ
+## 新しいMacをAIエージェントとセットアップする（推奨）
+
+AIエージェントを導入済みなら、次の1コマンドを**対話Terminal / PTY**で実行します。Homebrew・Gitの事前導入は不要です。個人用Macは `personal`、会社用Macは `work`、vaultを取得しない場合は `none` を指定します。
+
+```bash
+setup_dir="$(mktemp -d)" && curl -fsSL https://raw.githubusercontent.com/junhat6/dotfiles/main/setup.sh -o "$setup_dir/setup.sh" && bash "$setup_dir/setup.sh" --profile personal
+```
+
+最初に管理者認証を行い、その認証を同じTerminal内で維持します。基盤ツールの後、GitHub認証とキー操作アプリの許可を先に済ませ、残りをまとめてインストールします。通常終了・失敗・中断時には `sudo -k` で認証を失効します。sudoersの変更やパスワードの保存、AIの常設の権限拡大は行いません。認証を維持できなくなった場合は後からパスワード入力待ちにせず停止します。途中のGUI操作と続行のEnterはエージェントが代行できます。
+
+**ユーザーが最後まで画面を監視する必要を減らすことを優先します。** GitHubの2FA・Touch ID・macOSが要求する許可は完全にはなくせません。権限対象のアプリの導入にも時間がかかるため、本人操作が必ず最初の5分に収まる保証はありません。別のTerminalへ切り替えると認証の共有が崩れる場合があります。
+
+エージェント向けの操作・再開手順と自動化できる範囲は [SETUP-AGENT.md](SETUP-AGENT.md)。公式アプリの通常の初回起動確認もそこで扱います。
+
+```bash
+bash ~/setup.sh --profile personal --dry-run  # 予定表示だけ。認証・通信・書き込みなし
+# 導入後は次の入口でも再実行可能（現在の状態を再確認し、既存編集を保持）
+dotfiles setup --profile personal
+dotfiles setup --status
+```
+
+時刻付きの詳細ログ、30秒ごとの生存表示、段階別の終了コードと所要秒数は `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/setup/` に保存します。GitHubの認証コードはこのログへ保存しません。初回checkoutで異なる既存ファイルは各実行ディレクトリの `backups/` に退避します。既存yadmやvaultの強制checkout・reset・pullは行いません。vaultがすでに開かれている場合、役割を変更する操作は閉じてから再実行します。
+
+`--no-ui` はアプリの初回許可を後回しにするオプションです。残りの導入・検証後も終了コード2でGUI確認が未完了であることを示します。macOSの好み（スクロール、キーリピート等）はこのコマンドで変更しません。iPhone / Dropbox同期の認証も別です。
+
+## 個別に初回セットアップする場合
 
 ```bash
 brew install yadm

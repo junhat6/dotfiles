@@ -65,7 +65,12 @@
     ".config/karabiner/keymap.svg",
     ".config/dotfiles/scripts/sync.py",
     ".config/dotfiles/templates/com.junhat6.dotfiles-update.plist",
-    ".config/dotfiles/tests/test_sync.py"
+    ".config/dotfiles/tests/test_sync.py",
+    "setup.sh",
+    ".config/dotfiles/SETUP-AGENT.md",
+    ".config/dotfiles/scripts/setup_machine.py",
+    ".config/dotfiles/tests/test_setup.py",
+    ".config/dotfiles/tests/test_setup_session.py"
   ],
   "local": [
     ".claude/settings.local.json",
@@ -97,7 +102,8 @@
     "Brewfile.local",
     ".config/yadm/config",
     ".claude/commands/copilot-review.md",
-    ".claude/hooks/herdr-agent-state.sh"
+    ".claude/hooks/herdr-agent-state.sh",
+    ".gitconfig.local.before-setup"
   ],
   "excluded": [
     "**/.DS_Store",
