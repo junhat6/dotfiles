@@ -17,7 +17,7 @@ setup_dir="$(mktemp -d)" && curl -fsSL https://raw.githubusercontent.com/junhat6
 `mktemp` で作った作業ディレクトリへダウンロードする。取得先はこのリポジトリの公式URLに限定し、可能ならcommit SHAを固定して内容を確認してから実行する。
 
 1. `sudo -v` の本人認証だけユーザーに依頼する。その後はスクリプト内で認証を維持する。sudoersやエージェントの承認設定を緩めたり、1Password・キーチェーンからMacのパスワードを取り出したりしない。
-2. Homebrew / CLT / yadm / miseの基盤導入を待つ。最初のアプリ導入より先にGitHubの認証を完了する。デバイスコードのEnterはエージェントが送信できる。既存アカウントでログインを進め、2FA・パスキーの本人確認はユーザーへ。追加権限や規約同意などは実行環境の確認ルールに従う。
+2. Homebrew / CLT / yadm / miseの基盤導入を待つ。優先アプリのダウンロードも先に済ませ、その後GitHub認証とOS権限操作をまとめる。デバイスコードのEnterはエージェントが送信できる。既存アカウントでログインを進め、2FA・パスキーの本人確認はユーザーへ。追加権限や規約同意などは実行環境の確認ルールに従う。
 3. 優先アプリの導入が終わると `app-permissions` で待つ。公式配布アプリの通常の「開く」確認を代行する。Gatekeeper等の保護を全体無効化しない。
 4. KarabinerのSetup画面でBackground Services / Accessibility / Capture Input Events / Driver Extensionを確認する。HammerspoonはAccessibilityとログイン時起動を設定し、設定を再読み込みしてエラーがないことを確認する。Touch ID等が要求されたときだけユーザーへ依頼する。
 5. Obsidianを初めて開く場合、「保管庫としてフォルダを開く」で `~/ghq/github.com/junhat6/my-vault-personal` または `my-vault-work` を登録する。既存プラグインの信頼確認は実行環境のルールに従う。iPhone/Dropbox連携の認証は別扱いで、勝手に別vaultへ同期しない。
@@ -49,3 +49,13 @@ bash ~/setup.sh --status
 | AI自身の操作権限 | 未許可のAIが自分に権限を付けることはできない。導入直後の許可と必要な再起動は事前操作として案内する |
 | 通常の初回「開く」 | 公式アプリについてエージェントが代行。quarantine削除やGatekeeper全体無効化はしない |
 | 実行中の表示 | 時刻付きの詳細出力、30秒ごとの生存表示、段階別の所要時間と終了コード |
+
+## 現在のMacを変更しない模擬確認
+
+```bash
+python3 ~/.config/dotfiles/scripts/rehearse_setup.py --output-dir /tmp/dotfiles-rehearsal
+```
+
+実際のsetup.shを一時HOMEとPTYで動かし、sudo・Homebrew・GitHub・アプリ操作を模擬実装へ置換する。初期状態、再実行、認証失効、想定外の入力要求、インストール失敗を確認する。実際の認証やインストールは行わない。
+
+初回モデルの本人操作は管理者認証1回、GitHub認証1フロー、OS許可3フロー。操作のまとまりは2回（開始時と、基盤・優先アプリ導入後）。OS許可数は仮定であり、実際のmacOSで要求される認証回数を保証しない。最初の5分で全操作が終わる保証もない。大量インストール開始後は通常の標準入力を閉じ、想定外の入力要求は待ち続けず失敗させる。/dev/ttyを直接使うプログラムやOSダイアログまではこの模擬テストで検証できないため、AIはプロセスとGUIを監視し、必要なときだけユーザーへ連絡する。

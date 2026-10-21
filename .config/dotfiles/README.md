@@ -235,3 +235,11 @@ defaults write NSGlobalDomain KeyRepeat -int 1
 # キーリピート開始までの時間を短く（デフォルト: 25、小さいほど速い）
 defaults write NSGlobalDomain InitialKeyRepeat -int 15
 ```
+
+### 現在のMacを変更せずにセットアップを模擬する
+
+```bash
+python3 ~/.config/dotfiles/scripts/rehearse_setup.py --output-dir /tmp/dotfiles-rehearsal
+```
+
+実際のsetup.shを一時HOME・模擬コマンドで実行し、初回・再実行・認証失効・想定外入力・インストール失敗の結果と操作順を保存します。OSの権限ダイアログとダウンロード時間は模擬なので、実機の認証回数・所要時間の保証ではありません。詳しくは [エージェント向け手順](SETUP-AGENT.md) を参照してください。

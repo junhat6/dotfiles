@@ -30,8 +30,8 @@ if $DRY_RUN; then
 Profile: $PROFILE
 1. Authenticate sudo once; renew only while this setup lives; revoke on exit.
 2. Install Homebrew/CLT, yadm and mise; safely check out dotfiles with backups.
-3. Install GitHub CLI and authenticate; restore vaults ($PROFILE).
-4. Install Chrome, Karabiner, Hammerspoon, Obsidian and WezTerm first.
+3. Install GitHub CLI and priority apps before requesting more authentication.
+4. Authenticate GitHub; restore vaults ($PROFILE).
 5. Open the first-run apps; agent handles UI, user handles OS/2FA authentication.
 6. Install remaining Brewfile packages and mise tools with timed logs.
 7. Verify dependencies; enable validated services; print remaining actions.
@@ -85,7 +85,7 @@ run() {
     (trap - EXIT INT TERM HUP; while sleep 30; do printf '[%s] %s: still running (%ss)\n' "$(date +%H:%M:%S)" "$PHASE" "$(( $(date +%s) - start ))"; done) &
     HEARTBEAT=$!
     set +e
-    "$@" 2>&1 | while IFS= read -r line || [[ -n "$line" ]]; do
+    "$@" </dev/null 2>&1 | while IFS= read -r line || [[ -n "$line" ]]; do
         printf '[%s] %s\n' "$(date +%H:%M:%S)" "$line"
     done | tee "$RUN_DIR/$PHASE.log"
     result=${PIPESTATUS[0]}
@@ -166,6 +166,7 @@ run local-permissions /usr/bin/python3 "$HELPER" prepare-local
 run bootstrap yadm bootstrap
 run mise-trust mise trust "$HOME/.config/mise/config.toml"
 run github-tool mise install gh
+run priority-apps brew install --cask google-chrome karabiner-elements hammerspoon obsidian wezterm@nightly
 GH=$(mise which gh)
 if ! "$GH" auth status --hostname github.com >/dev/null 2>&1; then
     PHASE=github-auth; write_status waiting-for-user
@@ -176,7 +177,6 @@ fi
 "$GH" auth status --hostname github.com >/dev/null 2>&1
 run git-credentials /usr/bin/python3 "$HELPER" credentials
 if [[ $PROFILE != none ]]; then run vaults /usr/bin/python3 "$HELPER" vaults --profile "$PROFILE"; fi
-run priority-apps brew install --cask google-chrome karabiner-elements hammerspoon obsidian wezterm@nightly
 if ! $NO_UI; then
     for app in 'Google Chrome' 'Karabiner-Elements' Hammerspoon; do open -a "$app" || true; done
     if [[ $PROFILE != none ]]; then open -a Obsidian; fi
@@ -195,6 +195,7 @@ if ! $NO_UI; then
 完了・確認後にEnter。未完了ならCtrl-Cで止め、同じコマンドで再開してください。
 EOF
     read -r _confirmation
+    echo '本人操作の確認が完了しました。以降はAIが監視し、完了・失敗・追加の本人操作が必要な場合だけお知らせします。'
 fi
 run packages brew bundle install --no-upgrade --verbose --file="$HOME/.config/dotfiles/Brewfile"
 run runtimes mise install --yes

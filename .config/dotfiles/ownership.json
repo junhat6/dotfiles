@@ -70,7 +70,9 @@
     ".config/dotfiles/SETUP-AGENT.md",
     ".config/dotfiles/scripts/setup_machine.py",
     ".config/dotfiles/tests/test_setup.py",
-    ".config/dotfiles/tests/test_setup_session.py"
+    ".config/dotfiles/tests/test_setup_session.py",
+    ".config/dotfiles/scripts/rehearse_setup.py",
+    ".config/dotfiles/tests/test_rehearsal.py"
   ],
   "local": [
     ".claude/settings.local.json",
