@@ -29,7 +29,7 @@ class ProfileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as state, patch.dict(os.environ, {'XDG_STATE_HOME': state}), \
                 patch.object(mac.sys, 'platform', 'darwin'), patch.object(mac.os, 'geteuid', return_value=501), \
                 patch.object(mac, 'read_domain', side_effect=lambda d: copy.deepcopy(current[d])), \
-                patch.object(mac, 'write_value', side_effect=write), patch.object(mac.subprocess, 'run', side_effect=run):
+                patch.object(mac, 'power_settings'), patch.object(mac, 'write_value', side_effect=write), patch.object(mac.subprocess, 'run', side_effect=run):
             for action in ('apply', 'apply'):
                 with patch.object(sys, 'argv', ['profile', action]):
                     mac.main()
@@ -49,3 +49,34 @@ class ProfileTests(unittest.TestCase):
             for key, value in values.items():
                 mac.write_value(domain, key, value)
             self.assertEqual(mac.read_domain(domain), values)
+
+
+class PowerTests(unittest.TestCase):
+    def test_source_parser_handles_desktop_without_battery(self):
+        with patch.object(mac.subprocess, 'check_output', return_value='AC Power:\n displaysleep 15\n sleep 1\n'):
+            self.assertEqual(mac.read_power(), {'AC Power': 15})
+
+    def test_apply_repeat_restore_and_noninteractive_auth(self):
+        current = {'Battery Power': 2, 'AC Power': 10}
+        commands = []
+        def run(args, **kwargs):
+            commands.append(args)
+            source = next(source for source, flag in mac.POWER_FLAGS.items() if flag in args)
+            current[source] = int(args[-1])
+        with tempfile.TemporaryDirectory() as temporary, patch.object(mac, 'read_power', side_effect=lambda: dict(current)), \
+                patch.object(mac.subprocess, 'run', side_effect=run), patch.dict(os.environ, {'DOTFILES_SETUP_NONINTERACTIVE': '1'}):
+            state = Path(temporary)
+            mac.power_settings('apply', state)
+            self.assertEqual(current, {'Battery Power': 10, 'AC Power': 0})
+            self.assertEqual(len(commands), 2)
+            self.assertTrue(all(command[1] == '-n' for command in commands))
+            mac.power_settings('apply', state)
+            self.assertEqual(len(commands), 2)
+            mac.power_settings('restore', state)
+            self.assertEqual(current, {'Battery Power': 2, 'AC Power': 10})
+            self.assertTrue(all(command[-2] == 'displaysleep' for command in commands))
+
+    def test_legacy_backup_restore_does_not_touch_power(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.object(mac, 'read_power', return_value={'AC Power': 0}), patch.object(mac.subprocess, 'run') as run:
+            mac.power_settings('restore', Path(temporary))
+            run.assert_not_called()
