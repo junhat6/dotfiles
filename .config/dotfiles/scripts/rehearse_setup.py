@@ -15,14 +15,42 @@ import tempfile
 import time
 
 STUB = r'''#!/usr/bin/python3
-import json, os, sys, time
+import json, os, sys, time, plistlib, subprocess
 from pathlib import Path
 name=Path(sys.argv[0]).name; args=sys.argv[1:]
 root=Path(os.environ['SIM_ROOT']); scenario=os.environ['SIM_SCENARIO']
 def record(action):
     with (root/'calls.jsonl').open('a') as f: f.write(json.dumps([name,action,args])+'\n')
 record('call')
+if name in ('reboot', 'shutdown', 'osascript'):
+    print('[SIM] Forbidden session interruption', flush=True)
+    sys.exit(99)
+if name=='defaults':
+    path=root/'preferences.json'
+    data=json.loads(path.read_text()) if path.exists() else {'NSGlobalDomain': {}, 'com.apple.dock': {'persistent-apps': [], 'persistent-others': ['Downloads']}}
+    if args[0]=='export':
+        sys.stdout.buffer.write(plistlib.dumps(data[args[1]]))
+    elif args[0]=='write':
+        data[args[1]][args[2]]=plistlib.loads(('<plist version="1.0">'+args[3]+'</plist>').encode())
+        path.write_text(json.dumps(data))
+    else: sys.exit(98)
+    sys.exit(0)
+if name=='pmset':
+    path=root/'power.json'
+    data=json.loads(path.read_text()) if path.exists() else {'Battery Power': 2, 'AC Power': 10}
+    if args==['-g','custom']:
+        for source,value in data.items(): print(source+':\n displaysleep '+str(value))
+    else:
+        if scenario=='macos-write-failure': sys.exit(19)
+        assert args[1]=='displaysleep'
+        data['Battery Power' if args[0]=='-b' else 'AC Power']=int(args[2])
+        path.write_text(json.dumps(data))
+    sys.exit(0)
 if name=='sudo':
+    if '-n' in args and any('pmset' in arg for arg in args):
+        if scenario=='macos-auth-loss': sys.exit(1)
+        sys.exit(subprocess.run(args[1:]).returncode)
+
     if args==['-v'] and scenario!='existing':
         print('[SIM_USER:administrator-auth]',flush=True)
         if not sys.stdin.readline(): sys.exit(10)
@@ -77,7 +105,7 @@ def rehearse(source, scenario='fresh'):
         home.mkdir()
         binaries = root / 'bin'
         binaries.mkdir()
-        for name in ('sudo', 'curl', 'brew', 'yadm', 'mise', 'gh', 'open'):
+        for name in ('sudo', 'curl', 'brew', 'yadm', 'mise', 'gh', 'open', 'defaults', 'pmset', 'killall', 'reboot', 'shutdown', 'osascript'):
             target = binaries / name
             target.write_text(STUB)
             target.chmod(0o700)
@@ -86,6 +114,15 @@ def rehearse(source, scenario='fresh'):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text('#!/bin/bash\necho "[SIM] verification/service operation"\n')
             target.chmod(0o700)
+        # Exercise the production profile too. Replace only its OS commands.
+        profile = home / '.config/dotfiles/scripts/macos-personal.py'
+        profile.parent.mkdir(parents=True, exist_ok=True)
+        original = Path(source).resolve().parent / '.config/dotfiles/scripts/macos-personal.py'
+        profile_text = original.read_text()
+        for command in ('sudo', 'pmset'):
+            profile_text = profile_text.replace('/usr/bin/' + command, str(binaries / command))
+        profile.write_text(profile_text)
+        (home / '.local/bin/dotfiles').write_text("#!/bin/bash\nif [[ $1 == macos ]]; then shift; exec /usr/bin/python3 \"$HOME/.config/dotfiles/scripts/macos-personal.py\" \"$@\"; fi\necho '[SIM] verification operation'\n")
         if scenario == 'existing':
             (root / 'brew-ready').touch()
         # Platform-boundary replacement only. Keep production branching, order,
@@ -170,6 +207,9 @@ command() {
                 'auth_revoked': any(call[0] == 'sudo' and call[2] == ['-k'] for call in calls),
                 'lock_released': not (state / 'lock').exists(), 'events': events,
                 'transcript': b''.join(chunks).decode(errors='replace'),
+                'settings': json.loads((root / 'preferences.json').read_text()) if (root / 'preferences.json').exists() else {},
+                'power': json.loads((root / 'power.json').read_text()) if (root / 'power.json').exists() else {},
+                'calls': calls,
                 'scope': 'Synthetic approvals and compressed downloads; no real OS authentication or installation.',
             }
         finally:
@@ -186,7 +226,7 @@ def main():
     args = parser.parse_args()
     directory = args.output_dir or Path(tempfile.mkdtemp(prefix='dotfiles-rehearsal-report-'))
     directory.mkdir(parents=True, exist_ok=True)
-    results = [rehearse(args.source, scenario) for scenario in ('fresh', 'existing', 'auth-loss', 'late-input', 'package-failure')]
+    results = [rehearse(args.source, scenario) for scenario in ('fresh', 'existing', 'auth-loss', 'late-input', 'package-failure', 'macos-auth-loss', 'macos-write-failure')]
     (directory / 'results.json').write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n')
     for result in results:
         (directory / (result['scenario'] + '.txt')).write_text(result['scope'] + '\n\n' + result['transcript'])

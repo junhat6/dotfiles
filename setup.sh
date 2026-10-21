@@ -35,7 +35,8 @@ Profile: $PROFILE
 5. Agent confirms OS approvals; user can leave after authentication.
 6. Restore vaults ($PROFILE), remaining Brewfile packages and mise tools with timed logs.
 7. Verify dependencies; enable validated services.
-8. Apply shared Dock/keyboard settings without prompting; advise logout/restart at the end.
+8. Apply shared Dock/keyboard/display-sleep settings without prompting.
+9. Finish reports, then offer one final Mac restart for cached settings/pending driver activation.
 State: $STATE
 No sudoers, Gatekeeper, TCC database or agent permission settings are changed.
 EOF
@@ -193,7 +194,8 @@ if ! $NO_UI; then
 ・Hammerspoon: Accessibility / login launch / reload config。
 ・Obsidianとvaultは後で復元します。プラグイン等の追加同意が必要ならAIはこの時点で方針を確認します。
 ・Touch ID、GitHubの2FAなど本人認証だけユーザーが操作します。
-・ChatGPT自身の再起動が必要なら、再起動後にこのコマンドを再実行できます。
+・OSが再起動を案内しても「あとで」が選べる場合は保留し、残りの導入を続行します。
+・再起動後にしか確認できないドライバは未検証として記録し、最後にまとめて確認します。
 
 完了・確認後にEnter。未完了ならCtrl-Cで止め、同じコマンドで再開してください。
 EOF
@@ -214,4 +216,4 @@ run report /usr/bin/python3 "$HELPER" report --profile "$PROFILE" --run-dir "$RU
 if $NO_UI; then PHASE=app-permissions; write_status attention-required; echo 'GUI permissions/first launch were deferred (--no-ui).'; exit 2; fi
 PHASE=complete; write_status complete
 echo 'セットアップ完了。認証情報・状態・バックアップは端末内だけに保存しました。'
-echo 'Dock・キーリピート・ロック画面の消灯設定は適用済みです。作業終了後にログアウト／ログイン、またはMacを再起動してください（自動再起動はしません）。'
+echo 'FINAL_RESTART: 全工程の処理が終了しました。キーリピートと保留中のドライバ反映をまとめるため、作業を保存してMacを最後に1回再起動してください（自動再起動はしません）。再起動後に未検証の権限・キー操作を確認します。'

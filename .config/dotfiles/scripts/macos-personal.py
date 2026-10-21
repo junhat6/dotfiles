@@ -142,7 +142,8 @@ def main():
     # Restart only this user's Dock, without closing their applications.
     subprocess.run(['killall', '-u', str(os.getuid()), 'Dock'], check=False)
     print('Mac設定を適用しました。Dockは再起動済みです。' if args.action == 'apply' else '保存したMac設定へ戻しました。')
-    print('キーリピートの反映を確実にするため、作業終了後にログアウト／ログイン、またはMacを再起動してください。自動再起動はしません。')
+    if os.environ.get('DOTFILES_SETUP_NONINTERACTIVE') != '1':
+        print('キーリピートの反映を確実にするため、作業終了後にログアウト／ログイン、またはMacを再起動してください。自動再起動はしません。')
 
 
 if __name__ == '__main__':

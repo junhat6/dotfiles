@@ -12,7 +12,7 @@ class RehearsalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.results = {name: MODULE.rehearse(ROOT / 'setup.sh', name) for name in
-                       ('fresh', 'existing', 'auth-loss', 'late-input', 'package-failure')}
+                       ('fresh', 'existing', 'auth-loss', 'late-input', 'package-failure', 'macos-auth-loss', 'macos-write-failure')}
 
     def test_only_permission_apps_block_early_user_operations(self):
         source = (ROOT / 'setup.sh').read_text()
@@ -54,3 +54,35 @@ class RehearsalTests(unittest.TestCase):
             with self.subTest(scenario=result['scenario']):
                 self.assertTrue(result['auth_revoked'])
                 self.assertTrue(result['lock_released'])
+
+
+    def test_real_profile_applies_all_settings_without_late_input(self):
+        for name in ('fresh', 'existing'):
+            result = self.results[name]
+            with self.subTest(scenario=name):
+                self.assertEqual(result['exit_code'], 0)
+                self.assertEqual(result['settings']['NSGlobalDomain'], {'KeyRepeat': 1, 'InitialKeyRepeat': 15})
+                dock = result['settings']['com.apple.dock']
+                self.assertTrue(dock['autohide'])
+                self.assertFalse(dock['show-recents'])
+                self.assertEqual(dock['persistent-others'], ['Downloads'])
+                urls = [tile['tile-data']['file-data']['_CFURLString'] for tile in dock['persistent-apps']]
+                self.assertTrue(any('System%20Settings.app' in url for url in urls))
+                self.assertEqual(result['power'], {'Battery Power': 10, 'AC Power': 0})
+                calls = result['calls']
+                writes = [call for call in calls if call[0] == 'sudo' and any('pmset' in arg for arg in call[2])]
+                self.assertEqual(len(writes), 2)
+                self.assertTrue(all(call[2][0] == '-n' for call in writes))
+                self.assertEqual(result['user_operations_after_bulk'], 0)
+                text = result['transcript']
+                self.assertEqual(text.count('FINAL_RESTART:'), 1)
+                self.assertLess(text.index('DONE report'), text.index('FINAL_RESTART:'))
+                self.assertFalse(any(call[0] in ('reboot', 'shutdown', 'osascript') for call in calls))
+
+    def test_profile_failures_stop_without_late_password_or_reboot_message(self):
+        for name in ('macos-auth-loss', 'macos-write-failure'):
+            result = self.results[name]
+            with self.subTest(scenario=name):
+                self.assertNotEqual(result['exit_code'], 0)
+                self.assertEqual(result['user_operations_after_bulk'], 0)
+                self.assertNotIn('FINAL_RESTART:', result['transcript'])
