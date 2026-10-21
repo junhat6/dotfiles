@@ -51,8 +51,6 @@ cask "amical"
 cask "applite"
 # Utility that prevents the system from going to sleep
 cask "caffeine"
-# Two-panel file manager
-cask "commander-one"
 # Universal database tool and SQL client
 cask "dbeaver-community"
 # Voice and text chat software
@@ -69,8 +67,6 @@ cask "karabiner-elements"
 cask "keyboardcleantool"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
-# Collaboration platform for API development
-cask "postman"
 # Team communication and collaboration software
 cask "slack"
 # Open-source code editor
