@@ -91,17 +91,17 @@ def credentials(home):
     no_symlinks(backup, home)
     if local.exists() and not backup.exists():
         shutil.copy2(local, backup)
-    shim = home / '.local/share/mise/shims/gh'
-    run('mise', 'reshim')
-    if not shim.is_file():
-        raise ValueError('GitHub CLI shim missing after mise reshim')
+    mise = shutil.which('mise')
+    if not mise:
+        raise ValueError('mise is required for the credential helper')
     for host in ('github.com', 'gist.github.com'):
         key = f'credential.https://{host}.helper'
         run('git', 'config', '--file', str(local), '--replace-all', key, '')
-        # mise shims survive runtime version changes; avoid a versioned install path.
+        # Resolve the configured gh from HOME, not from an arbitrary/untrusted
+        # project. Explicitly name gh so authentication never installs all tools.
         import shlex
         run('git', 'config', '--file', str(local), '--add', key,
-            '!' + shlex.quote(str(shim)) + ' auth git-credential')
+            '!' + shlex.join([mise, '--cd', str(home), 'exec', 'gh', '--', 'gh', 'auth', 'git-credential']))
     local.chmod(0o600)
 
 

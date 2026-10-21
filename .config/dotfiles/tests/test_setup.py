@@ -106,14 +106,16 @@ class MachineSetup(unittest.TestCase):
             if args[0] != 'mise':
                 return subprocess.run(args, check=True, capture_output=True, **kwargs)
 
-        with patch.object(MODULE, 'run', run):
+        with patch.object(MODULE, 'run', run), patch.object(MODULE.shutil, 'which', return_value='/opt/homebrew/bin/mise'):
             MODULE.credentials(self.home)
             MODULE.credentials(self.home)
         self.assertEqual(shared.read_text(), '[include]\n path = ~/.gitconfig.local\n')
         self.assertIn('Keep Me', local.read_text())
         helpers = subprocess.check_output(['git', 'config', '--file', str(local), '--get-all', 'credential.https://github.com.helper']).decode().splitlines()
         self.assertEqual(len(helpers), 2)
-        self.assertIn('mise/shims/gh', helpers[1])
+        import shlex
+        command = shlex.split(helpers[1][1:])
+        self.assertEqual(command[:5], ['/opt/homebrew/bin/mise', '--cd', str(self.home), 'exec', 'gh'])
         self.assertNotIn('versioned', helpers[1])
         self.assertEqual(local.stat().st_mode & 0o777, 0o600)
 
