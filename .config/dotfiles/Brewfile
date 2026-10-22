@@ -67,6 +67,8 @@ cask "karabiner-elements"
 cask "keyboardcleantool"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
+# Mesh VPN; use the official standalone app and its built-in auto-updater
+cask "tailscale-app"
 # Team communication and collaboration software
 cask "slack"
 # Open-source code editor

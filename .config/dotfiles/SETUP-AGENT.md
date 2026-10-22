@@ -149,3 +149,9 @@ CLIは導入されたChromeのbundle IDを確認して作業対象を提示す�
 序盤のGUIチェックポイントでエージェントがFinderを開き、⌘⇧Gで表示された対象パスに移動する。よく使う項目に同じパスがある場合は追加しない（同名の別フォルダと混同しない）。未登録なら内容を選択していない状態で「ファイル」→「サイドバーに追加」を操作する。今回の実機ではフォルダを開いた状態からこのメニューで追加できた。追加後にサイドバーのgithub.comを開き、対象パスへ移動できることを確認する。既存のお気に入りを削除・並べ替えたり、Finder全体を再起動したりしない。追加のユーザー確認・認証・Mac再起動は不要。
 
 CLIはフォルダ作成とGUI操作の指示だけを行う。表示ログだけでサイドバー追加済みとは報告しない。GUIが使えない場合は未適用と記録する。`--no-ui` ではGUI処理を後回しにする。通知・ブラウザと同様、`dotfiles macos apply/restore` とボタンによる設定変更とは別のエージェントGUI工程。戻す場合はFinderの「サイドバーから削除」を使う（フォルダ自体は削除しない）。
+
+## Tailscale
+
+公式Standalone版を `brew install --cask tailscale-app` で導入する。CLI専用formulaの `tailscale` は重複導入しない。権限対象アプリとして前半で導入し、拡張機能・VPN許可・ログインを案内する。接続先tailnetやアカウントを推測しない。新しいネットワーク権限や登録の同意は実行環境の確認ルールに従う。
+
+`yadm bootstrap` / `install.sh --apply` で `io.tailscale.ipn.macsys` の `SUEnableAutomaticChecks` と `SUAutomaticallyUpdate` をtrueに設定し、アプリ内のSparkle更新を使う。Homebrewの日次更新は自動更新対応caskを除外するため二重管理しない。公式資料: https://tailscale.com/kb/1315/mdm-keys 。

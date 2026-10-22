@@ -29,7 +29,7 @@ if $DRY_RUN; then
     cat <<EOF
 Profile: $PROFILE
 1. Authenticate sudo once; renew only while this setup lives; revoke on exit.
-2. Install Homebrew/CLT, then only Karabiner/Hammerspoon.
+2. Install Homebrew/CLT, then Karabiner/Hammerspoon/Tailscale for early permissions.
 3. Prepare dotfiles; verify priority apps, clear quarantine only after signature/notarization pass, launch for approvals; prepare GitHub CLI.
 4. Authenticate GitHub using the existing browser (Safari is sufficient).
 5. Agent confirms OS approvals; user can leave after authentication.
@@ -143,7 +143,7 @@ fi
 export HOMEBREW_NO_AUTO_UPDATE=1
 # Only these apps need early macOS approvals. Install first; launch only after
 # the checked-out verification helper has assessed their signature/notarization.
-run permission-apps brew install --cask karabiner-elements hammerspoon
+run permission-apps brew install --cask karabiner-elements hammerspoon tailscale-app
 run foundation brew install yadm mise
 for setting in auto-private-dirs auto-perms auto-alt; do yadm config "yadm.$setting" false; done
 NEW_CLONE=false
@@ -169,9 +169,9 @@ if $NEW_CLONE || [[ -f "$STATE/needs-checkout" ]]; then
 fi
 run local-permissions /usr/bin/python3 "$HELPER" prepare-local
 run bootstrap yadm bootstrap
-run early-app-verification /usr/bin/python3 "$HELPER" prepare-apps --report "$RUN_DIR/app-verification-early.json" --cask karabiner-elements --cask hammerspoon
+run early-app-verification /usr/bin/python3 "$HELPER" prepare-apps --report "$RUN_DIR/app-verification-early.json" --cask karabiner-elements --cask hammerspoon --cask tailscale-app
 if ! $NO_UI; then
-    for app in 'Karabiner-Elements' Hammerspoon; do open -a "$app" || true; done
+    for app in 'Karabiner-Elements' Hammerspoon Tailscale; do open -a "$app" || true; done
     echo '権限対象アプリを起動しました。AIはCLI準備中にOS権限設定を進めてください。'
 fi
 run mise-trust mise trust "$HOME/.config/mise/config.toml"
@@ -195,6 +195,7 @@ if ! $NO_UI; then
 ・公式アプリの「開く」確認はAIが操作できます。
 ・Karabiner: background services / Accessibility / input capture / Driver Extension。
 ・Hammerspoon: Accessibility / login launch / reload config。
+・Tailscale: 拡張機能・VPN許可とログインを前半で案内。新しい権限やtailnet登録の同意が必要なら本人へ確認。自動更新はbootstrapで有効化済み。
 ・Finder: AIが~/ghq/github.comを「よく使う項目」に追加し、画面で確認。既存項目は維持し、重複追加しません。
 ・通知: AIがnotifications.jsonの指定に従い、メッセージ／Game Centerの「通知を許可」をオフにして画面確認。追加の本人確認は不要。
 ・Obsidianとvaultは後で復元します。プラグイン等の追加同意が必要ならAIはこの時点で方針を確認します。

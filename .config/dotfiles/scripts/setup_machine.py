@@ -246,6 +246,7 @@ def report(home, profile, run_dir):
 PACKAGE_APPS = {
     'karabiner-elements': ['Karabiner-Elements.app', 'Karabiner-EventViewer.app'],
     'zoom': ['zoom.us.app'],
+    'tailscale-app': ['Tailscale.app'],
 }
 
 

@@ -32,6 +32,11 @@ if $APPLY; then
     run yadm gitconfig core.hooksPath "$SUPPORT/git-hooks"
     run "$PYTHON" "$SUPPORT/scripts/dotfiles.py" --root "$ROOT" bootstrap-local
     run "$PYTHON" "$SUPPORT/scripts/dotfiles.py" --root "$ROOT" render
+    if [[ "$(uname -s)" == Darwin ]]; then
+        # Standalone Tailscale uses Sparkle; no password or maintenance daemon needed.
+        run /usr/bin/defaults write io.tailscale.ipn.macsys SUEnableAutomaticChecks -bool true
+        run /usr/bin/defaults write io.tailscale.ipn.macsys SUAutomaticallyUpdate -bool true
+    fi
 fi
 if $AGENTS; then
     [[ "$(uname -s)" == Darwin ]] || { echo 'LaunchAgents require macOS' >&2; exit 1; }
