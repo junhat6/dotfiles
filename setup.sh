@@ -195,6 +195,7 @@ if ! $NO_UI; then
 ・公式アプリの「開く」確認はAIが操作できます。
 ・Karabiner: background services / Accessibility / input capture / Driver Extension。
 ・Hammerspoon: Accessibility / login launch / reload config。
+・Mission Control: 通常デスクトップを最低3つ用意し、Control+1 / 2 / 3で切り替えを有効化。既存のデスクトップは維持。
 ・Tailscale: 拡張機能・VPN許可とログインを前半で案内。新しい権限やtailnet登録の同意が必要なら本人へ確認。自動更新はbootstrapで有効化済み。
 ・Finder: AIが~/ghq/github.comを「よく使う項目」に追加し、画面で確認。既存項目は維持し、重複追加しません。
 ・通知: AIがnotifications.jsonの指定に従い、メッセージ／Game Centerの「通知を許可」をオフにして画面確認。追加の本人確認は不要。

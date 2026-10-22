@@ -157,3 +157,11 @@ CLIはフォルダ作成とGUI操作の指示だけを行う。表示ログだ�
 `yadm bootstrap` / `install.sh --apply` で `io.tailscale.ipn.macsys` の `SUEnableAutomaticChecks` と `SUAutomaticallyUpdate` をtrueに設定し、アプリ内のSparkle更新を使う。Homebrewの日次更新は自動更新対応caskを除外するため二重管理しない。公式資料: https://tailscale.com/kb/1315/mdm-keys 。
 
 ログイン時の起動も設定する。アプリの「Launch Tailscale at login」で `Start on Login could not be set` が出る版がある（https://github.com/tailscale/tailscale/issues/18042）。その場合はmacOSの「システム設定 → 一般 → ログイン項目と機能拡張 → ログイン時に開く」の追加ボタンから `/Applications/Tailscale.app` を選ぶ。既存項目を残し、重複登録しない。追加後、一覧にTailscale.appが表示されたことをGUIで確認する。アプリ自身のチェックがオフのままでも、macOS側の登録とは別なのでチェック表示だけで失敗と判断しない。ログアウト／再起動による実起動確認はユーザーの都合に合わせ、勝手に実施しない。
+
+## Mission Control・デスクトップ切り替え
+
+通常のデスクトップを最低3つ用意し、Control+1 / Control+2 / Control+3でデスクトップ1 / 2 / 3へ切り替える設定をオンにする。既存デスクトップは削除・再作成せず、3つ以上ある場合も減らさない。フルスクリーンのSpaceを通常デスクトップ数に含めない。
+
+AIがMission Controlで必要な数だけ追加し、システム設定 → キーボード → キーボードショートカット → Mission Controlで各「デスクトップNに切り替え」を有効にしてキー割り当てを確認する。表示されない項目は先にデスクトップを追加してから設定画面を開き直す。Spacesの内部plistを直接書き換えて増やさない。
+
+読み取り確認にはcom.apple.spacesの通常Space（type=0）の数と、com.apple.symbolichotkeysのAppleSymbolicHotKeys 118 / 119 / 120を使える。最終的には画面・切り替えも確認し、CLI設定だけでGUIの検証済みとは報告しない。既に3つ・設定オンなら変更不要。現在の作業デスクトップは確認後に元へ戻す。
