@@ -27,6 +27,8 @@ cmake = "4.4.3"
 "npm:cf" = "latest"
 python = "3.11.17"
 ruby = "3.2.9"
+"npm:@opencode/cli" = { version = "latest", allow_builds = ["@opencode/cli"] }
+agent-browser = "latest"
 
 [settings]
 legacy_version_file = true
