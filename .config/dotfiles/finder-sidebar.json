@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "method": "agent-finder",
+  "favorites": [
+    {
+      "relative_path": "ghq/github.com",
+      "name": "github.com"
+    }
+  ]
+}

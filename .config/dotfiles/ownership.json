@@ -81,7 +81,8 @@
     ".config/dotfiles/templates/com.junhat6.homebrew-update.plist",
     ".config/dotfiles/tests/test_homebrew_update.py",
     ".config/dotfiles/notifications.json",
-    ".config/dotfiles/browser.json"
+    ".config/dotfiles/browser.json",
+    ".config/dotfiles/finder-sidebar.json"
   ],
   "local": [
     ".claude/settings.local.json",

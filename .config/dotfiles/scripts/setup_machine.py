@@ -155,6 +155,32 @@ def services(home, profile):
             run('launchctl', 'kickstart', '-k', target)
 
 
+def finder_sidebar_plan(home):
+    document = json.loads((home / '.config/dotfiles/finder-sidebar.json').read_text())
+    if document.get('version') != 1 or document.get('method') != 'agent-finder':
+        raise ValueError('Unsupported Finder sidebar preferences')
+    favorites = document.get('favorites')
+    if not isinstance(favorites, list) or not favorites:
+        raise ValueError('Finder favorites are required')
+    # Validate every path before creating anything. Resolve from this Mac's HOME.
+    targets = []
+    for item in favorites:
+        relative = PurePosixPath(item['relative_path'])
+        if relative.is_absolute() or not relative.parts or '..' in relative.parts or not isinstance(item.get('name'), str):
+            raise ValueError('Finder favorite must be a relative HOME directory')
+        target = home.joinpath(*relative.parts)
+        no_symlinks(target, home)
+        targets.append((item, target))
+    records = []
+    for item, target in targets:
+        target.mkdir(parents=True, exist_ok=True)
+        record = dict(item, path=str(target), status='pending-ui')
+        print('FINDER_SIDEBAR_PREFERENCE: ' + json.dumps(record, ensure_ascii=False))
+        records.append(record)
+    print('AI: Finderで対象フォルダを開き、ファイル → サイドバーに追加。既存項目を残し、同じパスを重複追加せず、よく使う項目に表示されたことを画面確認。追加確認・再起動不要。')
+    return records
+
+
 def browser_plan(home, appdir=Path('/Applications')):
     document = json.loads((home / '.config/dotfiles/browser.json').read_text())
     if document.get('version') != 1 or document.get('method') != 'agent-system-settings' or document.get('bundle_id') != 'com.google.Chrome' or document.get('app_path') != '/Applications/Google Chrome.app':
@@ -205,6 +231,7 @@ def report(home, profile, run_dir):
             print(f'App verification: {name}: {len(deferred)} deferred; details: {path}')
             for item in deferred:
                 print('APP_ATTENTION:', item.get('app', item['cask']), item['reason'])
+    print('Finder sidebar: agent must verify HOME/ghq/github.com in Favorites; the CLI plan creates the folder but does not add the sidebar item.')
     print('Default browser: agent must verify Google Chrome in System Settings after package installation; the CLI plan alone does not apply it.')
     print('Notification preferences require GUI verification at the early checkpoint; the CLI plan alone does not apply them.')
     print('App approvals are checked by the user/agent at the early GUI checkpoint.')
@@ -347,6 +374,7 @@ def main():
     sub.add_parser('credentials')
     sub.add_parser('notifications')
     sub.add_parser('browser')
+    sub.add_parser('finder-sidebar')
     apps = sub.add_parser('prepare-apps')
     apps.add_argument('--report', type=Path, required=True)
     apps.add_argument('--cask', action='append')
@@ -365,6 +393,8 @@ def main():
         prepare_local(home)
     elif args.command == 'prepare-apps':
         prepare_apps(home, args.report, args.cask, args.check_only, brewfile=args.brewfile)
+    elif args.command == 'finder-sidebar':
+        finder_sidebar_plan(home)
     elif args.command == 'browser':
         browser_plan(home)
     elif args.command == 'notifications':

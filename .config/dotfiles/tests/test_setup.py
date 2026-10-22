@@ -23,6 +23,39 @@ class MachineSetup(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
+    def prepare_finder_config(self, relative='ghq/github.com'):
+        path = self.home / '.config/dotfiles/finder-sidebar.json'
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({'version': 1, 'method': 'agent-finder',
+                                   'favorites': [{'relative_path': relative, 'name': 'github.com'}]}))
+        return path
+
+    def test_finder_folder_created_idempotently_in_this_home(self):
+        self.prepare_finder_config()
+        with patch.object(MODULE.subprocess, 'run') as run:
+            first = MODULE.finder_sidebar_plan(self.home)
+            (self.home / 'ghq/github.com/keep.txt').write_text('keep')
+            second = MODULE.finder_sidebar_plan(self.home)
+            run.assert_not_called()
+        self.assertEqual(first, second)
+        self.assertEqual(first[0]['path'], str(self.home / 'ghq/github.com'))
+        self.assertEqual(first[0]['status'], 'pending-ui')
+        self.assertEqual((self.home / 'ghq/github.com/keep.txt').read_text(), 'keep')
+
+    def test_finder_rejects_parent_traversal_and_symlinks(self):
+        config = self.prepare_finder_config('../outside')
+        with self.assertRaises(ValueError):
+            MODULE.finder_sidebar_plan(self.home)
+        data = json.loads(config.read_text())
+        data['favorites'][0]['relative_path'] = 'ghq/github.com'
+        config.write_text(json.dumps(data))
+        outside = self.root / 'outside'
+        outside.mkdir()
+        (self.home / 'ghq').symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            MODULE.finder_sidebar_plan(self.home)
+        self.assertFalse((outside / 'github.com').exists())
+
     def test_browser_plan_waits_for_chrome_and_checks_its_identity(self):
         import shutil
         config = self.home / '.config/dotfiles/browser.json'

@@ -186,6 +186,7 @@ fi
 "$GH" auth status --hostname github.com >/dev/null 2>&1
 run git-credentials /usr/bin/python3 "$HELPER" credentials
 run notification-plan /usr/bin/python3 "$HELPER" notifications
+run finder-sidebar /usr/bin/python3 "$HELPER" finder-sidebar
 if ! $NO_UI; then
     PHASE=app-permissions; write_status waiting-for-user
     cat <<EOF
@@ -194,6 +195,7 @@ if ! $NO_UI; then
 ・公式アプリの「開く」確認はAIが操作できます。
 ・Karabiner: background services / Accessibility / input capture / Driver Extension。
 ・Hammerspoon: Accessibility / login launch / reload config。
+・Finder: AIが~/ghq/github.comを「よく使う項目」に追加し、画面で確認。既存項目は維持し、重複追加しません。
 ・通知: AIがnotifications.jsonの指定に従い、メッセージ／Game Centerの「通知を許可」をオフにして画面確認。追加の本人確認は不要。
 ・Obsidianとvaultは後で復元します。プラグイン等の追加同意が必要ならAIはこの時点で方針を確認します。
 ・Touch ID、GitHubの2FAなど本人認証だけユーザーが操作します。

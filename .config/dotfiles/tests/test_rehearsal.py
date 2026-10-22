@@ -100,3 +100,9 @@ class RehearsalTests(unittest.TestCase):
         self.assertLess(text.index('DONE app-verification'), text.index('START browser-preference'))
         self.assertLess(text.index('DONE browser-preference'), text.index('FINAL_RESTART:'))
         self.assertEqual(self.results['fresh']['user_operations_after_bulk'], 0)
+
+
+    def test_finder_plan_runs_before_existing_gui_checkpoint(self):
+        text = self.results['fresh']['transcript']
+        self.assertLess(text.index('DONE finder-sidebar'), text.index('完了・確認後にEnter。'))
+        self.assertEqual(self.results['fresh']['user_operations_after_bulk'], 0)
