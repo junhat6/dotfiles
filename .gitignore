@@ -27,7 +27,7 @@
 !/.config/nvim/lua/
 !/.config/nvim/lua/config/
 !/.config/nvim/lua/plugins/
-!/.claude/CLAUDE.md
+!/AGENTS.md
 !/.claude/commands/address-review.md
 !/.claude/commands/lost.md
 !/.claude/commands/publish-artifact.md

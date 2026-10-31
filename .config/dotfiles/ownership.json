@@ -1,7 +1,7 @@
 {
   "version": 1,
   "shared": [
-    ".claude/CLAUDE.md",
+    "AGENTS.md",
     ".claude/commands/address-review.md",
     ".claude/commands/lost.md",
     ".claude/commands/publish-artifact.md",
