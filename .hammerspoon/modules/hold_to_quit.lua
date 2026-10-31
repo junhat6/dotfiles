@@ -13,18 +13,25 @@ local function copySet(source)
 	return result
 end
 
-local function exactCommandOnly(modifiers)
-	return modifiers.cmd == true
-		and not modifiers.alt
-		and not modifiers.ctrl
-		and not modifiers.shift
-		and not modifiers.fn
+function HoldToQuit:_matchesModifiers(modifiers)
+	for _, modifier in ipairs({ "cmd", "alt", "ctrl", "shift", "fn" }) do
+		if (modifiers[modifier] == true) ~= (self.requiredModifiers[modifier] == true) then
+			return false
+		end
+	end
+	return true
 end
 
 function HoldToQuit.new(options)
 	options = options or {}
 	local self = setmetatable({}, HoldToQuit)
 	self.duration = options.duration or 1
+	self.modifiers = options.modifiers or { "cmd" }
+	self.requiredModifiers = {}
+	for _, modifier in ipairs(self.modifiers) do
+		self.requiredModifiers[modifier] = true
+	end
+	self.hint = options.hint or "終了するには⌘Qを長押し"
 	self.quitAction = options.quitAction or function(application)
 		application:kill()
 	end
@@ -55,7 +62,7 @@ function HoldToQuit:_cancel(showHint)
 	self.hold = nil
 	self:_stopTimer()
 	if showHint and not hold.completed and not hold.excluded then
-		hs.alert.show("終了するには⌘Qを長押し")
+		hs.alert.show(self.hint)
 	end
 end
 
@@ -69,7 +76,7 @@ function HoldToQuit:_completeHold()
 	if not hold or hold.completed or hold.excluded then
 		return
 	end
-	if not exactCommandOnly(hs.eventtap.checkKeyboardModifiers()) or not self:_sameFrontmostApplication(hold) then
+	if not self:_matchesModifiers(hs.eventtap.checkKeyboardModifiers()) or not self:_sameFrontmostApplication(hold) then
 		self:_cancel(false)
 		return
 	end
@@ -87,7 +94,7 @@ function HoldToQuit:_pressed()
 	if self.hold then
 		return
 	end
-	if not exactCommandOnly(hs.eventtap.checkKeyboardModifiers()) then
+	if not self:_matchesModifiers(hs.eventtap.checkKeyboardModifiers()) then
 		return
 	end
 
@@ -122,7 +129,7 @@ function HoldToQuit:start()
 		return self
 	end
 
-	self.hotkey = hs.hotkey.bind({ "cmd" }, "q", function()
+	self.hotkey = hs.hotkey.bind(self.modifiers, "q", function()
 		self:_pressed()
 	end, function()
 		self:_released()
@@ -138,7 +145,7 @@ function HoldToQuit:start()
 			self:_cancel(true)
 		elseif event:getType() == hs.eventtap.event.types.flagsChanged then
 			local modifiers = event:getFlags()
-			if not exactCommandOnly(modifiers) then
+			if not self:_matchesModifiers(modifiers) then
 				self:_cancel(true)
 			end
 		end

@@ -1168,8 +1168,26 @@ local appShortcutManager = AppShortcuts.new({
 	showHelp = showHotkeyHelp,
 })
 
+local DesktopCleanup = require("modules.desktop_cleanup")
+local desktopCleanup = DesktopCleanup.new(appShortcutManager)
+
+local desktopCleanupHint = "整理するには⌘⇧Qを0.8秒長押し"
+local desktopCleanupHold = HoldToQuit.new({
+	duration = holdToQuitDuration,
+	modifiers = { "cmd", "shift" },
+	hint = desktopCleanupHint,
+	-- Finderが前面でも、他の未登録アプリを整理できるようにする。
+	excludedBundleIDs = { ["com.apple.finder"] = false },
+	quitAction = function() desktopCleanup:quit() end,
+}):start()
+
+addHelpEntry({ "cmd", "shift" }, "Q", "アプリ終了", "0.8秒長押しで現在のデスクトップの未登録アプリを通常終了", function()
+	hs.alert.show(desktopCleanupHint)
+end, { searchTerms = { "整理", "一括終了", "quit", "cleanup", "常駐アプリは保護" } })
+
 local commandPalette = CommandPalette.new({
 	appShortcuts = appShortcutManager,
+	cleanupDesktop = function() hs.alert.show(desktopCleanupHint) end,
 	showWindowSwitcher = showWindowSwitcher,
 	showURLLauncher = showURLLauncher,
 	showGitHubRepos = function()
@@ -1192,6 +1210,7 @@ appShortcutManager:start()
 hs.shutdownCallback = function()
 	stopCapsomniaCheck()
 	holdToQuit:stop()
+	desktopCleanupHold:stop()
 	chromeTabs:stop()
 	githubRepos:stop()
 end

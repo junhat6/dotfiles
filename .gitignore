@@ -127,3 +127,4 @@
 !/.config/dotfiles/browser.json
 
 !/.config/dotfiles/finder-sidebar.json
+!/.hammerspoon/modules/desktop_cleanup.lua

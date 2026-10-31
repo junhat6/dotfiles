@@ -86,7 +86,8 @@
     ".config/dotfiles/tests/test_homebrew_update.py",
     ".config/dotfiles/notifications.json",
     ".config/dotfiles/browser.json",
-    ".config/dotfiles/finder-sidebar.json"
+    ".config/dotfiles/finder-sidebar.json",
+    ".hammerspoon/modules/desktop_cleanup.lua"
   ],
   "local": [
     ".claude/settings.local.json",

@@ -3,6 +3,7 @@ CommandPalette.__index = CommandPalette
 
 function CommandPalette.new(options)
 	local self = setmetatable({}, CommandPalette)
+	self.cleanupDesktop = options.cleanupDesktop
 	self.appShortcuts = options.appShortcuts
 	self.showWindowSwitcher = options.showWindowSwitcher
 	self.showURLLauncher = options.showURLLauncher
@@ -24,6 +25,8 @@ function CommandPalette.new(options)
 			self.showURLLauncher()
 		elseif choice.actionID == "githubRepos" then
 			self.showGitHubRepos()
+		elseif choice.actionID == "cleanupDesktop" then
+			self.cleanupDesktop()
 		elseif choice.actionID == "launch" and choice.key then
 			local binding = self.appShortcuts:loadBindings()[choice.key]
 			if binding then
@@ -68,6 +71,11 @@ function CommandPalette:buildChoices(currentApp)
 			text = "GitHubリポジトリを検索",
 			subText = "Alt + Shift + G",
 			actionID = "githubRepos",
+		},
+		{
+			text = "現在のデスクトップの未登録アプリを通常終了",
+			subText = "Cmd + Shift + Q を0.8秒長押し — 選択すると操作方法を表示",
+			actionID = "cleanupDesktop",
 		},
 		{
 			text = "登録済みアプリの一覧",
