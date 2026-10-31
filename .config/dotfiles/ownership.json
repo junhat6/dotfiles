@@ -2,6 +2,7 @@
   "version": 1,
   "shared": [
     "AGENTS.md",
+    ".config/dotfiles/AGENTS.md",
     ".claude/commands/address-review.md",
     ".claude/commands/lost.md",
     ".claude/commands/publish-artifact.md",

@@ -128,3 +128,5 @@
 
 !/.config/dotfiles/finder-sidebar.json
 !/.hammerspoon/modules/desktop_cleanup.lua
+
+!/.config/dotfiles/AGENTS.md
