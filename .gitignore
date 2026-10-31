@@ -38,6 +38,7 @@
 !/.claude/statusline-command.sh
 !/.config/atuin/config.toml
 !/.config/dotfiles/Brewfile
+!/.config/dotfiles/BREW-AUDIT.md
 !/.config/dotfiles/README.md
 !/.config/dotfiles/git-hooks/pre-commit
 !/.config/dotfiles/git-hooks/pre-push
@@ -67,6 +68,7 @@
 !/.gitconfig
 !/.github/workflows/check.yml
 !/.gitignore
+!/.hammerspoon/README.md
 !/.hammerspoon/init.lua
 !/.hammerspoon/modules/app_shortcuts.lua
 !/.hammerspoon/modules/chrome_tabs.lua
@@ -91,6 +93,8 @@
 # Karabiner source-derived keyboard documentation
 !/.config/dotfiles/scripts/karabiner_map.py
 !/.config/dotfiles/tests/test_karabiner_map.py
+!/.config/dotfiles/tests/test_hammerspoon.py
+!/.config/dotfiles/tests/test_github_repos.lua
 !/.config/karabiner/AGENTS.md
 !/.config/karabiner/README.md
 !/.config/karabiner/keymap.svg

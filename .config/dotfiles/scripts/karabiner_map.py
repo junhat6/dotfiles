@@ -164,6 +164,9 @@ def key_label(code):
 
 def destination(chord, compact=False):
     mods = chord.get('to_modifiers', [])
+    if set(mods) == {'left_option', 'left_shift'} and chord['to'] in {'left_arrow', 'right_arrow'}:
+        selection = '選択' + short(chord['to'])
+        return selection if compact else 'Option + Shift + ' + short(chord['to']) + '（' + selection + '）'
     if mods == ['left_option'] and chord['to'] in {'left_arrow', 'right_arrow'}:
         word = '単語' + short(chord['to'])
         return word if compact else 'Option + ' + short(chord['to']) + '（' + word + '）'
@@ -223,7 +226,7 @@ def render_svg(profile, keys, bindings, chords, digest):
     title = 'Option＋キー（Tab併用でも操作）' if all(c['mandatory'] == ['option'] for c in chords) else '組み合わせ'
     text(566, 174, title, 19, weight=600)
     for i, chord in enumerate(chords):
-        value = ' + '.join([name(m) for m in chord['mandatory']] + [name(chord['code'])]) + ' → ' + destination(chord, compact=True)
+        value = ' + '.join([key_label(m) for m in chord['mandatory']] + [name(chord['code'])]) + ' → ' + destination(chord, compact=True)
         text(566+(i//4)*200, 201+(i%4)*23, value, 16)
     if len(chords) > 8:
         raise ValueError('more than eight chords: extend SVG callout layout')

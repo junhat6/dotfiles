@@ -83,7 +83,7 @@ config.keys = {
 	-- 共有設定検索（zsh の dotfiles-edit-widget）。シェルへ Ctrl-] を明示的に送る。
 	{ key = "]", mods = "CTRL", action = act.SendString("\x1d") },
 
-	-- macOSのOption+矢印をシェルの単語移動へ。KarabinerのTab+N/Mも同じ出力。
+	-- macOSのOption+矢印をシェルの単語移動へ。KarabinerのAlt+Ctrl+H/Lも同じ出力。
 	-- CSI 1;3D/C は現在のzshで未割り当てなので、EmacsのMeta-b/fを送る。
 	{ key = "LeftArrow", mods = "ALT", action = act.SendString("\x1bb") },
 	{ key = "RightArrow", mods = "ALT", action = act.SendString("\x1bf") },

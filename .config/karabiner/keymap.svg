@@ -199,13 +199,11 @@
 <g data-key="b"><rect x="509.25" y="526.00" width="69.00" height="50" rx="6" fill="#263244"/>
 <text x="543.75" y="557.0" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500" fill="#f4f7fc" text-anchor="middle">B</text>
 </g>
-<g data-key="n"><rect x="584.25" y="526.00" width="69.00" height="50" rx="6" fill="#cadff3"/>
-<text x="618.75" y="545" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500" fill="#17233b" text-anchor="middle">N</text>
-<text x="618.75" y="565" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="middle">単語←</text>
+<g data-key="n"><rect x="584.25" y="526.00" width="69.00" height="50" rx="6" fill="#263244"/>
+<text x="618.75" y="557.0" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500" fill="#f4f7fc" text-anchor="middle">N</text>
 </g>
-<g data-key="m"><rect x="659.25" y="526.00" width="69.00" height="50" rx="6" fill="#cadff3"/>
-<text x="693.75" y="545" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500" fill="#17233b" text-anchor="middle">M</text>
-<text x="693.75" y="565" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="middle">単語→</text>
+<g data-key="m"><rect x="659.25" y="526.00" width="69.00" height="50" rx="6" fill="#263244"/>
+<text x="693.75" y="557.0" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500" fill="#f4f7fc" text-anchor="middle">M</text>
 </g>
 <g data-key=","><rect x="734.25" y="526.00" width="69.00" height="50" rx="6" fill="#263244"/>
 <text x="768.75" y="557.0" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500" fill="#f4f7fc" text-anchor="middle">,</text>
@@ -263,13 +261,13 @@
 <text x="300" y="230" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="17" font-weight="400" fill="#17233b" text-anchor="start">併用 → Control</text>
 <text x="974" y="174" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="20" font-weight="600" fill="#17233b" text-anchor="start">右上Delete</text>
 <text x="974" y="202" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="17" font-weight="400" fill="#17233b" text-anchor="start">押す → 無効</text>
-<text x="566" y="174" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="19" font-weight="600" fill="#17233b" text-anchor="start">Option＋キー（Tab併用でも操作）</text>
-<text x="566" y="201" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">Option + H → ←</text>
-<text x="566" y="224" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">Option + J → ↓</text>
-<text x="566" y="247" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">Option + K → ↑</text>
-<text x="566" y="270" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">Option + L → →</text>
-<text x="766" y="201" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">Option + N → 単語←</text>
-<text x="766" y="224" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">Option + M → 単語→</text>
+<text x="566" y="174" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="19" font-weight="600" fill="#17233b" text-anchor="start">組み合わせ</text>
+<text x="566" y="201" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">⌥ + H → ←</text>
+<text x="566" y="224" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">⌥ + ⌃ + H → 単語←</text>
+<text x="566" y="247" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">⌥ + J → ↓</text>
+<text x="566" y="270" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">⌥ + K → ↑</text>
+<text x="766" y="201" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">⌥ + L → →</text>
+<text x="766" y="224" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">⌥ + ⌃ + L → 単語→</text>
 <path d="M 40.50 435.00 H 20 V 250 H 32" stroke="#8090a6" stroke-width="1.5"/>
 <path d="M 40.50 493.00 H 8 V 264 H 300" stroke="#8090a6" stroke-width="1.5"/>
 <path d="M 1160 377 H 1188 V 247 H 974" stroke="#8090a6" stroke-width="1.5"/>
@@ -296,5 +294,5 @@
 <text x="952" y="772" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="20" font-weight="600" fill="#17233b" text-anchor="start">右Option</text>
 <text x="952" y="800" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">通常のOption</text>
 <text x="32" y="867" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="15" font-weight="400" fill="#51627a" text-anchor="start">兼用キーの「併用」＝別のキーと組み合わせる操作。図はKarabinerの割り当てのみ（macOS・アプリ側の設定は含まない）。</text>
-<text x="1168" y="889" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="12" font-weight="400" fill="#51627a" text-anchor="end">config SHA-256: 1cde983b24a8</text>
+<text x="1168" y="889" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="12" font-weight="400" fill="#51627a" text-anchor="end">config SHA-256: 96ea9ddb0d74</text>
 </svg>

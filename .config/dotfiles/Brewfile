@@ -51,6 +51,8 @@ cask "amical"
 cask "applite"
 # Utility that prevents the system from going to sleep
 cask "caffeine"
+# Closed-lid keep-awake mode used by Hammerspoon Alt + Ctrl + S
+cask "capsomnia"
 # Universal database tool and SQL client
 cask "dbeaver-community"
 # Voice and text chat software

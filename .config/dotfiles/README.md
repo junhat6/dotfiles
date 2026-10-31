@@ -128,6 +128,8 @@ dotfiles auto-update enable     # 開始 / 再開（繰り返し実行可）
 
 共通の `.config/dotfiles/Brewfile` は手動編集します。日次 LaunchAgent は `~/.claude/hooks/brewfile-sync.sh` で `~/.config/dotfiles/Brewfile.local` にこの端末のパッケージ一覧を記録し、コミット/push しません。
 
+Capsomnia（Hammerspoon の Alt + Ctrl + S で使う蓋閉じ時のスリープ防止）は共通 Brewfile に含まれます。導入時は管理者認証が必要です。2026-10-31 の未記載パッケージと、Homebrew 管理外の主要アプリは [棚卸し記録](BREW-AUDIT.md) を参照してください。
+
 ```bash
 bash ~/.claude/hooks/brewfile-sync.sh
 diff -u ~/.config/dotfiles/Brewfile ~/.config/dotfiles/Brewfile.local
@@ -195,9 +197,9 @@ Tab併用と左右OptionはOption、Caps Lock併用と左ControlはControlです
 | --- | --- | --- |
 | 1文字左／右 | Tab + H / L | 通常の ← / → |
 | 上／下 | Tab + K / J | 通常の ↑ / ↓ |
-| 単語左／右 | Tab + N / M | Option + ← / → を出力 |
+| 単語左／右 | Tab + Caps + H / L | Option + ← / → を出力 |
 | 行頭／行末 | Caps + A / E、または左Control + A / E | Control + A / E。文章入力欄では行または段落の境界へ移動 |
-| 単語単位で選択 | Tab + Shift + N / M | 一般的な文章入力欄向け。ターミナルではアプリに従う |
+| 単語単位で選択 | Tab + Caps + Shift + H / L | 一般的な文章入力欄向け。ターミナルではアプリに従う |
 | 直前の文字を削除 | 右Shift | Delete（後方削除） |
 | 次の文字を削除 | Caps + D、またはFn + 右Shift | Control + D / Fn + Delete。シェルの空行でControl + Dを押すと終了するため、文字編集時に使う |
 | 直前の単語を削除 | 左Option + 右Shift、またはTab + 右Shift | Option + Delete。シェルではCaps + Wも使える |
@@ -210,7 +212,7 @@ WezTermではOption + ← / →をMeta-b/fとしてシェルへ送り、zshの�
 
 アプリによって操作が異なります。日本語変換中はIME側のキー操作になる場合があります。[Appleの文字編集ショートカット](https://support.apple.com/en-us/102650)も参照してください。
 
-Emacs標準の単語移動は `M-b`（単語左）と `M-f`（単語右）です。`M-` はMeta修飾キーで、一般的にはAlt/Option、またはEscを押して離してから文字キーを押します。ブラウザの文章入力欄ではEmacsの全キーが共通ではなく、Mac標準のOption + ← / →や、この配列のTab + N/Mを使います。HammerspoonのOption + B/Fはアプリ起動用なので、EmacsのMeta-b/fを使いたい場合はそちらの割り当ても確認してください。
+Emacs標準の単語移動は `M-b`（単語左）と `M-f`（単語右）です。`M-` はMeta修飾キーで、一般的にはAlt/Option、またはEscを押して離してから文字キーを押します。ブラウザの文章入力欄ではEmacsの全キーが共通ではなく、Mac標準のOption + ← / →や、この配列のTab + Caps + H/Lを使います。HammerspoonのOption + B/Fはアプリ起動用なので、EmacsのMeta-b/fを使いたい場合はそちらの割り当ても確認してください。
 
 アプリ起動と登録済みURLの番号キーはAlt、検索や一覧などの操作はAlt + Shiftに揃えます。クリップボード履歴はCommand + Shift + Vです。
 

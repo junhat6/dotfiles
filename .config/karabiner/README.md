@@ -9,7 +9,7 @@
 
 **選択プロファイル：** Default profile
 
-**設定のSHA-256：** `1cde983b24a86e470de8fa8a08973d8606e66106f4d5d9bf4472e4ff694c2278`
+**設定のSHA-256：** `96ea9ddb0d741b21133ab4866994665c9991d27a196d4b82294b1a9465cb3b63`
 
 ## 変更しているキー
 
@@ -29,11 +29,11 @@
 | 入力 | 出力 | 併用できる追加の修飾キー |
 | --- | --- | --- |
 | Option + H | ← | Caps Lock |
+| Option + Control + H | Option + ←（単語←） | Caps Lock、Shift |
 | Option + J | ↓ | Caps Lock |
 | Option + K | ↑ | Caps Lock |
 | Option + L | → | Caps Lock |
-| Option + N | Option + ←（単語←） | Caps Lock、Shift |
-| Option + M | Option + →（単語→） | Caps Lock、Shift |
+| Option + Control + L | Option + →（単語→） | Caps Lock、Shift |
 
 組み合わせの修飾キーは機能名です。物理キーの印字とは異なる場合があるため、上の表と合わせて確認してください。許可されていない追加の修飾キーを押した場合は、その組み合わせルールが適用されません。
 

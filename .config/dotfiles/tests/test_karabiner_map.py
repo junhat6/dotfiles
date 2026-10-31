@@ -84,6 +84,33 @@ class KarabinerMap(unittest.TestCase):
         _, _, _, chords = MAP.model(self.config)
         self.assertEqual(next(c['to'] for c in chords if c['code'] == 'h'), 'right_arrow')
 
+    def test_explicit_word_selection_fits_keycap(self):
+        rules = self.config['profiles'][0]['complex_modifications']['rules']
+        rules.append({'manipulators': [{
+            'type': 'basic',
+            'from': {'key_code': 'm', 'modifiers': {'mandatory': ['option', 'shift'], 'optional': ['caps_lock']}},
+            'to': [{'key_code': 'right_arrow', 'modifiers': ['left_option', 'left_shift']}],
+        }]})
+        outputs = MAP.generate(json.dumps(self.config).encode())
+        svg = ET.fromstring(outputs[MAP.OUTPUTS[0]])
+        label = svg.find(".//*[@data-key='m']/{http://www.w3.org/2000/svg}text[last()]")
+        self.assertEqual(label.text, '選択→')
+        self.assertIn('| Option + Shift + M | Option + Shift + →（選択→） | Caps Lock |', outputs[MAP.OUTPUTS[1]])
+
+    def test_word_navigation_extends_hl_without_consuming_launcher_or_apps(self):
+        config = json.loads((ROOT / '.config/karabiner/karabiner.json').read_text())
+        _, _, _, chords = MAP.model(config)
+        word = [c for c in chords if c['mandatory'] == ['option', 'control']]
+        self.assertEqual([(c['code'], c['to']) for c in word], [('h', 'left_arrow'), ('l', 'right_arrow')])
+        for chord in word:
+            self.assertEqual(chord['to_modifiers'], ['left_option'])
+            self.assertEqual(chord['optional'], ['caps_lock', 'shift'])
+        self.assertFalse(any(c['code'] in {'n', 'm'} for c in chords))
+        self.assertFalse(any(c['code'] == 'l' and c['mandatory'] == ['option', 'shift'] for c in chords))
+        outputs = MAP.generate(json.dumps(config).encode())
+        self.assertIn('| Option + Control + H | Option + ←（単語←） | Caps Lock、Shift |', outputs[MAP.OUTPUTS[1]])
+        self.assertIn('| Option + Control + L | Option + →（単語→） | Caps Lock、Shift |', outputs[MAP.OUTPUTS[1]])
+
     def test_word_navigation_preserves_output_modifiers_and_selection(self):
         rules = self.config['profiles'][0]['complex_modifications']['rules']
         rules.append({'manipulators': [
