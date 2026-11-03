@@ -1,32 +1,32 @@
 [tools]
-go = "1.27.1"
+go = "latest"
 node = "lts"
-rust = "1.98.1"
-uv = "0.12.17"
+rust = "latest"
+uv = "latest"
 
-# 開発 CLI。既存環境の版を固定し、更新は mise で行う。
-gh = "2.101.0"
-ghq = "1.10.1"
-lazygit = "0.65.1"
-ripgrep = "15.2.0"
-fd = "10.5.0"
-bat = "0.26.1"
-eza = "0.23.5"
-delta = "0.19.2"
-cmake = "4.4.3"
-"npm:czg" = "1.14.0"
-"github:openclaw/gogcli" = "0.43.0"
-"go:golang.org/x/tools/cmd/goimports" = "0.44.0"
-"go:golang.org/x/tools/gopls" = "0.21.1"
-"go:honnef.co/go/tools/cmd/staticcheck" = "0.7.0"
-"cargo:mdbook-plantuml" = "2.0.0"
+# 共通環境は毎朝自動更新。プロジェクトで必要な版は各リポジトリで指定する。
+gh = "latest"
+ghq = "latest"
+lazygit = "latest"
+ripgrep = "latest"
+fd = "latest"
+bat = "latest"
+eza = "latest"
+delta = "latest"
+cmake = "latest"
+"npm:czg" = "latest"
+"github:openclaw/gogcli" = "latest"
+"go:golang.org/x/tools/cmd/goimports" = "latest"
+"go:golang.org/x/tools/gopls" = "latest"
+"go:honnef.co/go/tools/cmd/staticcheck" = "latest"
+"cargo:mdbook-plantuml" = "latest"
 
 "aqua:anthropics/claude-code" = { version = "latest", minimum_release_age = "0s" }
 # Codex は aqua 経由で Apple Silicon 用を取得し、公開後 1 時間待つ。
 "aqua:openai/codex" = { version = "latest", minimum_release_age = "1h", os = ["macos/arm64"] }
 "npm:cf" = "latest"
-python = "3.11.17"
-ruby = "3.2.9"
+python = "latest"
+ruby = "latest"
 "npm:@opencode/cli" = { version = "latest", allow_builds = ["@opencode/cli"] }
 "npm:agent-browser" = { version = "latest", allow_builds = ["agent-browser"] }
 

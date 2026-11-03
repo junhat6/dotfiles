@@ -45,6 +45,10 @@ brew "zoxide"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
 brew "yakitrak/yakitrak/notesmd-cli", link: false, trusted: true
+# Password manager (vaults and sign-in remain local to each Mac)
+cask "1password"
+# Meeting notes app
+cask "granola"
 # AI dictation app
 cask "amical"
 # User-friendly GUI app for Homebrew
@@ -80,5 +84,5 @@ cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
 
-# Official stable build; subsequent updates use Orca’s built-in updater.
+# Official stable build; built-in updates plus daily Homebrew maintenance.
 cask "stablyai/orca/orca"
