@@ -90,7 +90,11 @@ OSが「あとで」を許さず、先へ進む必須処理そのものが再起
 
 ## OrcaとHomebrewの更新
 
-Orcaは公式の `stablyai/orca/orca` caskで初回導入する。既存のOrca.appがHomebrew管理外にある場合、強制上書き・削除・再インストールせず、既存インストールを報告して移行を別途扱う。Orca内蔵アップデーター（標準は安定版）に加え、Homebrewの日次更新でも補完する。更新目的でエージェントやデーモンを終了しない。内蔵更新によるアプリ再起動ではデーモンがセッションを保持するが、Mac自体の再起動は実行中プロセスを終了する。
+Orcaは公式の `stablyai/orca/orca` caskで初回導入する。既存のOrca.appがHomebrew管理外にある場合、強制上書き・削除・再インストールせず、既存インストールを報告して移行を別途扱う。Orca内蔵アップデーターは自動確認・通知を行うが、1.4.245ではダウンロード開始に操作が必要。起動中の完全無人更新は以下の定期実行で補い、Homebrewの日次更新も併用する。更新目的でエージェントやデーモンを終了しない。内蔵更新によるアプリ再起動ではデーモンがセッションを保持するが、Mac自体の再起動は実行中プロセスを終了する。
+
+Orcaの無人更新は `python3 ~/.config/dotfiles/scripts/install-orca-autoupdate.py` で各Macに個別導入する（通常setupとは別の明示導入）。`com.junhat6.orca-autoupdate` がログイン時と3時間ごとに、起動中のローカルOrcaへ認証付きRPCで安定版の確認・ダウンロード・標準インストールを要求する。更新時は画面が再起動する。ログアウト中・スリープ中・Orca未起動時は更新できず、後の定期実行で再試行する。接続先Macへの一括更新はしない。
+
+エラー時は次回に再試行し、更新要求後に確認が中断しても次回のバージョン確認で復帰する（過去のセッション継続まで成功と偽らない）。強制終了・通常Quitの追加送信・アプリ上書きはしない。`~/Library/Application Support/OrcaAutoUpdate/PAUSED` は明示的な手動停止専用。旧版が自動作成した停止フラグの解除はインストーラーでは行わない。更新ログは `~/Library/Logs/OrcaAutoUpdate/update.log`、状態は同サポートディレクトリの `last-update.json`。`--inspect` は更新せず状態を読む。停止は `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`、再有効化はインストーラーの再実行。
 
 セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy --no-quit`、`mise upgrade --global --yes --no-prune` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
 
@@ -100,9 +104,9 @@ miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジ�
 
 新しく `brew install` / `brew install --cask` したものは一覧への追記なしで日次更新対象になる。miseは共通設定へ `latest` / `lts` などの追従指定で追加する。特定版指定・プロジェクト内依存・直接配置したアプリは一括更新の対象に含まれない。新しいアプリを全Macにも導入したい場合は共通 `Brewfile` へ追加する。`Brewfile.local` は端末の記録であり、他Macへ自動配布しない。
 
-Orca自身の更新チェックはアプリ側でも管理される。dotfilesから別の3時間周期ジョブは作成せず、日次Homebrew更新を補完経路とする。アプリ内の更新間隔・ダウンロード・適用タイミングはOrcaのバージョンと設定に従う。
+通常setupでは3時間周期ジョブを自動導入しない。起動中の更新・再起動まで無人化したいMacでは、上記インストーラーで個別に有効化する。日次Homebrew更新は補完経路として維持する。
 
-内蔵アップデーターの有効状態はアプリごとに異なり、Homebrewの `auto_updates` 属性だけでは有効と断定しない。初回起動時にOrcaの更新設定を確認する。管理者認証や追加のOS許可が必要な更新は失敗・保留となるため、全更新が完全無人で完了する保証はない。
+内蔵アップデーターの有効状態はアプリごとに異なり、Homebrewの `auto_updates` 属性だけでは有効と断定しない。Orcaの内蔵更新だけで完全無人になるとは扱わない。管理者認証や追加のOS許可が必要な更新は失敗・保留となるため、全更新が完全無人で完了する保証はない。
 
 確認: `launchctl print gui/$(id -u)/com.junhat6.homebrew-update`。結果は `~/.claude/logs/homebrew-update.log` の終了コードを確認する。手動で同じ処理を実行する場合は `bash ~/.config/dotfiles/scripts/homebrew-update.sh`。既存のbrewfile-syncは一覧保存、dotfiles-updateは設定同期であり、パッケージ更新ではない。
 

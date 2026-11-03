@@ -84,8 +84,18 @@ def model(config):
     if len(profiles) != 1:
         raise ValueError('exactly one selected profile is required')
     profile = profiles[0]
-    if profile.get('devices') or profile.get('fn_function_keys'):
-        raise ValueError('extend the renderer for device-specific or function-key modifications')
+    if profile.get('fn_function_keys'):
+        raise ValueError('extend the renderer for function-key modifications')
+    for device in profile.get('devices', []):
+        # An explicitly enabled device uses the global map unchanged. Reject
+        # device remappings and ignored devices until we can diagram them.
+        require_fields(device, {'identifiers', 'ignore'}, 'device-specific configuration')
+        if device.get('ignore') is not False:
+            raise ValueError('extend the renderer for device-specific ignored devices')
+        identifiers = device.get('identifiers', {})
+        require_fields(identifiers, {'vendor_id', 'product_id', 'is_keyboard', 'is_pointing_device'}, 'device-specific identifiers')
+        if not identifiers or any(type(v) not in (int, bool) for v in identifiers.values()):
+            raise ValueError('invalid device-specific identifiers')
     simple = {}
     for item in profile.get('simple_modifications', []):
         require_fields(item, {'from', 'to'}, 'simple modification')
@@ -287,7 +297,7 @@ def render_readme(profile, bindings, chords, digest):
               '4. JSON・このREADME・SVGを同じコミットに含めます。', '',
               'READMEとSVGは生成物ですが、GitHubで表示するためGit管理します。図や表だけを手編集せず、割り当てはJSON、図の配置や説明の形式は [生成スクリプト](../dotfiles/scripts/karabiner_map.py) を修正してください。', '',
               '既存の `dotfiles check`、pre-commit/pre-push、GitHub Actionsは再生成漏れを検知します。ステージ済みファイルとpush対象のコミットも検証します。', '',
-              '条件分岐・デバイス別設定・未対応のイベントを追加した場合、生成はエラーで停止します。スクリプトとテストを拡張して、図が実際より単純な動作を示さないようにしてください。', '',
+              '機器の明示的な有効化（`ignore: false`）は全体と同じ割り当てを使います。条件分岐・デバイス別の再割り当て・無効化・未対応のイベントを追加した場合、生成はエラーで停止します。スクリプトとテストを拡張して、図が実際より単純な動作を示さないようにしてください。', '',
               '配列の参考：[Apple — MacBook AirのMagic Keyboard](https://support.apple.com/guide/macbook-air/magic-keyboard-apdab672d5e9/mac)。図は独自のSVGで、Appleの製品画像はリポジトリに含めていません。', '']
     return '\n'.join(lines)
 

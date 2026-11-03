@@ -9,7 +9,7 @@
 
 **選択プロファイル：** Default profile
 
-**設定のSHA-256：** `96ea9ddb0d741b21133ab4866994665c9991d27a196d4b82294b1a9465cb3b63`
+**設定のSHA-256：** `6c9093894baa346669378bebedeba73f8e0b0e016bcb66dac38ce14c4bbdfb7a`
 
 ## 変更しているキー
 
@@ -58,6 +58,6 @@ READMEとSVGは生成物ですが、GitHubで表示するためGit管理しま�
 
 既存の `dotfiles check`、pre-commit/pre-push、GitHub Actionsは再生成漏れを検知します。ステージ済みファイルとpush対象のコミットも検証します。
 
-条件分岐・デバイス別設定・未対応のイベントを追加した場合、生成はエラーで停止します。スクリプトとテストを拡張して、図が実際より単純な動作を示さないようにしてください。
+機器の明示的な有効化（`ignore: false`）は全体と同じ割り当てを使います。条件分岐・デバイス別の再割り当て・無効化・未対応のイベントを追加した場合、生成はエラーで停止します。スクリプトとテストを拡張して、図が実際より単純な動作を示さないようにしてください。
 
 配列の参考：[Apple — MacBook AirのMagic Keyboard](https://support.apple.com/guide/macbook-air/magic-keyboard-apdab672d5e9/mac)。図は独自のSVGで、Appleの製品画像はリポジトリに含めていません。

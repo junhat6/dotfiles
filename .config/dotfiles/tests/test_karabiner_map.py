@@ -74,6 +74,16 @@ class KarabinerMap(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'device-specific'):
             MAP.generate(json.dumps(self.config).encode())
 
+    def test_enabled_device_uses_global_map(self):
+        expected = MAP.model(self.config)
+        self.config['profiles'][0]['devices'] = [{'identifiers': {'vendor_id': 1452, 'product_id': 591, 'is_keyboard': True, 'is_pointing_device': True}, 'ignore': False}]
+        self.assertEqual(MAP.model(self.config), expected)
+
+    def test_ignored_device_is_rejected(self):
+        self.config['profiles'][0]['devices'] = [{'identifiers': {'vendor_id': 1452}, 'ignore': True}]
+        with self.assertRaisesRegex(ValueError, 'device-specific'):
+            MAP.model(self.config)
+
     def test_simple_then_complex_resolution(self):
         self.config['profiles'][0]['simple_modifications'].append({'from': {'key_code': 'left_shift'}, 'to': [{'key_code': 'right_command'}]})
         _, _, bindings, _ = MAP.model(self.config)

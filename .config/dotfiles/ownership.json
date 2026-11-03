@@ -88,7 +88,10 @@
     ".config/dotfiles/notifications.json",
     ".config/dotfiles/browser.json",
     ".config/dotfiles/finder-sidebar.json",
-    ".hammerspoon/modules/desktop_cleanup.lua"
+    ".hammerspoon/modules/desktop_cleanup.lua",
+    ".config/dotfiles/scripts/orca-autoupdate.py",
+    ".config/dotfiles/scripts/install-orca-autoupdate.py",
+    ".config/dotfiles/tests/test_orca_autoupdate.py"
   ],
   "local": [
     ".claude/settings.local.json",

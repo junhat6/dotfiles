@@ -294,5 +294,5 @@
 <text x="952" y="772" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="20" font-weight="600" fill="#17233b" text-anchor="start">右Option</text>
 <text x="952" y="800" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="16" font-weight="400" fill="#17233b" text-anchor="start">通常のOption</text>
 <text x="32" y="867" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="15" font-weight="400" fill="#51627a" text-anchor="start">兼用キーの「併用」＝別のキーと組み合わせる操作。図はKarabinerの割り当てのみ（macOS・アプリ側の設定は含まない）。</text>
-<text x="1168" y="889" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="12" font-weight="400" fill="#51627a" text-anchor="end">config SHA-256: 96ea9ddb0d74</text>
+<text x="1168" y="889" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, Noto Sans CJK JP, sans-serif" font-size="12" font-weight="400" fill="#51627a" text-anchor="end">config SHA-256: 6c9093894baa</text>
 </svg>
