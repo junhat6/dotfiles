@@ -157,7 +157,7 @@ class Repository:
         return sorted('.config/' + p.name for p in config.iterdir() if p.is_dir() and p.name not in known) if config.exists() else []
 
     def rendered(self, item, home, index=False):
-        if item['output'] == SETTINGS_OUTPUT:
+        if item.get('output') == SETTINGS_OUTPUT:
             shared = json_object(self.content(item['template'], index))
             if 'hooks' in shared or 'permissions' in shared:
                 raise ValueError('Claude template must contain only shared preferences; permissions/hooks must be host local')
@@ -169,7 +169,7 @@ class Repository:
         if '@HOME@' in result or '{{' in result:
             raise ValueError('unresolved template: ' + item['template'])
         document = plistlib.loads(result.encode())
-        if item['output'] == 'Library/LaunchAgents/com.claude.obsidian-sync.plist':
+        if item.get('output') == 'Library/LaunchAgents/com.claude.obsidian-sync.plist':
             environment = session_capture_environment(home)
             if environment:
                 document.setdefault('EnvironmentVariables', {}).update(environment)
@@ -186,6 +186,10 @@ class Repository:
             for entry in self.git('ls-files', '--stage', '-z').split(b'\0'):
                 if entry and entry.split(b' ', 1)[0] not in {b'100644', b'100755'}:
                     errors.append('non-regular index entry: ' + entry.decode())
+        if self.revision:
+            for entry in self.git('ls-tree', '-r', '-z', self.revision).split(b'\0'):
+                if entry and entry.split(b' ', 1)[0] not in {b'100644', b'100755'}:
+                    errors.append('non-regular committed entry: ' + entry.decode())
         for path in m['shared']:
             try:
                 data = self.content(path, index)
@@ -224,6 +228,19 @@ class Repository:
                     errors.append('removed packages in Brewfile')
             except (OSError, ValueError, ExpatError, plistlib.InvalidFileException, subprocess.CalledProcessError) as exc:
                 errors.append('invalid or missing shared file: ' + path + ': ' + str(exc))
+        keymap_script = '.config/dotfiles/scripts/karabiner_map.py'
+        if keymap_script in m['shared']:
+            try:
+                # Use the same tree for generator, config, and generated documents:
+                # never validate staged/committed content against unstaged files.
+                namespace = {'__name__': 'karabiner_map', '__file__': str(self.root / keymap_script)}
+                exec(compile(self.content(keymap_script, index), keymap_script, 'exec'), namespace)
+                expected = namespace['generate'](self.content(namespace['CONFIG'], index))
+                for path, text in expected.items():
+                    if self.content(path, index) != text.encode():
+                        errors.append('stale keymap: ' + path + ' (run python3 .config/dotfiles/scripts/karabiner_map.py)')
+            except (OSError, ValueError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError) as exc:
+                errors.append('invalid keymap: ' + str(exc))
         if discover:
             errors.extend('new candidate (register deliberately or exclude): ' + x for x in self.candidates(m))
         if generated:
@@ -292,12 +309,18 @@ def main():
     edit = sub.add_parser('edit', help='search shared files with diff preview and open in Neovim')
     edit.add_argument('--changed', action='store_true')
     edit.add_argument('--query', default='')
+    sub.add_parser('update', help='fetch origin/main and fast-forward HOME without overwriting local edits')
+    auto = sub.add_parser('auto-update', help='manage per-machine macOS automatic updates')
+    auto.add_argument('action', choices=['enable', 'disable', 'status'])
     sub.add_parser('render')
     boot = sub.add_parser('bootstrap-local')
     boot.add_argument('--managed-settings', default='/Library/Application Support/ClaudeCode/managed-settings.json')
     args = parser.parse_args()
     repo = Repository(args.root, args.backend, getattr(args, 'revision', None))
     try:
+        if args.command in {'update', 'auto-update'}:
+            from sync import update, auto_update
+            return update(repo) if args.command == 'update' else auto_update(repo, args.action)
         if args.command in {'files', 'preview', 'edit'}:
             from picker import main as picker_main
             picker_args = ['--root', str(repo.root), '--backend', repo.backend,

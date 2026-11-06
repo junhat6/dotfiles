@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Apply the shared Dock/keyboard/display-sleep profile, preserving only the affected keys."""
+import argparse
+import os
+from pathlib import Path
+import plistlib
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+
+KEYS = {'NSGlobalDomain': ('KeyRepeat', 'InitialKeyRepeat'),
+        'com.apple.dock': ('persistent-apps', 'autohide', 'show-recents')}
+
+
+def read_domain(domain):
+    result = subprocess.run(['defaults', 'export', domain, '-'], capture_output=True)
+    if result.returncode:
+        raise RuntimeError('Cannot export preferences: ' + domain)
+    return plistlib.loads(result.stdout)
+
+
+def write_value(domain, key, value):
+    # defaults accepts an XML property-list element, including nested Dock tiles.
+    element = ET.fromstring(plistlib.dumps(value))[0]
+    subprocess.run(['defaults', 'write', domain, key,
+                    ET.tostring(element, encoding='unicode')], check=True)
+
+
+def desired():
+    apps = []
+    for name in ('Launchpad', 'System Settings'):
+        path = Path('/System/Applications') / (name + '.app')
+        if not path.is_dir():
+            print('利用できないアプリをスキップ: ' + str(path))
+            continue
+        apps.append({'tile-type': 'file-tile', 'tile-data': {
+            'file-data': {'_CFURLString': path.as_uri() + '/', '_CFURLStringType': 15}}})
+    # Finder is provided by Dock itself; do not add a duplicate persistent tile.
+    return {'NSGlobalDomain': {'KeyRepeat': 1, 'InitialKeyRepeat': 15},
+            'com.apple.dock': {'persistent-apps': apps, 'autohide': True,
+                               'show-recents': False}}
+
+
+POWER_TARGETS = {'Battery Power': 10, 'AC Power': 0}
+POWER_FLAGS = {'Battery Power': '-b', 'AC Power': '-c'}
+
+
+def read_power(setting='displaysleep'):
+    text = subprocess.check_output(['/usr/bin/pmset', '-g', 'custom'], text=True)
+    result, source = {}, None
+    for line in text.splitlines():
+        if line.endswith(':'):
+            source = line.strip().rstrip(':')
+        elif source in POWER_TARGETS:
+            parts = line.split()
+            if len(parts) == 2 and parts[0] == setting:
+                result[source] = int(parts[1])
+    if 'AC Power' not in result:
+        raise RuntimeError('Cannot read AC power setting: ' + setting)
+    return result
+
+
+def power_settings(action, state):
+    current = read_power()
+    backup = state / 'display-sleep-before.plist'
+    if action == 'status':
+        for source, value in current.items():
+            print(f'{source}/displaysleep: {value} minutes (0=never)')
+        return
+    if action == 'restore':
+        # Older versions saved Dock/keyboard only. Do not invent power defaults.
+        if not backup.exists():
+            return
+        target = plistlib.loads(backup.read_bytes())
+    else:
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if not backup.exists():
+            with backup.open('xb') as stream:
+                os.chmod(backup, 0o600)
+                plistlib.dump(current, stream)
+        target = POWER_TARGETS
+    for source, value in target.items():
+        if source not in current or current[source] == value:
+            continue
+        # setup already maintains authentication. Never introduce a late prompt.
+        sudo = ['/usr/bin/sudo']
+        if os.environ.get('DOTFILES_SETUP_NONINTERACTIVE') == '1':
+            sudo.append('-n')
+        subprocess.run(sudo + ['/usr/bin/pmset', POWER_FLAGS[source], 'displaysleep', str(value)], check=True)
+    actual = read_power()
+    for source, value in target.items():
+        if source in actual and actual[source] != value:
+            raise RuntimeError('Display-sleep verification failed: ' + source)
+
+
+def ac_sleep_settings(action, state):
+    current = read_power('sleep')['AC Power']
+    backup = state / 'ac-sleep-before.plist'
+    if action == 'status':
+        print(f'AC Power/sleep: {current} minutes (0=prevent automatic sleep)')
+        return
+    if action == 'restore':
+        if not backup.exists():
+            return  # Older backups never managed system sleep.
+        target = plistlib.loads(backup.read_bytes())['sleep']
+    else:
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if not backup.exists():
+            with backup.open('xb') as stream:
+                os.chmod(backup, 0o600)
+                plistlib.dump({'sleep': current}, stream)
+        target = 0
+    if current != target:
+        sudo = ['/usr/bin/sudo']
+        if os.environ.get('DOTFILES_SETUP_NONINTERACTIVE') == '1':
+            sudo.append('-n')
+        subprocess.run(sudo + ['/usr/bin/pmset', '-c', 'sleep', str(target)], check=True)
+    if read_power('sleep')['AC Power'] != target:
+        raise RuntimeError('AC automatic-sleep verification failed')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=('apply', 'restore', 'status'), default='apply', nargs='?')
+    args = parser.parse_args()
+    if sys.platform != 'darwin' or os.geteuid() == 0:
+        parser.error('Run on macOS as the logged-in user, without sudo.')
+    state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'dotfiles/macos-personal'
+    backup = state / 'before.plist'
+    if args.action == 'restore':
+        if not backup.is_file():
+            parser.error('No saved settings to restore.')
+        saved = plistlib.loads(backup.read_bytes())
+        ac_sleep_settings('restore', state)
+        power_settings('restore', state)
+        for domain, keys in KEYS.items():
+            current = read_domain(domain)
+            for key in keys:
+                if key in saved[domain]:
+                    write_value(domain, key, saved[domain][key])
+                elif key in current:
+                    subprocess.run(['defaults', 'delete', domain, key], check=True)
+    else:
+        current = {domain: read_domain(domain) for domain in KEYS}
+        if args.action == 'status':
+            power_settings('status', state)
+            ac_sleep_settings('status', state)
+            for domain, keys in KEYS.items():
+                for key in keys:
+                    value = current[domain].get(key, '(unset)')
+                    if key == 'persistent-apps' and isinstance(value, list):
+                        value = [tile.get('tile-data', {}).get('file-label') or
+                                 tile.get('tile-data', {}).get('file-data', {}).get('_CFURLString', '(unknown)')
+                                 for tile in value]
+                    print(f'{domain}/{key}: {value}')
+            print('復元用バックアップ: ' + str(backup))
+            return
+        if not backup.exists():
+            state.mkdir(parents=True, exist_ok=True, mode=0o700)
+            saved = {domain: {key: current[domain][key] for key in keys if key in current[domain]}
+                     for domain, keys in KEYS.items()}
+            # Exclusive create: a repeat apply never replaces the original snapshot.
+            with backup.open('xb') as stream:
+                os.chmod(backup, 0o600)
+                plistlib.dump(saved, stream)
+        power_settings('apply', state)
+        ac_sleep_settings('apply', state)
+        for domain, values in desired().items():
+            for key, value in values.items():
+                write_value(domain, key, value)
+    # Restart only this user's Dock, without closing their applications.
+    subprocess.run(['killall', '-u', str(os.getuid()), 'Dock'], check=False)
+    print('Mac設定を適用しました。Dockは再起動済みです。' if args.action == 'apply' else '保存したMac設定へ戻しました。')
+    if os.environ.get('DOTFILES_SETUP_NONINTERACTIVE') != '1':
+        print('キーリピートの反映を確実にするため、作業終了後にログアウト／ログイン、またはMacを再起動してください。自動再起動はしません。')
+
+
+if __name__ == '__main__':
+    main()

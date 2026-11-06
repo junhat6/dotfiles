@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "method": "agent-system-settings",
+  "apps": [
+    {
+      "bundle_id": "com.apple.iChat",
+      "name": "メッセージ",
+      "enabled": false
+    },
+    {
+      "bundle_id": "com.apple.gamecenter",
+      "name": "Game Center",
+      "enabled": false
+    }
+  ]
+}

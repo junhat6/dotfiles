@@ -3,20 +3,23 @@
 set -euo pipefail
 SUPPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SUPPORT/../.." && pwd)"
-CHECK=false PACKAGES=false APPLY=false AGENTS=false DRY_RUN=false
-usage() { echo 'Usage: install.sh [--check] [--packages] [--apply] [--launchagents] [--all] [--dry-run]'; }
+CHECK=false PACKAGES=false APPLY=false AGENTS=false DRY_RUN=false AUTO_UPDATE=false
+usage() { echo 'Usage: install.sh [--check] [--packages] [--apply] [--launchagents] [--auto-update] [--all] [--dry-run]'; }
 for arg in "$@"; do
     case "$arg" in
         --check) CHECK=true ;; --packages) PACKAGES=true ;; --apply) APPLY=true ;;
-        --launchagents) AGENTS=true ;; --all) CHECK=true; PACKAGES=true; APPLY=true; AGENTS=true ;;
+        --launchagents) AGENTS=true ;; --auto-update) AUTO_UPDATE=true ;; --all) CHECK=true; PACKAGES=true; APPLY=true; AGENTS=true ;;
         --dry-run) DRY_RUN=true ;; -h|--help) usage; exit 0 ;; *) usage >&2; exit 2 ;;
     esac
 done
-if ! $CHECK && ! $PACKAGES && ! $APPLY && ! $AGENTS; then CHECK=true; APPLY=true; fi
+if ! $CHECK && ! $PACKAGES && ! $APPLY && ! $AGENTS && ! $AUTO_UPDATE; then CHECK=true; APPLY=true; fi
 run() { if $DRY_RUN; then printf '[dry-run]'; printf ' %q' "$@"; printf '\n'; else "$@"; fi; }
 if [[ -x /usr/bin/python3 ]]; then PYTHON=/usr/bin/python3; else PYTHON=python3; fi
 if $CHECK; then run bash "$SUPPORT/scripts/check.sh" "$ROOT"; fi
-if $PACKAGES; then run brew bundle --file="$SUPPORT/Brewfile"; fi
+if $PACKAGES; then
+    run brew bundle --file="$SUPPORT/Brewfile"
+    run "$PYTHON" "$SUPPORT/scripts/setup_machine.py" prepare-apps --brewfile "$SUPPORT/Brewfile" --report "$HOME/.local/state/dotfiles/app-verification.json"
+fi
 if $APPLY; then
     # Clone/checkout is yadm's job. Bootstrap only configures repository hooks and local/generated files.
     if [[ "$ROOT" != "$HOME" ]]; then
@@ -29,12 +32,21 @@ if $APPLY; then
     run yadm gitconfig core.hooksPath "$SUPPORT/git-hooks"
     run "$PYTHON" "$SUPPORT/scripts/dotfiles.py" --root "$ROOT" bootstrap-local
     run "$PYTHON" "$SUPPORT/scripts/dotfiles.py" --root "$ROOT" render
+    if [[ "$(uname -s)" == Darwin ]]; then
+        # Standalone Tailscale uses Sparkle; no password or maintenance daemon needed.
+        run /usr/bin/defaults write io.tailscale.ipn.macsys SUEnableAutomaticChecks -bool true
+        run /usr/bin/defaults write io.tailscale.ipn.macsys SUAutomaticallyUpdate -bool true
+    fi
 fi
 if $AGENTS; then
     [[ "$(uname -s)" == Darwin ]] || { echo 'LaunchAgents require macOS' >&2; exit 1; }
     run mkdir -p "$HOME/.claude/logs"
-    for agent in "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" "$HOME/Library/LaunchAgents/com.claude.brewfile-sync.plist" "$HOME/Library/LaunchAgents/com.claude.auto-update.plist"; do
+    for agent in "$HOME/Library/LaunchAgents/com.claude.obsidian-sync.plist" "$HOME/Library/LaunchAgents/com.claude.brewfile-sync.plist" "$HOME/Library/LaunchAgents/com.junhat6.homebrew-update.plist"; do
         run launchctl unload "$agent" || true
         run launchctl load -w "$agent"
     done
+fi
+
+if $AUTO_UPDATE; then
+    run "$PYTHON" "$SUPPORT/scripts/dotfiles.py" --root "$ROOT" auto-update enable
 fi

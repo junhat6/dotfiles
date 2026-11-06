@@ -19,7 +19,6 @@ end
 
 configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig)
 configWatcher:start()
-hs.alert.show("Hammerspoon loaded")
 
 -- =============================================================================
 -- ショートカット登録とヘルプ
@@ -38,9 +37,9 @@ local modifierAliases = {
 }
 
 local modifierDisplayOrder = {
-	{ name = "cmd", symbol = "⌘" },
-	{ name = "ctrl", symbol = "⌃" },
 	{ name = "alt", symbol = "⌥" },
+	{ name = "ctrl", symbol = "⌃" },
+	{ name = "cmd", symbol = "⌘" },
 	{ name = "shift", symbol = "⇧" },
 }
 
@@ -99,8 +98,11 @@ local function bindWithHelp(mods, key, category, description, action, options)
 		error("Duplicate hotkey registration: " .. formatHotkey(mods, key))
 	end
 
+	local hotkey = hs.hotkey.bind(mods, key, action)
+	if not hotkey then
+		error("Hotkey registration failed: " .. formatHotkey(mods, key))
+	end
 	registeredHotkeys[identifier] = true
-	hs.hotkey.bind(mods, key, action)
 	addHelpEntry(mods, key, category, description, action, options)
 end
 
@@ -205,7 +207,7 @@ local function showHotkeyHelp()
 end
 
 -- =============================================================================
--- Capsomnia: 蓋を閉じている間のスリープ防止 (ctrl + alt + S)
+-- Capsomnia: 蓋を閉じている間のスリープ防止 (alt + ctrl + S)
 -- =============================================================================
 -- 蓋閉じ・バッテリー時の制御はCapsomniaに任せ、同アプリが監視するCaps Lockを操作する。
 -- hs.caffeinateやpmsetを別途操作すると、Capsomniaの状態と食い違うため使わない。
@@ -261,15 +263,15 @@ local function toggleCapsomnia()
 	end)
 end
 
-bindWithHelp({ "ctrl", "alt" }, "S", "電源", "蓋閉じ時のスリープ防止を切り替え（Capsomnia）", toggleCapsomnia, {
+bindWithHelp({ "alt", "ctrl" }, "S", "電源", "蓋閉じ時のスリープ防止を切り替え（Capsomnia）", toggleCapsomnia, {
 	searchTerms = { "移動", "スリープ", "Capsomnia", "Caps Lock", "keep awake" },
 })
 
 -- =============================================================================
--- ウィンドウ管理 (ctrl + alt + 矢印/Enter, ctrl + alt + M)
+-- ウィンドウ管理 (alt + ctrl + 矢印/Enter, alt + ctrl + M)
 -- =============================================================================
 -- 次のモニターへ移動
-bindWithHelp({ "ctrl", "alt" }, "M", "ウィンドウ", "次のモニターへ移動", function()
+bindWithHelp({ "alt", "ctrl" }, "M", "ウィンドウ", "次のモニターへ移動", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -284,7 +286,7 @@ bindWithHelp({ "ctrl", "alt" }, "M", "ウィンドウ", "次のモニターへ�
 end)
 
 -- 左半分
-bindWithHelp({ "ctrl", "alt" }, "Left", "ウィンドウ", "左半分に配置", function()
+bindWithHelp({ "alt", "ctrl" }, "Left", "ウィンドウ", "左半分に配置", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -293,7 +295,7 @@ bindWithHelp({ "ctrl", "alt" }, "Left", "ウィンドウ", "左半分に配置",
 end)
 
 -- 右半分
-bindWithHelp({ "ctrl", "alt" }, "Right", "ウィンドウ", "右半分に配置", function()
+bindWithHelp({ "alt", "ctrl" }, "Right", "ウィンドウ", "右半分に配置", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -302,7 +304,7 @@ bindWithHelp({ "ctrl", "alt" }, "Right", "ウィンドウ", "右半分に配置"
 end)
 
 -- 最大化
-bindWithHelp({ "ctrl", "alt" }, "Return", "ウィンドウ", "最大化", function()
+bindWithHelp({ "alt", "ctrl" }, "Return", "ウィンドウ", "最大化", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -311,7 +313,7 @@ bindWithHelp({ "ctrl", "alt" }, "Return", "ウィンドウ", "最大化", functi
 end)
 
 -- 中央配置 (70%サイズ)
-bindWithHelp({ "ctrl", "alt" }, "C", "ウィンドウ", "中央に70%サイズで配置", function()
+bindWithHelp({ "alt", "ctrl" }, "C", "ウィンドウ", "中央に70%サイズで配置", function()
 	local win = hs.window.focusedWindow()
 	if not win then
 		return
@@ -546,6 +548,17 @@ local function loadDynamicSlots()
 	return slots
 end
 
+local function confirmOverwrite(shortcut, currentLabel, newLabel)
+	local result = hs.dialog.blockAlert(
+		"登録済みの割り当てを上書きしますか？",
+		shortcut .. "\n\n現在：\n" .. currentLabel .. "\n\n変更後：\n" .. newLabel,
+		"キャンセル",
+		"上書き",
+		"warning"
+	)
+	return result == "上書き"
+end
+
 local function saveDynamicSlot(slotKey, title, url)
 	slotKey = tostring(slotKey)
 	if not slotKey:match("^[1-9]$") or not isWebURL(url) then
@@ -553,14 +566,23 @@ local function saveDynamicSlot(slotKey, title, url)
 	end
 
 	local slots = loadDynamicSlots()
+	local newTitle = type(title) == "string" and title ~= "" and title or url
+	local existing = slots[slotKey]
+	if existing and not confirmOverwrite(
+		"Alt + " .. slotKey,
+		existing.title .. "\n" .. existing.url,
+		newTitle .. "\n" .. url
+	) then
+		return false
+	end
 	slots[slotKey] = {
-		title = type(title) == "string" and title ~= "" and title or url,
+		title = newTitle,
 		url = url,
 		savedAt = os.time(),
 	}
 
-	local succeeded = pcall(hs.settings.set, dynamicSlotsSettingsKey, slots)
-	if not succeeded then
+	local succeeded, result = pcall(hs.settings.set, dynamicSlotsSettingsKey, slots)
+	if not succeeded or result == false then
 		hs.alert.show("Alt + " .. slotKey .. " への登録に失敗しました")
 		return false
 	end
@@ -690,9 +712,6 @@ local function chromeHistoryChoices(excludedURLs)
 
 	local choices = {}
 	local hiddenURLs = {}
-	for _, link in ipairs(pinnedLinks) do
-		hiddenURLs[link.url] = true
-	end
 	for url in pairs(excludedURLs or {}) do
 		hiddenURLs[url] = true
 	end
@@ -1000,6 +1019,16 @@ bindWithHelp({ "alt", "shift" }, ",", "ウィンドウ切り替え", "現在の�
 	if not win then
 		return
 	end
+	if markedWindowID then
+		local previousWindow = hs.window.get(markedWindowID)
+		if not confirmOverwrite(
+			"Alt + Shift + ,",
+			previousWindow and windowLabel(previousWindow) or "以前記憶したウィンドウ",
+			windowLabel(win)
+		) then
+			return
+		end
+	end
 	markedWindowID = win:id()
 	hs.alert.show("記憶しました: " .. windowLabel(win))
 end)
@@ -1139,8 +1168,26 @@ local appShortcutManager = AppShortcuts.new({
 	showHelp = showHotkeyHelp,
 })
 
+local DesktopCleanup = require("modules.desktop_cleanup")
+local desktopCleanup = DesktopCleanup.new(appShortcutManager)
+
+local desktopCleanupHint = "整理するには⌘⇧Qを0.8秒長押し"
+local desktopCleanupHold = HoldToQuit.new({
+	duration = holdToQuitDuration,
+	modifiers = { "cmd", "shift" },
+	hint = desktopCleanupHint,
+	-- Finderが前面でも、他の未登録アプリを整理できるようにする。
+	excludedBundleIDs = { ["com.apple.finder"] = false },
+	quitAction = function() desktopCleanup:quit() end,
+}):start()
+
+addHelpEntry({ "cmd", "shift" }, "Q", "アプリ終了", "0.8秒長押しで現在のデスクトップの未登録アプリを通常終了", function()
+	hs.alert.show(desktopCleanupHint)
+end, { searchTerms = { "整理", "一括終了", "quit", "cleanup", "常駐アプリは保護" } })
+
 local commandPalette = CommandPalette.new({
 	appShortcuts = appShortcutManager,
+	cleanupDesktop = function() hs.alert.show(desktopCleanupHint) end,
 	showWindowSwitcher = showWindowSwitcher,
 	showURLLauncher = showURLLauncher,
 	showGitHubRepos = function()
@@ -1163,6 +1210,10 @@ appShortcutManager:start()
 hs.shutdownCallback = function()
 	stopCapsomniaCheck()
 	holdToQuit:stop()
+	desktopCleanupHold:stop()
 	chromeTabs:stop()
 	githubRepos:stop()
 end
+
+-- 全モジュールの初期化に成功してから通知する。
+hs.alert.show("Hammerspoon loaded")

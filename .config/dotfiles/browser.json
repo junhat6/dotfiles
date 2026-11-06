@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "method": "agent-system-settings",
+  "bundle_id": "com.google.Chrome",
+  "name": "Google Chrome",
+  "app_path": "/Applications/Google Chrome.app"
+}

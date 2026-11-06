@@ -45,14 +45,18 @@ brew "zoxide"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
 brew "yakitrak/yakitrak/notesmd-cli", link: false, trusted: true
+# Password manager (vaults and sign-in remain local to each Mac)
+cask "1password"
+# Meeting notes app
+cask "granola"
 # AI dictation app
 cask "amical"
 # User-friendly GUI app for Homebrew
 cask "applite"
 # Utility that prevents the system from going to sleep
 cask "caffeine"
-# Two-panel file manager
-cask "commander-one"
+# Closed-lid keep-awake mode used by Hammerspoon Alt + Ctrl + S
+cask "capsomnia"
 # Universal database tool and SQL client
 cask "dbeaver-community"
 # Voice and text chat software
@@ -69,8 +73,8 @@ cask "karabiner-elements"
 cask "keyboardcleantool"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
-# Collaboration platform for API development
-cask "postman"
+# Mesh VPN; use the official standalone app and its built-in auto-updater
+cask "tailscale-app"
 # Team communication and collaboration software
 cask "slack"
 # Open-source code editor
@@ -79,3 +83,6 @@ cask "visual-studio-code"
 cask "wezterm@nightly"
 # Video communication and virtual meeting platform
 cask "zoom"
+
+# Official stable build; built-in updates plus daily Homebrew maintenance.
+cask "stablyai/orca/orca"

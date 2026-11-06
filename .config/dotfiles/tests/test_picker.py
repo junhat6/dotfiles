@@ -204,6 +204,20 @@ class ShortcutIntegrationTests(unittest.TestCase):
         self.assertEqual(len(bindings), 1, result.stdout)
         self.assertIn(r"act.SendString '\u{1d}'", bindings[0])
 
+    @unittest.skipUnless(shutil.which('wezterm'), 'WezTerm is required')
+    def test_wezterm_word_arrows_send_shell_word_motion(self):
+        config = SCRIPTS.parents[2] / '.config/wezterm/wezterm.lua'
+        result = subprocess.run(['wezterm', '--config-file', str(config), 'show-keys', '--lua'],
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        main_keys = result.stdout.split('key_tables =', 1)[0]
+        for key, sequence in [('LeftArrow', r'\u{1b}b'), ('RightArrow', r'\u{1b}f')]:
+            bindings = [line for line in main_keys.splitlines()
+                        if "key = '" + key + "'" in line and "mods = 'ALT'" in line]
+            self.assertEqual(len(bindings), 1)
+            self.assertIn(sequence, bindings[0])
+        self.assertIn('config.leader = { key = ";", mods = "CTRL",', config.read_text())
+
 
 if __name__ == '__main__':
     unittest.main()

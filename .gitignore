@@ -27,7 +27,7 @@
 !/.config/nvim/lua/
 !/.config/nvim/lua/config/
 !/.config/nvim/lua/plugins/
-!/.claude/CLAUDE.md
+!/AGENTS.md
 !/.claude/commands/address-review.md
 !/.claude/commands/lost.md
 !/.claude/commands/publish-artifact.md
@@ -38,6 +38,7 @@
 !/.claude/statusline-command.sh
 !/.config/atuin/config.toml
 !/.config/dotfiles/Brewfile
+!/.config/dotfiles/BREW-AUDIT.md
 !/.config/dotfiles/README.md
 !/.config/dotfiles/git-hooks/pre-commit
 !/.config/dotfiles/git-hooks/pre-push
@@ -69,6 +70,7 @@
 !/.gitconfig
 !/.github/workflows/check.yml
 !/.gitignore
+!/.hammerspoon/README.md
 !/.hammerspoon/init.lua
 !/.hammerspoon/modules/app_shortcuts.lua
 !/.hammerspoon/modules/chrome_tabs.lua
@@ -89,3 +91,48 @@
 !/.config/dotfiles/tests/test_nvim.py
 !/.config/nvim/lua/plugins/dotfiles.lua
 !/.config/nvim/lua/dotfiles/init.lua
+
+# Karabiner source-derived keyboard documentation
+!/.config/dotfiles/scripts/karabiner_map.py
+!/.config/dotfiles/tests/test_karabiner_map.py
+!/.config/dotfiles/tests/test_hammerspoon.py
+!/.config/dotfiles/tests/test_github_repos.lua
+!/.config/karabiner/AGENTS.md
+!/.config/karabiner/README.md
+!/.config/karabiner/keymap.svg
+
+# Remote following
+!/.config/dotfiles/scripts/sync.py
+!/.config/dotfiles/templates/com.junhat6.dotfiles-update.plist
+!/.config/dotfiles/tests/test_sync.py
+
+# One-command Mac setup
+!/setup.sh
+!/.config/dotfiles/SETUP-AGENT.md
+!/.config/dotfiles/scripts/setup_machine.py
+!/.config/dotfiles/tests/test_setup.py
+!/.config/dotfiles/tests/test_setup_session.py
+
+!/.config/dotfiles/scripts/rehearse_setup.py
+!/.config/dotfiles/tests/test_rehearsal.py
+
+!/.config/dotfiles/scripts/macos-personal.py
+!/.config/dotfiles/tests/test_macos_personal.py
+!/Mac-Settings-Apply.command
+!/Mac-Settings-Restore.command
+!/.config/dotfiles/scripts/homebrew-update.sh
+!/.config/dotfiles/templates/com.junhat6.homebrew-update.plist
+!/.config/dotfiles/tests/test_homebrew_update.py
+
+!/.config/dotfiles/notifications.json
+
+!/.config/dotfiles/browser.json
+
+!/.config/dotfiles/finder-sidebar.json
+!/.hammerspoon/modules/desktop_cleanup.lua
+
+!/.config/dotfiles/AGENTS.md
+
+!/.config/dotfiles/scripts/orca-autoupdate.py
+!/.config/dotfiles/scripts/install-orca-autoupdate.py
+!/.config/dotfiles/tests/test_orca_autoupdate.py

@@ -13,7 +13,10 @@
     "gopls-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,
-    "codex@openai-codex": true
+    "codex@openai-codex": true,
+    "postman@claude-plugins-official": true,
+    "akapen@akapen": true,
+    "bestofn@bestofn": true
   },
   "extraKnownMarketplaces": {
     "obsidian-skills": {
@@ -33,6 +36,24 @@
         "source": "github",
         "repo": "openai/codex-plugin-cc"
       }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "akapen": {
+      "source": {
+        "source": "github",
+        "repo": "AI-Driven-R-D-Dept/akapen"
+      }
+    },
+    "bestofn": {
+      "source": {
+        "source": "github",
+        "repo": "AI-Driven-R-D-Dept/bestofn"
+      }
     }
   },
   "language": "Japanese",
@@ -41,5 +62,10 @@
   "tui": "fullscreen",
   "theme": "light",
   "preferredNotifChannel": "notifications_disabled",
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "autoCompactWindow": 400000
+    }
+  }
 }

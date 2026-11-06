@@ -2,7 +2,32 @@
 
 HOME の共有ファイルを yadm (Git) で直接追跡します。コピーや symlink を介さないため、エディタ・AI・atomic save で実体を変更しても `yadm diff` に現れます。既存 Git 履歴は引き継ぎます。
 
-## 初回セットアップ
+## 新しいMacをAIエージェントとセットアップする（推奨）
+
+AIエージェントを導入済みなら、次の1コマンドを**対話Terminal / PTY**で実行します。Homebrew・Gitの事前導入は不要です。個人用Macは `personal`、会社用Macは `work`、vaultを取得しない場合は `none` を指定します。
+
+```bash
+setup_dir="$(mktemp -d)" && curl -fsSL https://raw.githubusercontent.com/junhat6/dotfiles/main/setup.sh -o "$setup_dir/setup.sh" && bash "$setup_dir/setup.sh" --profile personal
+```
+
+最初に管理者認証を行い、その認証を同じTerminal内で維持します。基盤ツールの後、GitHub認証とキー操作アプリの許可を先に済ませ、残りをまとめてインストールします。通常終了・失敗・中断時には `sudo -k` で認証を失効します。sudoersの変更やパスワードの保存、AIの常設の権限拡大は行いません。認証を維持できなくなった場合は後からパスワード入力待ちにせず停止します。途中のGUI操作と続行のEnterはエージェントが代行できます。
+
+**ユーザーが最後まで画面を監視する必要を減らすことを優先します。** GitHubの2FA・Touch ID・macOSが要求する許可は完全にはなくせません。権限対象のアプリの導入にも時間がかかるため、本人操作が必ず最初の5分に収まる保証はありません。別のTerminalへ切り替えると認証の共有が崩れる場合があります。
+
+エージェント向けの操作・再開手順と自動化できる範囲は [SETUP-AGENT.md](SETUP-AGENT.md)。公式アプリの通常の初回起動確認もそこで扱います。
+
+```bash
+bash ~/setup.sh --profile personal --dry-run  # 予定表示だけ。認証・通信・書き込みなし
+# 導入後は次の入口でも再実行可能（現在の状態を再確認し、既存編集を保持）
+dotfiles setup --profile personal
+dotfiles setup --status
+```
+
+時刻付きの詳細ログ、30秒ごとの生存表示、段階別の終了コードと所要秒数は `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/setup/` に保存します。GitHubの認証コードはこのログへ保存しません。初回checkoutで異なる既存ファイルは各実行ディレクトリの `backups/` に退避します。既存yadmやvaultの強制checkout・reset・pullは行いません。vaultがすでに開かれている場合、役割を変更する操作は閉じてから再実行します。
+
+`--no-ui` はアプリの初回許可を後回しにするオプションです。残りの導入・検証後も終了コード2でGUI確認が未完了であることを示します。macOSの好み（スクロール、キーリピート等）はこのコマンドで変更しません。iPhone / Dropbox同期の認証も別です。
+
+## 個別に初回セットアップする場合
 
 ```bash
 brew install yadm
@@ -11,6 +36,8 @@ yadm config yadm.auto-perms false
 yadm config yadm.auto-alt false
 yadm clone --no-bootstrap https://github.com/junhat6/dotfiles.git
 yadm bootstrap
+# この端末ではリモートに自動追従する（MacBook / Mac mini 共通の推奨設定）
+bash ~/.config/dotfiles/install.sh --auto-update
 bash ~/.config/dotfiles/install.sh --packages
 mise install
 source ~/.zshrc
@@ -96,9 +123,30 @@ tail ~/.claude/logs/auto-update.log ~/.claude/logs/auto-update-error.log
 launchctl unload -w ~/Library/LaunchAgents/com.claude.auto-update.plist   # 停止
 ```
 
+## リモートへの自動追従
+
+各 Mac で一度 `dotfiles auto-update enable` を実行すると、ログイン時と15分ごとに `origin/main` を取り込み、HOME の共有設定へ直接反映します。普段はこれを有効にして使います。端末ごとの登録なので、別の Mac でも同じコマンドだけで設定できます。`bash ~/.config/dotfiles/install.sh --auto-update` でも登録できます。既存の `--apply` / `--all` は停止した自動更新を勝手に再開しません。
+
+```bash
+dotfiles update                 # 今すぐ取得・検証・反映（自動更新が無効でも利用可）
+dotfiles auto-update status     # 常駐登録・最終結果・エラーメッセージ・ログの場所
+dotfiles auto-update disable    # この端末だけ停止（再ログイン後も停止）
+dotfiles auto-update enable     # 開始 / 再開（繰り返し実行可）
+```
+
+自動更新は main ブランチを fast-forward できる場合だけ実行します。ステージ済みの変更、ローカル commit による分岐、main 以外の作業ブランチでは保留します。未ステージの編集は、リモートの変更ファイルと重ならない場合は保持して更新し、重なる場合は Git が上書きを拒否します。自動 stash・reset・merge commit・commit・push はしません。新規ローカルファイルとの衝突も上書きしません。リモートの所有権・設定構文を取り込み前に検証します。
+
+保留は `dotfiles auto-update status` と `~/Library/Application Support/dotfiles/update.log` で確認できます。編集を commit/push する、ステージを外す、main に戻るなど原因を解消して `dotfiles update` を実行すると再開します。ネットワークや認証の失敗は次の15分周期で再試行します。バックグラウンドでパスワード入力は待たず、初回の GitHub 認証は対話ターミナルで設定します。端末がスリープ中は更新できません。
+
+共有ファイルは HOME へ即時反映します。LaunchAgent の既存生成物も再生成します。実行中のシェルやアプリは必要に応じて再読み込み・再起動してください（シェルは `source ~/.zshrc`）。パッケージの追加・削除、macOS defaults、他の常駐処理の再起動は自動実行しません。`Brewfile` / mise の依存が変わった場合はそれぞれ手動でインストールします。
+
+自動更新を止める用途は、設定を試している間、プレゼン中など環境を固定したい間、main と異なる構成を検証する間です。既存の `.gitconfig.local` / `.zshrc.local` など端末専用ファイルは引き続き共有対象外です。macOS 以外は `dotfiles update` を利用でき、定期実行はその OS の scheduler へ登録します。macOS の登録はユーザー LaunchAgent `com.junhat6.dotfiles-update` で、期限なしで継続します。
+
 ## Brewfile と mise
 
 共通の `.config/dotfiles/Brewfile` は手動編集します。日次 LaunchAgent は `~/.claude/hooks/brewfile-sync.sh` で `~/.config/dotfiles/Brewfile.local` にこの端末のパッケージ一覧を記録し、コミット/push しません。
+
+Capsomnia（Hammerspoon の Alt + Ctrl + S で使う蓋閉じ時のスリープ防止）は共通 Brewfile に含まれます。導入時は管理者認証が必要です。2026-10-31 の未記載パッケージと、Homebrew 管理外の主要アプリは [棚卸し記録](BREW-AUDIT.md) を参照してください。
 
 ```bash
 bash ~/.claude/hooks/brewfile-sync.sh
@@ -164,7 +212,34 @@ GitHub Actions も同じ検証を実行します。テストは一時 HOME の G
 
 ## macOS キーボード操作
 
+Karabinerの現在の物理キー割り当ては [キー配列図と表](../karabiner/README.md) を参照してください。`karabiner.json` を編集したら `python3 ~/.config/dotfiles/scripts/karabiner_map.py` で図と表を再生成します。`dotfiles check` とGitHub Actionsで再生成漏れを検知します。
+
 Alt（Option）+ H/J/K/L はそれぞれ ←/↓/↑/→。Tabを押しながら使ってもAltとして操作できます。Shift・Command・Control・Fnを併用した組み合わせは矢印へ変換しません。
+
+### Vim以外の文字編集
+
+Tab併用と左右OptionはOption、Caps Lock併用と左ControlはControlです。右ShiftはDelete専用です。Returnは元のキーを使い、右上のDeleteは無効です。日本語入力への切り替えは右Command、英数への切り替えは左Commandの単押しで行います。
+
+| 操作 | この配列で押すキー | 補足 |
+| --- | --- | --- |
+| 1文字左／右 | Tab + H / L | 通常の ← / → |
+| 上／下 | Tab + K / J | 通常の ↑ / ↓ |
+| 単語左／右 | Tab + Caps + H / L | Option + ← / → を出力 |
+| 行頭／行末 | Caps + A / E、または左Control + A / E | Control + A / E。文章入力欄では行または段落の境界へ移動 |
+| 単語単位で選択 | Tab + Caps + Shift + H / L | 一般的な文章入力欄向け。ターミナルではアプリに従う |
+| 直前の文字を削除 | 右Shift | Delete（後方削除） |
+| 次の文字を削除 | Caps + D、またはFn + 右Shift | Control + D / Fn + Delete。シェルの空行でControl + Dを押すと終了するため、文字編集時に使う |
+| 直前の単語を削除 | 左Option + 右Shift、またはTab + 右Shift | Option + Delete。シェルではCaps + Wも使える |
+| カーソルから行末を削除 | Caps + K | シェルではControl + K |
+| 確定・改行 | 通常のReturn | 元のキーを使用 |
+
+WezTermのLEADERは **Control + ;（Caps + ;）**。押して離した後、既存のH/J/K/Lなどでペインを操作します。Control + AはLEADERから外し、シェルの行頭移動に戻しています。Control + SpaceはmacOSの入力ソース切り替えと衝突するため使いません。tmuxは従来どおりControl + Bです。
+
+WezTermではOption + ← / →をMeta-b/fとしてシェルへ送り、zshの単語移動に揃えています。TUIアプリはそのアプリのキーバインドで処理します。Caps + Fはこのzsh設定ではディレクトリ検索なので、1文字右移動にはTab + Lを使います。
+
+アプリによって操作が異なります。日本語変換中はIME側のキー操作になる場合があります。[Appleの文字編集ショートカット](https://support.apple.com/en-us/102650)も参照してください。
+
+Emacs標準の単語移動は `M-b`（単語左）と `M-f`（単語右）です。`M-` はMeta修飾キーで、一般的にはAlt/Option、またはEscを押して離してから文字キーを押します。ブラウザの文章入力欄ではEmacsの全キーが共通ではなく、Mac標準のOption + ← / →や、この配列のTab + Caps + H/Lを使います。HammerspoonのOption + B/Fはアプリ起動用なので、EmacsのMeta-b/fを使いたい場合はそちらの割り当ても確認してください。
 
 アプリ起動と登録済みURLの番号キーはAlt、検索や一覧などの操作はAlt + Shiftに揃えます。クリップボード履歴はCommand + Shift + Vです。
 
@@ -189,3 +264,57 @@ defaults write NSGlobalDomain KeyRepeat -int 1
 # キーリピート開始までの時間を短く（デフォルト: 25、小さいほど速い）
 defaults write NSGlobalDomain InitialKeyRepeat -int 15
 ```
+
+### 現在のMacを変更せずにセットアップを模擬する
+
+```bash
+python3 ~/.config/dotfiles/scripts/rehearse_setup.py --output-dir /tmp/dotfiles-rehearsal
+```
+
+実際のsetup.shを一時HOME・模擬コマンドで実行し、初回・再実行・認証失効・想定外入力・インストール失敗の結果と操作順を保存します。OSの権限ダイアログとダウンロード時間は模擬なので、実機の認証回数・所要時間の保証ではありません。詳しくは [エージェント向け手順](SETUP-AGENT.md) を参照してください。
+
+## OrcaとHomebrewの更新
+
+Orcaは公式の `stablyai/orca/orca` caskで初回導入する。既存のOrca.appがHomebrew管理外にある場合、強制上書き・削除・再インストールせず、既存インストールを報告して移行を別途扱う。Orca内蔵アップデーターは自動確認・通知を行うが、1.4.245ではダウンロード開始に操作が必要。起動中の完全無人更新は以下の定期実行で補い、Homebrewの日次更新も併用する。更新目的でエージェントやデーモンを終了しない。内蔵更新によるアプリ再起動ではデーモンがセッションを保持するが、Mac自体の再起動は実行中プロセスを終了する。
+
+Orcaの無人更新は `python3 ~/.config/dotfiles/scripts/install-orca-autoupdate.py` で各Macに個別導入する（通常setupとは別の明示導入）。`com.junhat6.orca-autoupdate` がログイン時と3時間ごとに、起動中のローカルOrcaへ認証付きRPCで安定版の確認・ダウンロード・標準インストールを要求する。更新時は画面が再起動する。ログアウト中・スリープ中・Orca未起動時は更新できず、後の定期実行で再試行する。接続先Macへの一括更新はしない。
+
+エラー時は次回に再試行し、更新要求後に確認が中断しても次回のバージョン確認で復帰する（過去のセッション継続まで成功と偽らない）。強制終了・通常Quitの追加送信・アプリ上書きはしない。`~/Library/Application Support/OrcaAutoUpdate/PAUSED` は明示的な手動停止専用。旧版が自動作成した停止フラグの解除はインストーラーでは行わない。更新ログは `~/Library/Logs/OrcaAutoUpdate/update.log`、状態は同サポートディレクトリの `last-update.json`。`--inspect` は更新せず状態を読む。停止は `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`、再有効化はインストーラーの再実行。
+
+セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy --no-quit`、`mise upgrade --global --yes --no-prune` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
+
+自動更新を優先し、`auto_updates` caskもHomebrewの更新対象に含める。内蔵更新も併用するが、強制終了・強制上書き・無人sudoは使わない。`--no-quit` はアプリを終了させない指定であり、ディスク上の更新後にアプリの再起動が必要な場合がある。CLIやサービスの更新は動作変更やサービス再起動を伴う可能性がある。
+
+miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジェクト内の版指定・lockfileは変更しない。旧ツール版はロールバック用に残す。
+
+新しく `brew install` / `brew install --cask` したものは一覧への追記なしで日次更新対象になる。miseは共通設定へ `latest` / `lts` などの追従指定で追加する。特定版指定・プロジェクト内依存・直接配置したアプリは一括更新の対象に含まれない。新しいアプリを全Macにも導入したい場合は共通 `Brewfile` へ追加する。`Brewfile.local` は端末の記録であり、他Macへ自動配布しない。
+
+通常setupでは3時間周期ジョブを自動導入しない。起動中の更新・再起動まで無人化したいMacでは、上記インストーラーで個別に有効化する。日次Homebrew更新は補完経路として維持する。
+
+内蔵アップデーターの有効状態はアプリごとに異なり、Homebrewの `auto_updates` 属性だけでは有効と断定しない。Orcaの内蔵更新だけで完全無人になるとは扱わない。管理者認証や追加のOS許可が必要な更新は失敗・保留となるため、全更新が完全無人で完了する保証はない。
+
+確認: `launchctl print gui/$(id -u)/com.junhat6.homebrew-update`。結果は `~/.claude/logs/homebrew-update.log` の終了コードを確認する。手動で同じ処理を実行する場合は `bash ~/.config/dotfiles/scripts/homebrew-update.sh`。既存のbrewfile-syncは一覧保存、dotfiles-updateは設定同期であり、パッケージ更新ではない。
+
+参考: https://docs.brew.sh/Manpage / https://www.onorca.dev/docs/install / https://www.onorca.dev/docs/model/session-restore
+
+既存Macで設定を取り込んだ後は、`dotfiles render` を実行し、`mkdir -p ~/.claude/logs`、`launchctl enable gui/$(id -u)/com.junhat6.homebrew-update`、未登録なら `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junhat6.homebrew-update.plist` を実行する。dotfilesの自動同期だけでは、新しいLaunchAgentは登録されない。
+
+## Brewfileアプリの初回確認を減らす検証工程
+
+Gatekeeperは常に有効のまま。`setup.sh` はbootstrap後、Karabiner/Hammerspoonを起動する前に優先アプリを検証し、Brewfileの一括導入後に対象アプリ全体を検証する。`install.sh --packages` にも同じ工程を含む。確認対象は指定Brewfileに文字列で明記されたcaskのみで、再実行時は既存の対象アプリも再検証する。Brewfile.localや一覧にないアプリは対象にしない。
+
+`brew info --json=v2 --cask` の `full_token` とインストール状態を照合し、app artifactの実際のtargetを使う。`stablyai/orca/orca` を裸の `orca` に置き換えない（別製品になる）。対象パスは `/Applications` 直下の `.app` だけ。pkg型のKarabinerとZoomはスクリプト内の明示的なアプリ対応表を使い、それ以外のpkgやフォントは自動推測せずスキップする。
+
+各アプリについて `codesign --verify --deep --strict` が成功し、キャッシュを使わない `spctl --assess --type execute` が成功し、出力に `source=Notarized Developer ID` がある場合だけ、アプリ内の `com.apple.quarantine` を削除する。バンドル内のシンボリックリンクは `xattr -s` によりリンク自体だけを扱い、リンク先はたどらない。他の拡張属性は変更しない。署名が有効でも公証を確認できない場合、通信エラー、属性削除権限不足などは `deferred` として理由を記録する。検証失敗では削除処理へ進まない。削除中の失敗では一部の属性が削除済みの場合があるため、`deferred` を成功扱いしない。
+
+Gatekeeperが無効な場合は処理を停止する（勝手に有効化・無効化しない）。アプリ単位の保留は他のインストールを妨げず、通常の初回確認で扱う。アクセシビリティ、入力監視、フルディスクアクセス、ドライバ許可は別であり、この処理では付与しない。公証は完全な安全性の保証ではない。
+
+ログ: セットアップ実行ディレクトリの `app-verification-early.json` / `app-verification.json` と時刻付きの検証ログ。AIは `deferred` を確認して未完了項目を報告する。`install.sh --packages` では `~/.local/state/dotfiles/app-verification.json`。
+
+属性を変更しない検証だけの実行:
+
+```bash
+python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --report ~/.local/state/dotfiles/app-verification-check.json
+```
+
+参考: https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html
