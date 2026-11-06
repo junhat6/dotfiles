@@ -69,7 +69,7 @@ class OwnershipIntegration(unittest.TestCase):
         self.assertNotEqual(self.git('commit', '-qm', 'forbidden', success=False).returncode, 0)
 
     def test_index_content_checked_when_worktree_valid(self):
-        path = self.root / '.claude/settings.json'
+        path = self.root / MODULE.SETTINGS_TEMPLATE
         original = path.read_bytes()
         path.write_text('{"permissions":{"defaultMode":"bypassPermissions"}}')
         self.git('add', str(path))
@@ -107,7 +107,7 @@ class OwnershipIntegration(unittest.TestCase):
         self.cli('check')
 
     def test_local_mode_preserved_and_invalid_not_overwritten(self):
-        target = self.root / '.claude/settings.local.json'
+        target = self.root / MODULE.SETTINGS_HOST
         target.write_text('{"permissions":{"defaultMode":"plan","allow":["existing"]},"hooks":{}}')
         original = target.read_bytes()
         self.cli('bootstrap-local')
@@ -120,7 +120,7 @@ class OwnershipIntegration(unittest.TestCase):
         managed = self.root / 'corporate-managed.json'
         managed.write_text('{}')
         self.cli('bootstrap-local', '--managed-settings', str(managed))
-        target = self.root / '.claude/settings.local.json'
+        target = self.root / MODULE.SETTINGS_HOST
         self.assertEqual(json.loads(target.read_text())['permissions']['defaultMode'], 'auto')
         original = target.read_bytes()
         self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
@@ -133,7 +133,7 @@ class OwnershipIntegration(unittest.TestCase):
         shutil.rmtree(self.root / 'Library')
         self.cli('check', '--source')
         self.assertFalse((self.root / 'Library').exists())
-        self.assertFalse((self.root / '.claude/settings.local.json').exists())
+        self.assertFalse((self.root / MODULE.SETTINGS_HOST).exists())
 
     def test_isolated_yadm_clone_bootstrap_idempotent(self):
         if shutil.which('yadm') is None:
@@ -151,12 +151,14 @@ class OwnershipIntegration(unittest.TestCase):
             yadm('config', 'yadm.' + key, 'false')
         yadm('clone', '--no-bootstrap', str(self.root))
         yadm('bootstrap')
-        local = home / '.claude/settings.local.json'
+        local = home / MODULE.SETTINGS_HOST
         first = local.read_bytes()
         yadm('bootstrap')
         self.assertEqual(local.read_bytes(), first)
         self.assertEqual(yadm('gitconfig', 'core.hooksPath').decode().strip(), str(home / '.config/dotfiles/git-hooks'))
-        self.assertNotIn('.claude/settings.local.json', yadm('ls-files').decode().splitlines())
+        tracked = yadm('ls-files').decode().splitlines()
+        self.assertNotIn(MODULE.SETTINGS_HOST, tracked)
+        self.assertNotIn(MODULE.SETTINGS_OUTPUT, tracked)
         self.assertFalse((home / '.ssh').exists())
         self.assertFalse((home / '.gnupg').exists())
         result = subprocess.run([str(home / '.local/bin/dotfiles'), 'check'], cwd=home, env=env, capture_output=True)
@@ -170,7 +172,7 @@ class OwnershipIntegration(unittest.TestCase):
         self.cli('check')
 
     def test_invalid_committed_tip_cannot_push(self):
-        path = self.root / '.claude/settings.json'
+        path = self.root / MODULE.SETTINGS_TEMPLATE
         path.write_text('{"hooks":{}}')
         self.git('add', str(path))
         self.git('-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'invalid')
@@ -186,6 +188,94 @@ class OwnershipIntegration(unittest.TestCase):
         self.git('add', '-f', str(path))
         result = subprocess.run([str(self.root / '.config/dotfiles/git-hooks/pre-push')], cwd=self.root, capture_output=True)
         self.assertNotEqual(result.returncode, 0)
+
+    def test_global_hooks_migrate_to_host_and_render_in_user_settings(self):
+        output = self.root / MODULE.SETTINGS_OUTPUT
+        existing = json.loads(output.read_text())
+        hook = {'hooks': [{'type': 'command', 'command': '/local/orca-hook'}]}
+        existing['hooks'] = {'SessionStart': [hook]}
+        existing['permissions'] = {'defaultMode': 'auto'}
+        output.write_text(json.dumps(existing))
+        project_local = self.root / '.claude/settings.local.json'
+        project_local.write_text('{"permissions":{"allow":["home-only"]}}')
+        self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
+        host = self.root / MODULE.SETTINGS_HOST
+        self.assertEqual(json.loads(host.read_text())['hooks'], existing['hooks'])
+        self.cli('render')
+        result = json.loads(output.read_text())
+        self.assertEqual(result['hooks'], existing['hooks'])
+        self.assertEqual(result['permissions'], {'defaultMode': 'auto'})
+        self.assertEqual(result['model'], existing['model'])
+        self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(json.loads(project_local.read_text())['permissions']['allow'], ['home-only'])
+        self.cli('bootstrap-local')
+        self.cli('render')
+        self.assertEqual(json.loads(output.read_text()), result)
+        self.cli('check')
+
+    def test_invalid_host_settings_do_not_replace_any_generated_files(self):
+        output = self.root / MODULE.SETTINGS_OUTPUT
+        plist = self.root / 'Library/LaunchAgents/com.claude.brewfile-sync.plist'
+        before = (output.read_bytes(), plist.read_bytes())
+        host = self.root / MODULE.SETTINGS_HOST
+        host.write_text('{invalid')
+        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
+        self.assertEqual((output.read_bytes(), plist.read_bytes()), before)
+        host.write_text('{"hooks":[]}')
+        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
+        self.assertEqual((output.read_bytes(), plist.read_bytes()), before)
+
+    def test_generated_user_settings_cannot_be_shared_or_committed(self):
+        output = self.root / MODULE.SETTINGS_OUTPUT
+        self.git('add', '-f', str(output))
+        result = self.git('commit', '-qm', 'forbidden generated settings', success=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unapproved tracked path', result.stderr.decode())
+
+    def test_host_changes_are_detected_until_rendered(self):
+        host = self.root / MODULE.SETTINGS_HOST
+        host.write_text('{"permissions":{"defaultMode":"plan"}}')
+        self.assertNotEqual(self.cli('check', success=False).returncode, 0)
+        self.cli('render')
+        self.cli('check')
+
+    def test_shared_and_host_preferences_merge_without_losing_plugins(self):
+        shared = {'enabledPlugins': {'shared@market': True}, 'list': ['shared']}
+        host = {'enabledPlugins': {'host@market': True}, 'list': ['shared', 'host']}
+        self.assertEqual(MODULE.merge_settings(shared, host), {
+            'enabledPlugins': {'shared@market': True, 'host@market': True}, 'list': ['shared', 'host']})
+        self.assertEqual(shared['list'], ['shared'])
+
+    def test_explicit_session_vault_renders_local_launchagent_environment(self):
+        import plistlib
+        self.git('remote', 'add', 'origin', 'https://github.com/fixture/vault.git')
+        settings = self.root / MODULE.SESSION_CAPTURE
+        settings.write_text(json.dumps({'vault': str(self.root), 'repository': 'fixture/vault'}))
+        self.cli('render')
+        target = self.root / 'Library/LaunchAgents/com.claude.obsidian-sync.plist'
+        environment = plistlib.loads(target.read_bytes())['EnvironmentVariables']
+        self.assertEqual(environment['OBSIDIAN_DIR'], str(self.root / 'claude'))
+        self.assertEqual(environment['CODEX_OBSIDIAN_DIR'], str(self.root / 'Codex'))
+        self.assertIn('/opt/homebrew/bin', environment['PATH'])
+        self.cli('check')
+        self.git('add', '-f', str(settings))
+        self.assertNotEqual(self.git('commit', '-qm', 'forbidden local vault', success=False).returncode, 0)
+
+    def test_wrong_session_vault_cannot_replace_generated_files(self):
+        self.git('remote', 'add', 'origin', 'https://github.com/fixture/vault.git')
+        output = self.root / MODULE.SETTINGS_OUTPUT
+        before = output.read_bytes()
+        settings = self.root / MODULE.SESSION_CAPTURE
+        settings.write_text(json.dumps({'vault': str(self.root), 'repository': 'other/vault'}))
+        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
+        self.assertEqual(output.read_bytes(), before)
+
+    def test_session_vault_requires_ignored_capture_folders(self):
+        self.git('remote', 'add', 'origin', 'https://github.com/fixture/vault.git')
+        (self.root / '.gitignore').write_text('')
+        settings = self.root / MODULE.SESSION_CAPTURE
+        settings.write_text(json.dumps({'vault': str(self.root), 'repository': 'fixture/vault'}))
+        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
 
 
 if __name__ == '__main__':

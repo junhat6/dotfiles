@@ -8,7 +8,7 @@
     ".claude/hooks/brewfile-sync.sh",
     ".claude/hooks/watch-and-save.sh",
     ".claude/rules/context7.md",
-    ".claude/settings.json",
+    ".config/dotfiles/templates/claude-settings.json",
     ".claude/statusline-command.sh",
     ".config/atuin/config.toml",
     ".config/dotfiles/Brewfile",
@@ -17,11 +17,13 @@
     ".config/dotfiles/git-hooks/pre-push",
     ".config/dotfiles/install.sh",
     ".config/dotfiles/ownership.json",
+    ".config/dotfiles/scripts/auto-update.sh",
     ".config/dotfiles/scripts/check.sh",
     ".config/dotfiles/scripts/dotfiles.py",
     ".config/dotfiles/scripts/macos-defaults.sh",
     ".config/dotfiles/scripts/render.py",
     ".config/dotfiles/scripts/setup-git-work.sh",
+    ".config/dotfiles/templates/com.claude.auto-update.plist",
     ".config/dotfiles/templates/com.claude.brewfile-sync.plist",
     ".config/dotfiles/templates/com.claude.obsidian-sync.plist",
     ".config/dotfiles/tests/test_dotfiles.py",
@@ -60,6 +62,8 @@
     ".config/nvim/lua/dotfiles/init.lua"
   ],
   "local": [
+    ".config/dotfiles/session-capture.local.json",
+    ".claude/settings.host.json",
     ".claude/settings.local.json",
     ".gitconfig.local",
     ".gitconfig.work",
@@ -135,6 +139,14 @@
     ".ruby-lsp/*"
   ],
   "generated": [
+    {
+      "template": ".config/dotfiles/templates/claude-settings.json",
+      "output": ".claude/settings.json"
+    },
+    {
+      "template": ".config/dotfiles/templates/com.claude.auto-update.plist",
+      "output": "Library/LaunchAgents/com.claude.auto-update.plist"
+    },
     {
       "template": ".config/dotfiles/templates/com.claude.brewfile-sync.plist",
       "output": "Library/LaunchAgents/com.claude.brewfile-sync.plist"

@@ -20,7 +20,7 @@ bash ~/.config/dotfiles/install.sh --launchagents
 
 既存 HOME を移行するときは先に対象ファイルとローカル設定をバックアップし、yadm の checkout との差分を確認します。既存のローカルファイルを force checkout で上書きしないでください。別の Git checkout は履歴保管・開発用で、日常編集する正本は HOME です。
 
-Bootstrap は `yadm gitconfig core.hooksPath ~/.config/dotfiles/git-hooks` を設定し、yadm の自動 private-dir 作成・権限変更・alternate 処理を無効化します。ローカル Claude mode の初期化と LaunchAgent の render を行います。再実行しても既存 local 値は保存し、local JSON が壊れていれば上書きせず失敗します。会社の managed-settings がある新規端末だけ `auto`、ない端末は従来の `bypassPermissions` を local に初期化します。既存 mode を広げません。
+Bootstrap は `yadm gitconfig core.hooksPath ~/.config/dotfiles/git-hooks` を設定し、yadm の自動 private-dir 作成・権限変更・alternate 処理を無効化します。Claude の端末固有設定と LaunchAgent を生成します。初回は既存の `~/.claude/settings.json` から permissions・hooks・モデル別設定を `~/.claude/settings.host.json` に保存します。再実行しても既存の端末固有設定は保存し、JSON が壊れていれば上書きせず失敗します。既存の mode がない新規端末では、会社の managed-settings があれば `auto`、なければ従来の `bypassPermissions` を初期値にします。既存 mode を広げません。
 
 `--check` はシェル/Git 構文・所有権と一時 HOME による統合テストを実行し、HOME を変更しません。`--apply` は bootstrap 処理、`--packages` は共通 Brewfile、`--launchagents` は常駐処理、`--all --dry-run` は実行予定のみ表示します。
 
@@ -65,7 +65,7 @@ dotfiles check              # HOME の所有権・設定・生成物検証
 dotfiles add ~/.zshrc       # manifest 登録済みの個別ファイルだけ stage
 yadm commit -m 'Update shell settings'
 yadm pull --ff-only         # 共有変更を HOME に直接反映
-dotfiles render             # この HOME の LaunchAgent を再生成
+dotfiles render             # Claude のユーザー設定と LaunchAgent を再生成
 ```
 
 `.config/dotfiles/ownership.json` の `shared` は完全なファイル名の allowlist、`local` は端末専用パス、`excluded` は runtime の除外、`generated` は template と未追跡出力の組です。新規共有ファイルは内容を確認し `shared` に個別登録してから manifest と一緒に stage します。`.claude` 全体やディレクトリを一括 add しません。登録された共有 config 内の新規ファイルはチェックで検知し、未知の `.config` ディレクトリは status が所有権確認候補として表示します。既存の他ツール設定と runtime はローカル扱いです。
@@ -76,7 +76,25 @@ pre-commit/pre-push は実際の Git INDEX のパス・manifest・JSON を検証
 
 共有設定は `.zshrc`, `.zprofile`, `.gitconfig`, `.tmux.conf` と `.config/`, `.claude/`, `.hammerspoon/` の manifest にある個別ファイルです。Neovim は標準 bootstrap・配色に、共有設定検索と Git 連携用の `lua/plugins/dotfiles.lua`, `lua/dotfiles/init.lua` を加えた5ファイルです。LazyVim 標準と Catppuccin Latte を使用し、`lazy-lock.json` / `lazyvim.json` はローカル生成物です。以前の `lazyvim.json` に extras が残る端末では、バックアップ後にその extras を空にして標準構成に戻します。Ghostty・Gemini CLI・opencode は共通設定から削除済みです。
 
-Claude の共通 `settings.json` は共有 UI/plugin 設定のみ。`settings.local.json` の permissions・defaultMode・host hooks は共有しません。端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
+Claude の共通 UI/plugin 設定は `.config/dotfiles/templates/claude-settings.json`、端末固有の permissions・defaultMode・Orca hooks は `~/.claude/settings.host.json` に保存します。`dotfiles render` で両者を合成し、Claude が全プロジェクトで読む `~/.claude/settings.json` を生成します。端末固有の値が優先され、オブジェクトは再帰的に合成し、配列は重複を除いて追加します。テンプレートと host ファイルを編集した後は `dotfiles render` を実行します。生成した `settings.json` と host ファイルは Git で追跡せず、強制 add も検査で拒否します。
+
+`~/.claude/settings.local.json` は HOME を作業ディレクトリにしたセッションだけの設定で、全プロジェクトに適用する hooks の保存先には使いません。既存のプロジェクト限定の許可はグローバル設定へ移しません。[Claude Code の設定範囲](https://code.claude.com/docs/en/settings)も参照してください。端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
+
+## 自動更新（dotfiles の取り込みと mise）
+
+LaunchAgent `com.claude.auto-update` がログイン時と毎日 9:30 に `~/.config/dotfiles/scripts/auto-update.sh` を実行します。直近 6 時間以内に実行済みなら再実行しません。
+
+1. `yadm pull --ff-only` で共有設定を HOME に取り込む。追跡ファイルに未コミット変更があるときは、編集中の内容を壊さないよう取り込まずログだけ残す
+2. `brew upgrade mise`（mise 本体は Homebrew 管理で self-update 無効）
+3. `mise install`（取り込んだ config.toml の版を導入）→ `mise upgrade`（`latest` 指定のツールだけ更新）
+
+コミット・push・`mise upgrade --bump`・`brew bundle` は行いません。固定版は `~/.config/mise/config.toml` を編集して上げます。各ステップは独立しており、1 つ失敗しても次へ進みます。
+
+```bash
+bash ~/.config/dotfiles/scripts/auto-update.sh --force   # 手動実行
+tail ~/.claude/logs/auto-update.log ~/.claude/logs/auto-update-error.log
+launchctl unload -w ~/Library/LaunchAgents/com.claude.auto-update.plist   # 停止
+```
 
 ## Brewfile と mise
 
@@ -122,6 +140,15 @@ bash .config/dotfiles/scripts/check.sh "$PWD"
 GitHub Actions も同じ検証を実行します。テストは一時 HOME の Git repository で atomic save、新規候補、強制 add の拒否、不正 INDEX、portable template、ローカル初期化と再実行を検証します。
 
 ### Claude / Codex セッションの Obsidian 記録
+
+この端末の保存先を固定する場合は、Git 管理外の `~/.config/dotfiles/session-capture.local.json` に次の形式で設定し、`dotfiles render` を実行します。指定した vault の Git 接続先と、`claude/`・`Codex/` が Git の対象外であることを生成時に検証します。LaunchAgent に端末専用の保存先が入り、2つの vault を使う自動判定を省略できます。
+
+```json
+{
+  "vault": "/absolute/path/to/vault",
+  "repository": "junhat6/my-vault-work"
+}
+```
 
 `.claude/hooks/watch-and-save.sh` は Claude Code と Codex のローカル JSONL を監視します。`~/ghq/github.com/junhat6/` にある2つの vault の GitHub 接続先と Obsidian Git の `disablePush: false` を確認し、この Mac の書き手 vault を自動選択します。個人 Mac では個人 vault、会社 Mac では会社 vault です。両 vault の設定が揃っていない場合や、書き手が重複する場合は、誤った vault に書かないよう起動を止めます。Claude は `<vault>/claude/<repo>/<セッション開始日>/`、Codex は `<vault>/Codex/<repo>/<セッション開始日>/` に保存します。各日付フォルダの中は `<開始時刻> <タイトル> [Claude|Codex] <ID>.md` というセッション別ノートです。同じセッションを翌日再開しても、開始日の同じノートに続けます。ブランチ、エージェント、セッション ID を記録し、Issue が解決できた場合はリンクも付けます。
 

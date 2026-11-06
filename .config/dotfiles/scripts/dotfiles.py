@@ -12,7 +12,73 @@ import tempfile
 from xml.parsers.expat import ExpatError
 
 MANIFEST = '.config/dotfiles/ownership.json'
+SETTINGS_TEMPLATE = '.config/dotfiles/templates/claude-settings.json'
+SETTINGS_HOST = '.claude/settings.host.json'
+SETTINGS_OUTPUT = '.claude/settings.json'
+SESSION_CAPTURE = '.config/dotfiles/session-capture.local.json'
 FORBIDDEN = ['.claude/settings.local.json', '.gitconfig.local', '.gitconfig.work', '.zshrc.local', '.config/nvim/lazy-lock.json', '.config/nvim/lazyvim.json', '.config/dotfiles/Brewfile.local', '.config/ghostty/*', '.eval-loop/*', 'Library/LaunchAgents/*', '.claude/projects/*', '.claude/logs/*', '.claude/plugins/*', '.claude/history*', '.codex/*', '.ssh/*', '.gnupg/*']
+
+
+FORBIDDEN += [SETTINGS_HOST, SETTINGS_OUTPUT, SESSION_CAPTURE]
+
+
+def session_capture_environment(home):
+    path = home / SESSION_CAPTURE
+    if path.is_symlink():
+        raise ValueError('refusing session capture settings symlink')
+    if not path.exists():
+        return {}
+    settings = json_object(path.read_bytes())
+    if set(settings) != {'vault', 'repository'} or any(not isinstance(value, str) or not value for value in settings.values()):
+        raise ValueError('session capture requires vault and repository strings')
+    vault = Path(settings['vault'])
+    repository = settings['repository']
+    if not vault.is_absolute() or not vault.is_dir() or repository.count('/') != 1 or any(part in {'', '.', '..'} for part in repository.split('/')):
+        raise ValueError('session capture requires an existing absolute vault path and owner/repository')
+    env = dict(os.environ)
+    env.pop('GIT_DIR', None)
+    env.pop('GIT_WORK_TREE', None)
+    origin = subprocess.run(['git', 'remote', 'get-url', 'origin'], cwd=vault, env=env,
+                            check=True, capture_output=True, text=True).stdout.strip().removesuffix('.git')
+    if not origin.endswith(('github.com/' + repository, 'github.com:' + repository)):
+        raise ValueError('session capture vault has an unexpected Git origin')
+    probes = ['claude/__session_probe__.md', 'Codex/__session_probe__.md']
+    ignored = subprocess.run(['git', 'check-ignore', '--', *probes], cwd=vault, env=env,
+                             capture_output=True, text=True)
+    if set(ignored.stdout.splitlines()) != set(probes):
+        raise ValueError('session capture folders must be ignored by Git')
+    return {'OBSIDIAN_DIR': str(vault / 'claude'), 'CODEX_OBSIDIAN_DIR': str(vault / 'Codex')}
+
+
+def json_object(data):
+    value = json.loads(data)
+    if not isinstance(value, dict):
+        raise ValueError('settings must be a JSON object')
+    if 'permissions' in value and not isinstance(value['permissions'], dict):
+        raise ValueError('permissions must be an object')
+    if 'hooks' in value and not isinstance(value['hooks'], dict):
+        raise ValueError('hooks must be an object')
+    return value
+
+
+def host_settings(home):
+    path = home / SETTINGS_HOST
+    if path.is_symlink():
+        raise ValueError('refusing host settings symlink')
+    return json_object(path.read_bytes()) if path.exists() else {}
+
+
+def merge_settings(shared, host):
+    result = dict(shared)
+    for key, value in host.items():
+        previous = result.get(key)
+        if isinstance(previous, dict) and isinstance(value, dict):
+            result[key] = merge_settings(previous, value)
+        elif isinstance(previous, list) and isinstance(value, list):
+            result[key] = previous + [item for item in value if item not in previous]
+        else:
+            result[key] = value
+    return result
 
 
 def matches(path, patterns):
@@ -58,7 +124,11 @@ class Repository:
             if path.startswith('.claude/') and path not in {'.claude/CLAUDE.md', '.claude/settings.json', '.claude/statusline-command.sh'} and not path.startswith(('.claude/commands/', '.claude/rules/', '.claude/hooks/')):
                 raise ValueError('Claude runtime cannot be shared: ' + path)
         for item in m['generated']:
-            if set(item) != {'template', 'output'} or item['template'] not in m['shared'] or not item['output'].startswith('Library/LaunchAgents/') or Path(item['output']).name != item['output'].split('/')[-1] or '..' in PurePosixPath(item['output']).parts:
+            if set(item) != {'template', 'output'} or item['template'] not in m['shared']:
+                raise ValueError('invalid generated ownership')
+            if item == {'template': SETTINGS_TEMPLATE, 'output': SETTINGS_OUTPUT}:
+                continue
+            if not item['output'].startswith('Library/LaunchAgents/') or Path(item['output']).name != item['output'].split('/')[-1] or '..' in PurePosixPath(item['output']).parts:
                 raise ValueError('invalid generated ownership')
         return m
 
@@ -87,12 +157,23 @@ class Repository:
         return sorted('.config/' + p.name for p in config.iterdir() if p.is_dir() and p.name not in known) if config.exists() else []
 
     def rendered(self, item, home, index=False):
+        if item['output'] == SETTINGS_OUTPUT:
+            shared = json_object(self.content(item['template'], index))
+            if 'hooks' in shared or 'permissions' in shared:
+                raise ValueError('Claude template must contain only shared preferences; permissions/hooks must be host local')
+            result = merge_settings(shared, host_settings(home))
+            return (json.dumps(result, ensure_ascii=False, indent=2) + '\n').encode()
         text = self.content(item['template'], index).decode()
         from xml.sax.saxutils import escape
         result = text.replace('@HOME@', escape(str(home)))
         if '@HOME@' in result or '{{' in result:
             raise ValueError('unresolved template: ' + item['template'])
-        plistlib.loads(result.encode())
+        document = plistlib.loads(result.encode())
+        if item['output'] == 'Library/LaunchAgents/com.claude.obsidian-sync.plist':
+            environment = session_capture_environment(home)
+            if environment:
+                document.setdefault('EnvironmentVariables', {}).update(environment)
+                return plistlib.dumps(document, sort_keys=False)
         return result.encode()
 
     def check(self, index=False, generated=True, discover=True):
@@ -131,7 +212,7 @@ class Repository:
                         errors.append('invalid Git syntax: ' + path)
                 if path.endswith('.json'):
                     doc = json.loads(data)
-                    if path == '.claude/settings.json' and ('defaultMode' in doc.get('permissions', {}) or 'hooks' in doc):
+                    if path == SETTINGS_TEMPLATE and ('permissions' in json_object(data) or 'hooks' in doc):
                         errors.append('host permission mode/hooks must be local')
                 if path.endswith('.plist'):
                     plistlib.loads(data.replace(b'@HOME@', b'/portable/home'))
@@ -171,17 +252,21 @@ def atomic_write(path, data, mode=0o644):
 
 
 def bootstrap_local(home, managed):
-    path = home / '.claude/settings.local.json'
-    if path.is_symlink():
-        raise ValueError('refusing local settings symlink')
-    settings = json.loads(path.read_text()) if path.exists() else {}
-    if not isinstance(settings, dict):
-        raise ValueError('local settings must be an object')
+    path = home / SETTINGS_HOST
+    settings = host_settings(home)
+    if not path.exists():
+        previous = home / SETTINGS_OUTPUT
+        if previous.is_symlink():
+            raise ValueError('refusing user settings symlink')
+        existing = json_object(previous.read_bytes()) if previous.exists() else {}
+        settings = {key: existing[key] for key in ('permissions', 'hooks', 'modelSettings') if key in existing}
     permissions = settings.setdefault('permissions', {})
     if not isinstance(permissions, dict):
         raise ValueError('local permissions must be an object')
+    needs_write = not path.exists() or 'defaultMode' not in permissions
     if 'defaultMode' not in permissions:
         permissions['defaultMode'] = 'auto' if managed.exists() else 'bypassPermissions'
+    if needs_write:
         atomic_write(path, (json.dumps(settings, ensure_ascii=False, indent=2) + '\n').encode(), 0o600)
 
 
@@ -236,7 +321,7 @@ def main():
             # Validate every output before replacing any.
             outputs = [(repo.root / x['output'], repo.rendered(x, repo.root)) for x in m['generated']]
             for path, data in outputs:
-                atomic_write(path, data)
+                atomic_write(path, data, 0o600 if path == repo.root / SETTINGS_OUTPUT else 0o644)
             return 0
         if args.command == 'status':
             result = {'git': repo.git('status', '--short', '--untracked-files=no').decode(), 'candidates': repo.candidates(m), 'unknown_config_directories': repo.unknown_config_directories(m), 'errors': repo.check()}
