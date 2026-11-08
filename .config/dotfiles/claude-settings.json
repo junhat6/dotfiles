@@ -19,7 +19,6 @@
   },
   "enabledPlugins": {
     "codex@openai-codex": true,
-    "context7@claude-plugins-official": true,
     "cowork-plugin-management@synced": false
   },
   "extraKnownMarketplaces": {
