@@ -71,7 +71,7 @@ class RemoteFollowing(unittest.TestCase):
 
     def test_invalid_remote_is_not_applied(self):
         self.remote()
-        self.change('.claude/settings.json', b'{"hooks":{}}')
+        self.change('.config/dotfiles/claude-settings.json', b'{"hooks":{}}')
         head = self.git('rev-parse', 'HEAD').stdout
         self.assertNotEqual(self.cli('update', success=False).returncode, 0)
         self.assertEqual(self.git('rev-parse', 'HEAD').stdout, head)

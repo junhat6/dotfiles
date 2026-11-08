@@ -34,7 +34,6 @@
 !/.claude/hooks/brewfile-sync.sh
 !/.claude/hooks/watch-and-save.sh
 !/.claude/rules/context7.md
-!/.claude/settings.json
 !/.claude/statusline-command.sh
 !/.config/atuin/config.toml
 !/.config/dotfiles/Brewfile
@@ -121,6 +120,10 @@
 !/.config/dotfiles/scripts/homebrew-update.sh
 !/.config/dotfiles/templates/com.junhat6.homebrew-update.plist
 !/.config/dotfiles/tests/test_homebrew_update.py
+!/.config/dotfiles/scripts/orca-sidebar.js
+!/.config/dotfiles/scripts/install-orca-sidebar.py
+!/.config/dotfiles/claude-settings.json
+!/.config/dotfiles/tests/test_orca_sidebar.py
 
 !/.config/dotfiles/notifications.json
 

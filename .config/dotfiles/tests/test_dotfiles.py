@@ -69,7 +69,7 @@ class OwnershipIntegration(unittest.TestCase):
         self.assertNotEqual(self.git('commit', '-qm', 'forbidden', success=False).returncode, 0)
 
     def test_index_content_checked_when_worktree_valid(self):
-        path = self.root / '.claude/settings.json'
+        path = self.root / '.config/dotfiles/claude-settings.json'
         original = path.read_bytes()
         path.write_text('{"permissions":{"defaultMode":"bypassPermissions"}}')
         self.git('add', str(path))
@@ -129,7 +129,7 @@ class OwnershipIntegration(unittest.TestCase):
         self.cli('check')
 
     def test_local_mode_preserved_and_invalid_not_overwritten(self):
-        target = self.root / '.claude/settings.local.json'
+        target = self.root / '.claude/settings.json'
         target.write_text('{"permissions":{"defaultMode":"plan","allow":["existing"]},"hooks":{}}')
         original = target.read_bytes()
         self.cli('bootstrap-local')
@@ -142,7 +142,7 @@ class OwnershipIntegration(unittest.TestCase):
         managed = self.root / 'corporate-managed.json'
         managed.write_text('{}')
         self.cli('bootstrap-local', '--managed-settings', str(managed))
-        target = self.root / '.claude/settings.local.json'
+        target = self.root / '.claude/settings.json'
         self.assertEqual(json.loads(target.read_text())['permissions']['defaultMode'], 'auto')
         original = target.read_bytes()
         self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
@@ -150,6 +150,13 @@ class OwnershipIntegration(unittest.TestCase):
         self.cli('render')
         self.assertEqual(target.read_bytes(), original)
         self.cli('check')
+
+    def test_legacy_local_mode_is_carried_over(self):
+        (self.root / '.claude/settings.local.json').write_text('{"permissions":{"defaultMode":"plan"}}')
+        target = self.root / '.claude/settings.json'
+        target.unlink(missing_ok=True)
+        self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
+        self.assertEqual(json.loads(target.read_text())['permissions']['defaultMode'], 'plan')
 
     def test_source_check_does_not_write_or_require_generated(self):
         shutil.rmtree(self.root / 'Library')
@@ -173,7 +180,7 @@ class OwnershipIntegration(unittest.TestCase):
             yadm('config', 'yadm.' + key, 'false')
         yadm('clone', '--no-bootstrap', str(self.root))
         yadm('bootstrap')
-        local = home / '.claude/settings.local.json'
+        local = home / '.claude/settings.json'
         first = local.read_bytes()
         yadm('bootstrap')
         self.assertEqual(local.read_bytes(), first)
@@ -191,8 +198,41 @@ class OwnershipIntegration(unittest.TestCase):
         self.assertIn('.config/new-app', json.loads(result.stdout)['unknown_config_directories'])
         self.cli('check')
 
+    def test_render_merges_shared_claude_keys_and_keeps_local_ones(self):
+        target = self.root / '.claude/settings.json'
+        shared = json.loads((self.root / '.config/dotfiles/claude-settings.json').read_text())
+        local = {'hooks': {'Stop': [{'hooks': [{'type': 'command', 'command': 'orca-hook'}]}]},
+                 'permissions': {'defaultMode': 'bypassPermissions'},
+                 'enabledPlugins': {'postman@claude-plugins-official': True},
+                 'theme': 'dark'}
+        target.write_text(json.dumps(local))
+        result = self.cli('check', success=False)
+        self.assertIn('generated drift: .claude/settings.json', result.stderr.decode())
+        self.cli('render')
+        merged = json.loads(target.read_text())
+        self.assertEqual(merged['hooks'], local['hooks'])
+        self.assertEqual(merged['permissions'], local['permissions'])
+        # 共有キーは丸ごと置き換える (外したプラグインが残らない)
+        self.assertEqual(merged['enabledPlugins'], shared['enabledPlugins'])
+        self.assertEqual(merged['theme'], shared['theme'])
+        self.cli('check')
+        before = target.stat().st_mtime_ns
+        self.cli('render')
+        self.assertEqual(target.stat().st_mtime_ns, before)
+
+    def test_render_refuses_broken_local_claude_settings(self):
+        target = self.root / '.claude/settings.json'
+        target.write_text('{broken')
+        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
+        self.assertEqual(target.read_text(), '{broken')
+
+    def test_local_claude_settings_cannot_be_shared(self):
+        target = self.root / '.claude/settings.json'
+        self.git('add', '-f', str(target))
+        self.assertNotEqual(self.git('commit', '-qm', 'share local settings', success=False).returncode, 0)
+
     def test_invalid_committed_tip_cannot_push(self):
-        path = self.root / '.claude/settings.json'
+        path = self.root / '.config/dotfiles/claude-settings.json'
         path.write_text('{"hooks":{}}')
         self.git('add', str(path))
         self.git('-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'invalid')

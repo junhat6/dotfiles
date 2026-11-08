@@ -1,0 +1,39 @@
+{
+  "model": "opus",
+  "effortLevel": "xhigh",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "autoCompactWindow": 400000
+    }
+  },
+  "language": "Japanese",
+  "theme": "light",
+  "tui": "fullscreen",
+  "autoUpdatesChannel": "latest",
+  "enableWorkflows": true,
+  "preferredNotifChannel": "notifications_disabled",
+  "agentPushNotifEnabled": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "codex@openai-codex": true,
+    "context7@claude-plugins-official": true,
+    "cowork-plugin-management@synced": false
+  },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
+    }
+  }
+}

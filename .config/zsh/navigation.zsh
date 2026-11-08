@@ -54,6 +54,35 @@ fzf-ghq-widget() {
 zle -N fzf-ghq-widget
 bindkey '^Q' fzf-ghq-widget
 
+# Mac mini の ~/ghq に clone して Orca のプロジェクトに登録する (MacBook から 1 手)。
+# 例: gq owner/repo / gq https://github.com/owner/repo / gq git@github.com:owner/repo.git
+# 置き場所は ghq と同じ <root>/github.com/<owner>/<repo>。既にあれば登録だけ行う。
+# 環境変数: GQ_ENV (Orca の環境名) / GQ_REMOTE_ROOT (Mac mini 側の ghq root)
+gq() {
+  emulate -L zsh
+  local env="${GQ_ENV:-mac mini}" root="${GQ_REMOTE_ROOT:-/Users/$USER/ghq}"
+  local slug="${1:?usage: gq owner/repo | github URL}"
+  slug="${slug#https://github.com/}"; slug="${slug#git@github.com:}"; slug="${slug#github.com/}"
+  slug="${slug%.git}"; slug="${slug%/}"
+  if [[ ! "$slug" =~ '^[^/]+/[^/]+$' ]]; then
+    print -u2 "gq: GitHub の owner/repo を指定してください: $1"
+    return 1
+  fi
+  local owner="${slug%%/*}" repo="${slug#*/}" out
+  # Orca のプロジェクト ID は小文字で解決されるため、ID だけ小文字にする
+  out=$(orca project setup-clone --project "github:${slug:l}" --host "$env" \
+    --url "https://github.com/$slug.git" --destination "$root/github.com/$owner" --json 2>/dev/null)
+  if [[ "$(print -r -- "$out" | jq -r '.ok' 2>/dev/null)" == true ]]; then
+    print "gq: $env の $root/github.com/$slug に clone して登録しました"
+  elif print -r -- "$out" | grep -q 'already exists'; then
+    orca repo add --environment "$env" --path "$root/github.com/$slug" >/dev/null &&
+      print "gq: 既にあったので $env の $root/github.com/$slug を登録しました"
+  else
+    print -u2 -r -- "gq: 失敗しました: $(print -r -- "$out" | jq -r '.error.message // .' 2>/dev/null)"
+    return 1
+  fi
+}
+
 
 # Finder の現在位置へ移動。失敗時は現在のディレクトリを保つ。
 cdf() {

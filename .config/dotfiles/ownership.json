@@ -9,7 +9,6 @@
     ".claude/hooks/brewfile-sync.sh",
     ".claude/hooks/watch-and-save.sh",
     ".claude/rules/context7.md",
-    ".claude/settings.json",
     ".claude/statusline-command.sh",
     ".config/atuin/config.toml",
     ".config/dotfiles/Brewfile",
@@ -91,9 +90,14 @@
     ".hammerspoon/modules/desktop_cleanup.lua",
     ".config/dotfiles/scripts/orca-autoupdate.py",
     ".config/dotfiles/scripts/install-orca-autoupdate.py",
-    ".config/dotfiles/tests/test_orca_autoupdate.py"
+    ".config/dotfiles/tests/test_orca_autoupdate.py",
+    ".config/dotfiles/scripts/orca-sidebar.js",
+    ".config/dotfiles/tests/test_orca_sidebar.py",
+    ".config/dotfiles/claude-settings.json",
+    ".config/dotfiles/scripts/install-orca-sidebar.py"
   ],
   "local": [
+    ".claude/settings.json",
     ".claude/settings.local.json",
     ".gitconfig.local",
     ".gitconfig.work",
