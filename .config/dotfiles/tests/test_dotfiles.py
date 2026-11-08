@@ -12,12 +12,34 @@ SPEC = importlib.util.spec_from_file_location('dotfiles', SOURCE / '.config/dotf
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
+FAKE_CLAUDE = """#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+path = Path(os.environ['HOME']) / '.claude.json'
+state = json.loads(path.read_text()) if path.exists() else {}
+servers = state.setdefault('mcpServers', {})
+args = sys.argv[1:]
+with open(Path(os.environ['HOME']) / 'claude-calls.log', 'a') as log:
+    log.write(' '.join(args[:4]) + '\\n')
+if args[:2] == ['mcp', 'remove']:
+    servers.pop(args[-1])
+elif args[:2] == ['mcp', 'add-json']:
+    servers[args[-2]] = json.loads(args[-1])
+path.write_text(json.dumps(state))
+"""
+
 
 class OwnershipIntegration(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = (Path(self.temporary.name) / 'home space & symbol').resolve()
         self.root.mkdir()
+        # 本物の claude に触らせない: ~/.claude.json を書き換えるだけの偽物を PATH の先頭に置く
+        self.bin = Path(self.temporary.name) / 'bin'
+        self.bin.mkdir()
+        fake = self.bin / 'claude'
+        fake.write_text(FAKE_CLAUDE)
+        fake.chmod(0o755)
         for rel in json.loads((SOURCE / MODULE.MANIFEST).read_text())['shared']:
             dest = self.root / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -41,7 +63,8 @@ class OwnershipIntegration(unittest.TestCase):
         return result
 
     def cli(self, *args, success=True):
-        result = subprocess.run([os.sys.executable, str(self.root / '.config/dotfiles/scripts/dotfiles.py'), '--root', str(self.root), '--backend', 'git', *args], capture_output=True)
+        env = {**os.environ, 'PATH': str(self.bin) + os.pathsep + os.environ['PATH']}
+        result = subprocess.run([os.sys.executable, str(self.root / '.config/dotfiles/scripts/dotfiles.py'), '--root', str(self.root), '--backend', 'git', *args], capture_output=True, env=env)
         if success:
             self.assertEqual(result.returncode, 0, result.stderr.decode())
         return result
@@ -219,6 +242,34 @@ class OwnershipIntegration(unittest.TestCase):
         before = target.stat().st_mtime_ns
         self.cli('render')
         self.assertEqual(target.stat().st_mtime_ns, before)
+
+    def test_render_syncs_shared_mcp_servers_and_keeps_others(self):
+        state_path = self.root / '.claude.json'
+        shared = json.loads((self.root / '.config/dotfiles/claude-mcp.json').read_text())
+        state = json.loads(state_path.read_text())
+        self.assertEqual(state['mcpServers'], shared)  # setUp の render で登録済み
+        state['mcpServers']['context7'] = {'type': 'http', 'url': 'https://old.invalid/mcp'}
+        state['mcpServers']['mine'] = {'type': 'http', 'url': 'https://mine.invalid'}
+        state['numStartups'] = 7
+        state_path.write_text(json.dumps(state))
+        self.cli('render')
+        state = json.loads(state_path.read_text())
+        self.assertEqual(state['mcpServers']['context7'], shared['context7'])
+        self.assertEqual(state['mcpServers']['mine'], {'type': 'http', 'url': 'https://mine.invalid'})
+        self.assertEqual(state['numStartups'], 7)
+        calls = (self.root / 'claude-calls.log').read_text()
+        self.cli('render')  # 一致していれば claude を呼ばない
+        self.assertEqual((self.root / 'claude-calls.log').read_text(), calls)
+
+    def test_shared_mcp_config_cannot_hold_secrets(self):
+        path = self.root / '.config/dotfiles/claude-mcp.json'
+        for leak in ({'headers': {'X-Context7-API-Key': 'ctx7sk-secret'}}, {'env': {'TOKEN': 'x'}}):
+            doc = json.loads(path.read_text())
+            doc['context7'].update(leak)
+            path.write_text(json.dumps(doc))
+            result = self.cli('check', success=False)
+            self.assertIn('MCP secrets must come from headersHelper', result.stderr.decode())
+            self.git('checkout', '--', str(path))
 
     def test_render_refuses_broken_local_claude_settings(self):
         target = self.root / '.claude/settings.json'

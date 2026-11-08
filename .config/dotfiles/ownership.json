@@ -94,7 +94,9 @@
     ".config/dotfiles/scripts/orca-sidebar.js",
     ".config/dotfiles/tests/test_orca_sidebar.py",
     ".config/dotfiles/claude-settings.json",
-    ".config/dotfiles/scripts/install-orca-sidebar.py"
+    ".config/dotfiles/scripts/install-orca-sidebar.py",
+    ".config/dotfiles/claude-mcp.json",
+    ".config/dotfiles/scripts/context7-headers.sh"
   ],
   "local": [
     ".claude/settings.json",
