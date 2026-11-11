@@ -103,7 +103,18 @@ pre-commit/pre-push は実際の Git INDEX のパス・manifest・JSON を検証
 
 共有設定は `.zshrc`, `.zprofile`, `.gitconfig`, `.tmux.conf` と `.config/`, `.claude/`, `.hammerspoon/` の manifest にある個別ファイルです。Neovim は標準 bootstrap・配色に、共有設定検索と Git 連携用の `lua/plugins/dotfiles.lua`, `lua/dotfiles/init.lua` を加えた5ファイルです。LazyVim 標準と Catppuccin Latte を使用し、`lazy-lock.json` / `lazyvim.json` はローカル生成物です。以前の `lazyvim.json` に extras が残る端末では、バックアップ後にその extras を空にして標準構成に戻します。Ghostty・Gemini CLI・opencode は共通設定から削除済みです。
 
-Claude の `~/.claude/settings.json` は端末専用です（Orca などが hooks を書き込むため）。共有したいキーだけを `.config/dotfiles/claude-settings.json` に置くと、`dotfiles render`（自動同期のたびに実行）がそのキーだけを上書き合成します。共有キーを変えるときは `/config` ではなく共有ファイルを編集してください（`/config` の変更は次の同期で戻ります）。permissions・defaultMode・hooks は共有ファイルに入れられません（検査で拒否）。defaultMode は `dotfiles bootstrap-local` が端末ごとに `settings.json` へ一度だけ書きます。端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
+Claude の `~/.claude/settings.json` は端末専用です（Orca などが hooks を書き込むため）。共有したいキーだけを `.config/dotfiles/claude-settings.json` に置くと、`dotfiles render`（自動同期のたびに実行）がそのキーだけを上書き合成します。共有キーを変えるときは `/config` ではなく共有ファイルを編集してください（`/config` の変更は次の同期で戻ります）。permissions・defaultMode・hooks は共有ファイルに入れられません（検査で拒否）。defaultMode は `dotfiles bootstrap-local` が端末ごとに `settings.json` へ一度だけ書きます。
+
+plugin とマーケットプレイス (`enabledPlugins` / `extraKnownMarketplaces`) も端末ごとに管理し、共有ファイルには入れません (検査で拒否)。共有キーは合成で丸ごと置き換わるため、共有すると端末で試しに入れた plugin が同期のたびに無効へ戻るためです。新しい Mac では次を一度実行します。`~/.claude/rules/human-checkpoint.md` は akapen・bestofn・shiwake・tenaoshi を前提にしています。
+
+```bash
+claude plugin marketplace add openai/codex-plugin-cc && claude plugin install codex@openai-codex --scope user
+for p in akapen bestofn shiwake tenaoshi; do
+  claude plugin marketplace add "AI-Driven-R-D-Dept/$p" && claude plugin install "$p@$p" --scope user
+done
+```
+
+端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
 
 ## リモートへの自動追従
 

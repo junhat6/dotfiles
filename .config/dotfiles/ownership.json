@@ -9,6 +9,7 @@
     ".claude/hooks/brewfile-sync.sh",
     ".claude/hooks/watch-and-save.sh",
     ".claude/rules/context7.md",
+    ".claude/rules/human-checkpoint.md",
     ".claude/statusline-command.sh",
     ".config/atuin/config.toml",
     ".config/dotfiles/Brewfile",

@@ -162,6 +162,9 @@ class Repository:
                     doc = json.loads(data)
                     if path == CLAUDE_SHARED and (not isinstance(doc, dict) or 'hooks' in doc or 'defaultMode' in doc.get('permissions', {})):
                         errors.append('host permission mode/hooks must be local: ' + path)
+                    # 共有キーは合成で丸ごと置き換わるため、端末で入れた plugin が同期のたびに消える
+                    if path == CLAUDE_SHARED and isinstance(doc, dict) and ({'enabledPlugins', 'extraKnownMarketplaces'} & set(doc)):
+                        errors.append('plugins/marketplaces must be local: ' + path)
                     if path == CLAUDE_MCP and (not isinstance(doc, dict) or any(
                             not isinstance(e, dict) or 'headers' in e or 'env' in e for e in doc.values())):
                         errors.append('MCP secrets must come from headersHelper, not headers/env: ' + path)

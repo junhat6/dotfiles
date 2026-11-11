@@ -99,6 +99,13 @@ class OwnershipIntegration(unittest.TestCase):
         path.write_bytes(original)
         self.assertNotEqual(self.git('commit', '-qm', 'invalid staged mode', success=False).returncode, 0)
 
+    def test_shared_claude_settings_cannot_hold_plugins(self):
+        path = self.root / '.config/dotfiles/claude-settings.json'
+        for key in ('enabledPlugins', 'extraKnownMarketplaces'):
+            path.write_text(json.dumps({key: {}}))
+            result = self.cli('check', success=False)
+            self.assertIn('plugins/marketplaces must be local', result.stderr.decode())
+
     def test_staged_keymap_drift_rejected_with_valid_worktree(self):
         path = self.root / '.config/karabiner/karabiner.json'
         original = path.read_bytes()
@@ -235,8 +242,8 @@ class OwnershipIntegration(unittest.TestCase):
         merged = json.loads(target.read_text())
         self.assertEqual(merged['hooks'], local['hooks'])
         self.assertEqual(merged['permissions'], local['permissions'])
-        # 共有キーは丸ごと置き換える (外したプラグインが残らない)
-        self.assertEqual(merged['enabledPlugins'], shared['enabledPlugins'])
+        # plugin は端末ごとに管理するので、端末の値が残る
+        self.assertEqual(merged['enabledPlugins'], local['enabledPlugins'])
         self.assertEqual(merged['theme'], shared['theme'])
         self.cli('check')
         before = target.stat().st_mtime_ns
