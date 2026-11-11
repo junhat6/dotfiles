@@ -125,7 +125,6 @@
 !/.config/dotfiles/scripts/context7-headers.sh
 !/.config/dotfiles/scripts/install-orca-sidebar.py
 !/.config/dotfiles/claude-settings.json
-!/.config/dotfiles/claude-mcp.json
 !/.config/dotfiles/tests/test_orca_sidebar.py
 
 !/.config/dotfiles/notifications.json

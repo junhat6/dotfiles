@@ -250,34 +250,6 @@ class OwnershipIntegration(unittest.TestCase):
         self.cli('render')
         self.assertEqual(target.stat().st_mtime_ns, before)
 
-    def test_render_syncs_shared_mcp_servers_and_keeps_others(self):
-        state_path = self.root / '.claude.json'
-        shared = json.loads((self.root / '.config/dotfiles/claude-mcp.json').read_text())
-        state = json.loads(state_path.read_text())
-        self.assertEqual(state['mcpServers'], shared)  # setUp の render で登録済み
-        state['mcpServers']['context7'] = {'type': 'http', 'url': 'https://old.invalid/mcp'}
-        state['mcpServers']['mine'] = {'type': 'http', 'url': 'https://mine.invalid'}
-        state['numStartups'] = 7
-        state_path.write_text(json.dumps(state))
-        self.cli('render')
-        state = json.loads(state_path.read_text())
-        self.assertEqual(state['mcpServers']['context7'], shared['context7'])
-        self.assertEqual(state['mcpServers']['mine'], {'type': 'http', 'url': 'https://mine.invalid'})
-        self.assertEqual(state['numStartups'], 7)
-        calls = (self.root / 'claude-calls.log').read_text()
-        self.cli('render')  # 一致していれば claude を呼ばない
-        self.assertEqual((self.root / 'claude-calls.log').read_text(), calls)
-
-    def test_shared_mcp_config_cannot_hold_secrets(self):
-        path = self.root / '.config/dotfiles/claude-mcp.json'
-        for leak in ({'headers': {'X-Context7-API-Key': 'ctx7sk-secret'}}, {'env': {'TOKEN': 'x'}}):
-            doc = json.loads(path.read_text())
-            doc['context7'].update(leak)
-            path.write_text(json.dumps(doc))
-            result = self.cli('check', success=False)
-            self.assertIn('MCP secrets must come from headersHelper', result.stderr.decode())
-            self.git('checkout', '--', str(path))
-
     def test_render_refuses_broken_local_claude_settings(self):
         target = self.root / '.claude/settings.json'
         target.write_text('{broken')

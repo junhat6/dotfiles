@@ -6,8 +6,6 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import plistlib
-import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,11 +17,6 @@ MANIFEST = '.config/dotfiles/ownership.json'
 # local; only the keys in CLAUDE_SHARED are shared and merged in by `render`.
 CLAUDE_SHARED = '.config/dotfiles/claude-settings.json'
 CLAUDE_TARGET = '.claude/settings.json'
-# User-scope MCP servers live in Claude's state file ~/.claude.json, which is never
-# shared. CLAUDE_MCP lists the servers; secrets stay in each Mac's Keychain and are
-# read at connect time by `headersHelper`, so the shared file must not hold `headers`.
-CLAUDE_MCP = '.config/dotfiles/claude-mcp.json'
-CONTEXT7_KEY = re.compile(r'[A-Za-z0-9_-]{20,200}')
 FORBIDDEN = ['.claude/settings.json', '.claude/settings.local.json', '.gitconfig.local', '.gitconfig.work', '.zshrc.local', '.config/nvim/lazy-lock.json', '.config/nvim/lazyvim.json', '.config/dotfiles/Brewfile.local', '.config/ghostty/*', '.eval-loop/*', 'Library/LaunchAgents/*', '.claude/projects/*', '.claude/logs/*', '.claude/plugins/*', '.claude/history*', '.codex/*', '.ssh/*', '.gnupg/*']
 
 
@@ -165,9 +158,6 @@ class Repository:
                     # 共有キーは合成で丸ごと置き換わるため、端末で入れた plugin が同期のたびに消える
                     if path == CLAUDE_SHARED and isinstance(doc, dict) and ({'enabledPlugins', 'extraKnownMarketplaces'} & set(doc)):
                         errors.append('plugins/marketplaces must be local: ' + path)
-                    if path == CLAUDE_MCP and (not isinstance(doc, dict) or any(
-                            not isinstance(e, dict) or 'headers' in e or 'env' in e for e in doc.values())):
-                        errors.append('MCP secrets must come from headersHelper, not headers/env: ' + path)
                 if path.endswith('.plist'):
                     plistlib.loads(data.replace(b'@HOME@', b'/portable/home'))
                     if '@HOME@' not in data.decode() or '{{' in data.decode():
@@ -247,50 +237,6 @@ def bootstrap_local(home, managed):
         atomic_write(path, (json.dumps(settings, ensure_ascii=False, indent=2) + '\n').encode())
 
 
-def claude_command(home):
-    """`claude` may live under mise, which launchd's PATH does not include."""
-    found = shutil.which('claude')
-    candidates = [found] if found else []
-    candidates += [str(home / '.local/share/mise/installs/aqua-anthropics-claude-code/latest/claude'),
-                   str(home / '.local/bin/claude')]
-    return next((c for c in candidates if c and os.access(c, os.X_OK)), None)
-
-
-def store_context7_key(key):
-    """Keep the API key in this Mac's Keychain (never in dotfiles). Uses stdin, not argv."""
-    if not CONTEXT7_KEY.fullmatch(key):
-        raise ValueError('Context7 API key has an unexpected format')
-    subprocess.run(['/usr/bin/security', '-i'], check=True, capture_output=True,
-                   input=('add-generic-password -U -a context7 -s context7-api-key '
-                          '-T /usr/bin/security -w ' + key + '\n').encode())
-
-
-def sync_claude_mcp(repo, index=False):
-    """Make ~/.claude.json's user MCP servers match CLAUDE_MCP (secrets come from headersHelper)."""
-    shared = json.loads(repo.content(CLAUDE_MCP, index))
-    state_path = repo.root / '.claude.json'
-    state = json.loads(state_path.read_text()) if state_path.exists() else {}
-    current = state.get('mcpServers', {}) if isinstance(state, dict) else {}
-    changed = [name for name, entry in shared.items() if current.get(name) != entry]
-    if not changed:
-        return []
-    claude = claude_command(repo.root)
-    if not claude:
-        print('dotfiles: claude が見つからないため MCP 設定の同期を保留しました', file=sys.stderr)
-        return []
-    old_key = (current.get('context7') or {}).get('headers', {}).get('X-Context7-API-Key')
-    if 'context7' in changed and old_key and subprocess.run(
-            ['/usr/bin/security', 'find-generic-password', '-s', 'context7-api-key'], capture_output=True).returncode:
-        store_context7_key(old_key)  # migrate a key typed via `claude mcp add --header`
-    env = {**os.environ, 'HOME': str(repo.root)}  # --root is the HOME whose ~/.claude.json we manage
-    for name in changed:
-        if name in current:
-            subprocess.run([claude, 'mcp', 'remove', '--scope', 'user', name], cwd=repo.root, env=env, check=True, capture_output=True)
-        subprocess.run([claude, 'mcp', 'add-json', '--scope', 'user', name, json.dumps(shared[name])],
-                       cwd=repo.root, env=env, check=True, capture_output=True)
-    return changed
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', default=os.environ.get('HOME'))
@@ -317,7 +263,6 @@ def main():
     auto = sub.add_parser('auto-update', help='manage per-machine macOS automatic updates')
     auto.add_argument('action', choices=['enable', 'disable', 'status'])
     sub.add_parser('render')
-    sub.add_parser('context7-key', help="store this Mac's Context7 API key in the Keychain (read from stdin/prompt)")
     boot = sub.add_parser('bootstrap-local')
     boot.add_argument('--managed-settings', default='/Library/Application Support/ClaudeCode/managed-settings.json')
     args = parser.parse_args()
@@ -341,12 +286,6 @@ def main():
             if args.command == 'edit' and args.query:
                 picker_args.extend(['--query', args.query])
             return picker_main(picker_args)
-        if args.command == 'context7-key':
-            import getpass
-            key = getpass.getpass('Context7 API key: ') if sys.stdin.isatty() else sys.stdin.readline()
-            store_context7_key(key.strip())
-            print('dotfiles: キーチェーンに保存しました (Claude の次回起動から使われます)')
-            return 0
         if args.command == 'bootstrap-local':
             bootstrap_local(repo.root, Path(args.managed_settings))
             return 0
@@ -359,8 +298,6 @@ def main():
                 atomic_write(path, data)
             if settings and settings[1] != settings[2]:
                 atomic_write(settings[0], (json.dumps(settings[2], ensure_ascii=False, indent=2) + '\n').encode())
-            if CLAUDE_MCP in m['shared']:
-                sync_claude_mcp(repo)
             return 0
         if args.command == 'status':
             result = {'git': repo.git('status', '--short', '--untracked-files=no').decode(), 'candidates': repo.candidates(m), 'unknown_config_directories': repo.unknown_config_directories(m), 'errors': repo.check()}

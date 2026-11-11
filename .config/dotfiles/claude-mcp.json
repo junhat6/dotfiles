@@ -1,7 +1,0 @@
-{
-  "context7": {
-    "type": "http",
-    "url": "https://mcp.context7.com/mcp",
-    "headersHelper": "sh \"$HOME/.config/dotfiles/scripts/context7-headers.sh\""
-  }
-}
