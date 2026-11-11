@@ -47,6 +47,8 @@ brew "zsh-syntax-highlighting"
 brew "yakitrak/yakitrak/notesmd-cli", link: false, trusted: true
 # Password manager (vaults and sign-in remain local to each Mac)
 cask "1password"
+# 1Password CLI (op)。dotfiles context7-key がキーを 1Password から読む
+cask "1password-cli"
 # Meeting notes app
 cask "granola"
 # AI dictation app

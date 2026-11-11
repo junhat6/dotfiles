@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import plistlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,15 @@ MANIFEST = '.config/dotfiles/ownership.json'
 # local; only the keys in CLAUDE_SHARED are shared and merged in by `render`.
 CLAUDE_SHARED = '.config/dotfiles/claude-settings.json'
 CLAUDE_TARGET = '.claude/settings.json'
+# Context7 の API キーの正本は 1Password。Claude の起動ごとに Touch ID を求めないよう、
+# `dotfiles context7-key` で端末ごとに一度だけキーチェーンへ取り込み、headersHelper
+# (scripts/context7-headers.sh) はキーチェーンから読む。
+# 人が画面の前にいない端末 (Mac mini) は、Automation 保管庫だけを読めるサービスアカウントの
+# トークンをキーチェーンに置き (`dotfiles op-token`)、承認なしで op を使う。サービスアカウントは
+# Private 保管庫を読めないため、キーは Automation 保管庫に置く。
+CONTEXT7_OP_REF = 'op://Automation/Context7/credential'
+OP_TOKEN_SERVICE = 'op-service-account-token'
+CONTEXT7_KEY = re.compile(r'[A-Za-z0-9_-]{20,200}')
 # Machine-local vault pin for the Obsidian session capture LaunchAgent. Without it,
 # watch-and-save.sh auto-selects between two configured vaults and stops otherwise.
 SESSION_CAPTURE = '.config/dotfiles/session-capture.local.json'
@@ -248,6 +258,49 @@ def atomic_write(path, data, mode=0o644):
         temporary.unlink(missing_ok=True)
 
 
+def op_env():
+    """Use this Mac's service account token when stored; otherwise fall back to the desktop app (Touch ID)."""
+    found = subprocess.run(['/usr/bin/security', 'find-generic-password', '-s', OP_TOKEN_SERVICE, '-w'],
+                           capture_output=True, text=True)
+    token = found.stdout.strip() if found.returncode == 0 else ''
+    return {**os.environ, 'OP_SERVICE_ACCOUNT_TOKEN': token} if token else None
+
+
+def store_op_token(token):
+    if not token.startswith('ops_'):
+        raise ValueError('サービスアカウントのトークンは ops_ で始まります')
+    subprocess.run(['/usr/bin/security', '-i'], check=True, capture_output=True,
+                   input=('add-generic-password -U -a op -s ' + OP_TOKEN_SERVICE +
+                          ' -T /usr/bin/security -w ' + token + '\n').encode())
+
+
+def read_context7_key(reference):
+    """Read the key from 1Password (service account if stored, else desktop app integration)."""
+    try:
+        result = subprocess.run(['op', 'read', '--no-newline', reference], capture_output=True, text=True, env=op_env())
+    except FileNotFoundError:
+        raise ValueError('op が見つかりません (brew install --cask 1password-cli)')
+    if result.returncode:
+        raise ValueError('1Password から読めませんでした: ' + result.stderr.strip())
+    return result.stdout.strip()
+
+
+def store_context7_key(key):
+    """Keep the API key in this Mac's Keychain (never in dotfiles). Uses stdin, not argv."""
+    if not CONTEXT7_KEY.fullmatch(key):
+        raise ValueError('Context7 API key has an unexpected format')
+    # 既存の項目を上書きすると、macOS がログインキーチェーンのパスワードを画面で求めて止まる
+    # (画面の前に人がいない Mac mini では待ち続ける)。同じ値なら書き込まない。
+    current = subprocess.run(['/usr/bin/security', 'find-generic-password', '-s', 'context7-api-key', '-w'],
+                             capture_output=True, text=True)
+    if current.returncode == 0 and current.stdout.strip() == key:
+        return False
+    subprocess.run(['/usr/bin/security', '-i'], check=True, capture_output=True,
+                   input=('add-generic-password -U -a context7 -s context7-api-key '
+                          '-T /usr/bin/security -w ' + key + '\n').encode())
+    return True
+
+
 def bootstrap_local(home, managed):
     """Set this machine's default permission mode once, in the user settings file.
 
@@ -300,6 +353,9 @@ def main():
     auto = sub.add_parser('auto-update', help='manage per-machine macOS automatic updates')
     auto.add_argument('action', choices=['enable', 'disable', 'status'])
     sub.add_parser('render')
+    c7 = sub.add_parser('context7-key', help="copy the Context7 API key from 1Password into this Mac's Keychain")
+    c7.add_argument('--ref', default=CONTEXT7_OP_REF, help='1Password secret reference (op://vault/item/field)')
+    sub.add_parser('op-token', help="store this Mac's 1Password service account token in the Keychain (read from prompt/stdin)")
     boot = sub.add_parser('bootstrap-local')
     boot.add_argument('--managed-settings', default='/Library/Application Support/ClaudeCode/managed-settings.json')
     args = parser.parse_args()
@@ -323,6 +379,18 @@ def main():
             if args.command == 'edit' and args.query:
                 picker_args.extend(['--query', args.query])
             return picker_main(picker_args)
+        if args.command == 'context7-key':
+            if store_context7_key(read_context7_key(args.ref)):
+                print('dotfiles: 1Password のキーをキーチェーンへ取り込みました (Claude の次回起動から使われます)')
+            else:
+                print('dotfiles: キーチェーンのキーは 1Password と同じです (変更なし)')
+            return 0
+        if args.command == 'op-token':
+            import getpass
+            token = getpass.getpass('1Password service account token: ') if sys.stdin.isatty() else sys.stdin.readline()
+            store_op_token(token.strip())
+            print('dotfiles: キーチェーンに保存しました。この Mac の op は承認なしで Automation 保管庫を読めます')
+            return 0
         if args.command == 'bootstrap-local':
             bootstrap_local(repo.root, Path(args.managed_settings))
             return 0

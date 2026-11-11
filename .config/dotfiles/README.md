@@ -114,6 +114,13 @@ for p in akapen bestofn shiwake tenaoshi; do
 done
 ```
 
+MCP サーバーも端末ごとに登録します。Context7 の API キーの正本は 1Password の `op://Automation/Context7/credential` です。手元で操作する Mac は 1Password アプリの「設定 → 開発者 → 1Password CLI と連携」をオンにします (読むときに Touch ID が出ます)。人が画面の前にいない Mac (Mac mini) は、Automation 保管庫だけを読み書きできるサービスアカウントのトークンを `dotfiles op-token` でキーチェーンに置きます。以後その Mac の `dotfiles context7-key` は承認なしで動きます。`~/.zshrc.local` に `op` をトークン付きで呼ぶ関数を置けば、手で打つ `op` も承認なしになります。サービスアカウントは Private 保管庫を読めないため、キーは Automation 保管庫に置きます。準備ができたら次を一度実行します。キーは `dotfiles context7-key` がキーチェーンへ取り込み、Claude は接続時に `context7-headers.sh` 経由でキーチェーンから読みます。Claude を起動するたびに 1Password の承認を求めないための分担です。キーを変えたら、各 Mac で `dotfiles context7-key` をもう一度実行します。キーチェーンの既存の値を書き換えるときは、macOS がその Mac の画面でログインキーチェーンのパスワードを求めるので、Mac mini では画面を見られる状態で実行します (値が同じなら書き換えず、確認も出ません)。
+
+```bash
+dotfiles context7-key
+claude mcp add-json --scope user context7 '{"type":"http","url":"https://mcp.context7.com/mcp","headersHelper":"sh \"$HOME/.config/dotfiles/scripts/context7-headers.sh\""}'
+```
+
 端末固有の `.gitconfig.local`, `.gitconfig.work`, `.zshrc.local`、認証データもローカルです。
 
 ## リモートへの自動追従

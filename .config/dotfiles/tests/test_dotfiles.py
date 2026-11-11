@@ -99,6 +99,16 @@ class OwnershipIntegration(unittest.TestCase):
         path.write_bytes(original)
         self.assertNotEqual(self.git('commit', '-qm', 'invalid staged mode', success=False).returncode, 0)
 
+    def test_context7_key_rejects_unexpected_1password_value_before_keychain(self):
+        # 偽の op を置き、形の合わない値ならキーチェーンに触らず失敗することを確かめる
+        fake_op = self.bin / 'op'
+        args_log = self.bin / 'op-args'
+        fake_op.write_text(f'#!/bin/sh\necho "$@" > \'{args_log}\'\nprintf "not a key!"\n')
+        fake_op.chmod(0o755)
+        result = self.cli('context7-key', '--ref', 'op://Vault/Item/credential', success=False)
+        self.assertIn('unexpected format', result.stderr.decode())
+        self.assertEqual(args_log.read_text().split(), ['read', '--no-newline', 'op://Vault/Item/credential'])
+
     def test_shared_claude_settings_cannot_hold_plugins(self):
         path = self.root / '.config/dotfiles/claude-settings.json'
         for key in ('enabledPlugins', 'extraKnownMarketplaces'):
