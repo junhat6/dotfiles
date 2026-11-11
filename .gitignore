@@ -34,7 +34,7 @@
 !/.claude/hooks/brewfile-sync.sh
 !/.claude/hooks/watch-and-save.sh
 !/.claude/rules/context7.md
-!/.config/dotfiles/templates/claude-settings.json
+!/.claude/rules/human-checkpoint.md
 !/.claude/statusline-command.sh
 !/.config/atuin/config.toml
 !/.config/dotfiles/Brewfile
@@ -44,13 +44,11 @@
 !/.config/dotfiles/git-hooks/pre-push
 !/.config/dotfiles/install.sh
 !/.config/dotfiles/ownership.json
-!/.config/dotfiles/scripts/auto-update.sh
 !/.config/dotfiles/scripts/check.sh
 !/.config/dotfiles/scripts/dotfiles.py
 !/.config/dotfiles/scripts/macos-defaults.sh
 !/.config/dotfiles/scripts/render.py
 !/.config/dotfiles/scripts/setup-git-work.sh
-!/.config/dotfiles/templates/com.claude.auto-update.plist
 !/.config/dotfiles/templates/com.claude.brewfile-sync.plist
 !/.config/dotfiles/templates/com.claude.obsidian-sync.plist
 !/.config/dotfiles/tests/test_dotfiles.py
@@ -123,6 +121,11 @@
 !/.config/dotfiles/scripts/homebrew-update.sh
 !/.config/dotfiles/templates/com.junhat6.homebrew-update.plist
 !/.config/dotfiles/tests/test_homebrew_update.py
+!/.config/dotfiles/scripts/orca-sidebar.js
+!/.config/dotfiles/scripts/context7-headers.sh
+!/.config/dotfiles/scripts/install-orca-sidebar.py
+!/.config/dotfiles/claude-settings.json
+!/.config/dotfiles/tests/test_orca_sidebar.py
 
 !/.config/dotfiles/notifications.json
 

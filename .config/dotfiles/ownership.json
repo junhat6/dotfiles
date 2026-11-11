@@ -9,7 +9,7 @@
     ".claude/hooks/brewfile-sync.sh",
     ".claude/hooks/watch-and-save.sh",
     ".claude/rules/context7.md",
-    ".config/dotfiles/templates/claude-settings.json",
+    ".claude/rules/human-checkpoint.md",
     ".claude/statusline-command.sh",
     ".config/atuin/config.toml",
     ".config/dotfiles/Brewfile",
@@ -91,12 +91,17 @@
     ".hammerspoon/modules/desktop_cleanup.lua",
     ".config/dotfiles/scripts/orca-autoupdate.py",
     ".config/dotfiles/scripts/install-orca-autoupdate.py",
-    ".config/dotfiles/tests/test_orca_autoupdate.py"
+    ".config/dotfiles/tests/test_orca_autoupdate.py",
+    ".config/dotfiles/scripts/orca-sidebar.js",
+    ".config/dotfiles/tests/test_orca_sidebar.py",
+    ".config/dotfiles/claude-settings.json",
+    ".config/dotfiles/scripts/install-orca-sidebar.py",
+    ".config/dotfiles/scripts/context7-headers.sh"
   ],
   "local": [
-    ".config/dotfiles/session-capture.local.json",
-    ".claude/settings.host.json",
+    ".claude/settings.json",
     ".claude/settings.local.json",
+    ".config/dotfiles/session-capture.local.json",
     ".gitconfig.local",
     ".gitconfig.work",
     ".zshrc.local",
@@ -172,10 +177,6 @@
     ".ruby-lsp/*"
   ],
   "generated": [
-    {
-      "template": ".config/dotfiles/templates/claude-settings.json",
-      "output": ".claude/settings.json"
-    },
     {
       "template": ".config/dotfiles/templates/com.claude.brewfile-sync.plist",
       "output": "Library/LaunchAgents/com.claude.brewfile-sync.plist"

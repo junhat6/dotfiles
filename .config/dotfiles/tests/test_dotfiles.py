@@ -12,12 +12,34 @@ SPEC = importlib.util.spec_from_file_location('dotfiles', SOURCE / '.config/dotf
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
+FAKE_CLAUDE = """#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+path = Path(os.environ['HOME']) / '.claude.json'
+state = json.loads(path.read_text()) if path.exists() else {}
+servers = state.setdefault('mcpServers', {})
+args = sys.argv[1:]
+with open(Path(os.environ['HOME']) / 'claude-calls.log', 'a') as log:
+    log.write(' '.join(args[:4]) + '\\n')
+if args[:2] == ['mcp', 'remove']:
+    servers.pop(args[-1])
+elif args[:2] == ['mcp', 'add-json']:
+    servers[args[-2]] = json.loads(args[-1])
+path.write_text(json.dumps(state))
+"""
+
 
 class OwnershipIntegration(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = (Path(self.temporary.name) / 'home space & symbol').resolve()
         self.root.mkdir()
+        # 本物の claude に触らせない: ~/.claude.json を書き換えるだけの偽物を PATH の先頭に置く
+        self.bin = Path(self.temporary.name) / 'bin'
+        self.bin.mkdir()
+        fake = self.bin / 'claude'
+        fake.write_text(FAKE_CLAUDE)
+        fake.chmod(0o755)
         for rel in json.loads((SOURCE / MODULE.MANIFEST).read_text())['shared']:
             dest = self.root / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -41,7 +63,8 @@ class OwnershipIntegration(unittest.TestCase):
         return result
 
     def cli(self, *args, success=True):
-        result = subprocess.run([os.sys.executable, str(self.root / '.config/dotfiles/scripts/dotfiles.py'), '--root', str(self.root), '--backend', 'git', *args], capture_output=True)
+        env = {**os.environ, 'PATH': str(self.bin) + os.pathsep + os.environ['PATH']}
+        result = subprocess.run([os.sys.executable, str(self.root / '.config/dotfiles/scripts/dotfiles.py'), '--root', str(self.root), '--backend', 'git', *args], capture_output=True, env=env)
         if success:
             self.assertEqual(result.returncode, 0, result.stderr.decode())
         return result
@@ -69,12 +92,19 @@ class OwnershipIntegration(unittest.TestCase):
         self.assertNotEqual(self.git('commit', '-qm', 'forbidden', success=False).returncode, 0)
 
     def test_index_content_checked_when_worktree_valid(self):
-        path = self.root / MODULE.SETTINGS_TEMPLATE
+        path = self.root / '.config/dotfiles/claude-settings.json'
         original = path.read_bytes()
         path.write_text('{"permissions":{"defaultMode":"bypassPermissions"}}')
         self.git('add', str(path))
         path.write_bytes(original)
         self.assertNotEqual(self.git('commit', '-qm', 'invalid staged mode', success=False).returncode, 0)
+
+    def test_shared_claude_settings_cannot_hold_plugins(self):
+        path = self.root / '.config/dotfiles/claude-settings.json'
+        for key in ('enabledPlugins', 'extraKnownMarketplaces'):
+            path.write_text(json.dumps({key: {}}))
+            result = self.cli('check', success=False)
+            self.assertIn('plugins/marketplaces must be local', result.stderr.decode())
 
     def test_staged_keymap_drift_rejected_with_valid_worktree(self):
         path = self.root / '.config/karabiner/karabiner.json'
@@ -129,7 +159,7 @@ class OwnershipIntegration(unittest.TestCase):
         self.cli('check')
 
     def test_local_mode_preserved_and_invalid_not_overwritten(self):
-        target = self.root / MODULE.SETTINGS_HOST
+        target = self.root / '.claude/settings.json'
         target.write_text('{"permissions":{"defaultMode":"plan","allow":["existing"]},"hooks":{}}')
         original = target.read_bytes()
         self.cli('bootstrap-local')
@@ -142,7 +172,7 @@ class OwnershipIntegration(unittest.TestCase):
         managed = self.root / 'corporate-managed.json'
         managed.write_text('{}')
         self.cli('bootstrap-local', '--managed-settings', str(managed))
-        target = self.root / MODULE.SETTINGS_HOST
+        target = self.root / '.claude/settings.json'
         self.assertEqual(json.loads(target.read_text())['permissions']['defaultMode'], 'auto')
         original = target.read_bytes()
         self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
@@ -151,11 +181,18 @@ class OwnershipIntegration(unittest.TestCase):
         self.assertEqual(target.read_bytes(), original)
         self.cli('check')
 
+    def test_legacy_local_mode_is_carried_over(self):
+        (self.root / '.claude/settings.local.json').write_text('{"permissions":{"defaultMode":"plan"}}')
+        target = self.root / '.claude/settings.json'
+        target.unlink(missing_ok=True)
+        self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
+        self.assertEqual(json.loads(target.read_text())['permissions']['defaultMode'], 'plan')
+
     def test_source_check_does_not_write_or_require_generated(self):
         shutil.rmtree(self.root / 'Library')
         self.cli('check', '--source')
         self.assertFalse((self.root / 'Library').exists())
-        self.assertFalse((self.root / MODULE.SETTINGS_HOST).exists())
+        self.assertFalse((self.root / '.claude/settings.local.json').exists())
 
     def test_isolated_yadm_clone_bootstrap_idempotent(self):
         if shutil.which('yadm') is None:
@@ -173,14 +210,12 @@ class OwnershipIntegration(unittest.TestCase):
             yadm('config', 'yadm.' + key, 'false')
         yadm('clone', '--no-bootstrap', str(self.root))
         yadm('bootstrap')
-        local = home / MODULE.SETTINGS_HOST
+        local = home / '.claude/settings.json'
         first = local.read_bytes()
         yadm('bootstrap')
         self.assertEqual(local.read_bytes(), first)
         self.assertEqual(yadm('gitconfig', 'core.hooksPath').decode().strip(), str(home / '.config/dotfiles/git-hooks'))
-        tracked = yadm('ls-files').decode().splitlines()
-        self.assertNotIn(MODULE.SETTINGS_HOST, tracked)
-        self.assertNotIn(MODULE.SETTINGS_OUTPUT, tracked)
+        self.assertNotIn('.claude/settings.local.json', yadm('ls-files').decode().splitlines())
         self.assertFalse((home / '.ssh').exists())
         self.assertFalse((home / '.gnupg').exists())
         result = subprocess.run([str(home / '.local/bin/dotfiles'), 'check'], cwd=home, env=env, capture_output=True)
@@ -193,8 +228,41 @@ class OwnershipIntegration(unittest.TestCase):
         self.assertIn('.config/new-app', json.loads(result.stdout)['unknown_config_directories'])
         self.cli('check')
 
+    def test_render_merges_shared_claude_keys_and_keeps_local_ones(self):
+        target = self.root / '.claude/settings.json'
+        shared = json.loads((self.root / '.config/dotfiles/claude-settings.json').read_text())
+        local = {'hooks': {'Stop': [{'hooks': [{'type': 'command', 'command': 'orca-hook'}]}]},
+                 'permissions': {'defaultMode': 'bypassPermissions'},
+                 'enabledPlugins': {'postman@claude-plugins-official': True},
+                 'theme': 'dark'}
+        target.write_text(json.dumps(local))
+        result = self.cli('check', success=False)
+        self.assertIn('generated drift: .claude/settings.json', result.stderr.decode())
+        self.cli('render')
+        merged = json.loads(target.read_text())
+        self.assertEqual(merged['hooks'], local['hooks'])
+        self.assertEqual(merged['permissions'], local['permissions'])
+        # plugin は端末ごとに管理するので、端末の値が残る
+        self.assertEqual(merged['enabledPlugins'], local['enabledPlugins'])
+        self.assertEqual(merged['theme'], shared['theme'])
+        self.cli('check')
+        before = target.stat().st_mtime_ns
+        self.cli('render')
+        self.assertEqual(target.stat().st_mtime_ns, before)
+
+    def test_render_refuses_broken_local_claude_settings(self):
+        target = self.root / '.claude/settings.json'
+        target.write_text('{broken')
+        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
+        self.assertEqual(target.read_text(), '{broken')
+
+    def test_local_claude_settings_cannot_be_shared(self):
+        target = self.root / '.claude/settings.json'
+        self.git('add', '-f', str(target))
+        self.assertNotEqual(self.git('commit', '-qm', 'share local settings', success=False).returncode, 0)
+
     def test_invalid_committed_tip_cannot_push(self):
-        path = self.root / MODULE.SETTINGS_TEMPLATE
+        path = self.root / '.config/dotfiles/claude-settings.json'
         path.write_text('{"hooks":{}}')
         self.git('add', str(path))
         self.git('-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'invalid')
@@ -210,63 +278,6 @@ class OwnershipIntegration(unittest.TestCase):
         self.git('add', '-f', str(path))
         result = subprocess.run([str(self.root / '.config/dotfiles/git-hooks/pre-push')], cwd=self.root, capture_output=True)
         self.assertNotEqual(result.returncode, 0)
-
-    def test_global_hooks_migrate_to_host_and_render_in_user_settings(self):
-        output = self.root / MODULE.SETTINGS_OUTPUT
-        existing = json.loads(output.read_text())
-        hook = {'hooks': [{'type': 'command', 'command': '/local/orca-hook'}]}
-        existing['hooks'] = {'SessionStart': [hook]}
-        existing['permissions'] = {'defaultMode': 'auto'}
-        output.write_text(json.dumps(existing))
-        project_local = self.root / '.claude/settings.local.json'
-        project_local.write_text('{"permissions":{"allow":["home-only"]}}')
-        self.cli('bootstrap-local', '--managed-settings', str(self.root / 'absent'))
-        host = self.root / MODULE.SETTINGS_HOST
-        self.assertEqual(json.loads(host.read_text())['hooks'], existing['hooks'])
-        self.cli('render')
-        result = json.loads(output.read_text())
-        self.assertEqual(result['hooks'], existing['hooks'])
-        self.assertEqual(result['permissions'], {'defaultMode': 'auto'})
-        self.assertEqual(result['model'], existing['model'])
-        self.assertEqual(output.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(json.loads(project_local.read_text())['permissions']['allow'], ['home-only'])
-        self.cli('bootstrap-local')
-        self.cli('render')
-        self.assertEqual(json.loads(output.read_text()), result)
-        self.cli('check')
-
-    def test_invalid_host_settings_do_not_replace_any_generated_files(self):
-        output = self.root / MODULE.SETTINGS_OUTPUT
-        plist = self.root / 'Library/LaunchAgents/com.claude.brewfile-sync.plist'
-        before = (output.read_bytes(), plist.read_bytes())
-        host = self.root / MODULE.SETTINGS_HOST
-        host.write_text('{invalid')
-        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
-        self.assertEqual((output.read_bytes(), plist.read_bytes()), before)
-        host.write_text('{"hooks":[]}')
-        self.assertNotEqual(self.cli('render', success=False).returncode, 0)
-        self.assertEqual((output.read_bytes(), plist.read_bytes()), before)
-
-    def test_generated_user_settings_cannot_be_shared_or_committed(self):
-        output = self.root / MODULE.SETTINGS_OUTPUT
-        self.git('add', '-f', str(output))
-        result = self.git('commit', '-qm', 'forbidden generated settings', success=False)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('unapproved tracked path', result.stderr.decode())
-
-    def test_host_changes_are_detected_until_rendered(self):
-        host = self.root / MODULE.SETTINGS_HOST
-        host.write_text('{"permissions":{"defaultMode":"plan"}}')
-        self.assertNotEqual(self.cli('check', success=False).returncode, 0)
-        self.cli('render')
-        self.cli('check')
-
-    def test_shared_and_host_preferences_merge_without_losing_plugins(self):
-        shared = {'enabledPlugins': {'shared@market': True}, 'list': ['shared']}
-        host = {'enabledPlugins': {'host@market': True}, 'list': ['shared', 'host']}
-        self.assertEqual(MODULE.merge_settings(shared, host), {
-            'enabledPlugins': {'shared@market': True, 'host@market': True}, 'list': ['shared', 'host']})
-        self.assertEqual(shared['list'], ['shared'])
 
     def test_explicit_session_vault_renders_local_launchagent_environment(self):
         import plistlib
@@ -285,7 +296,7 @@ class OwnershipIntegration(unittest.TestCase):
 
     def test_wrong_session_vault_cannot_replace_generated_files(self):
         self.git('remote', 'add', 'origin', 'https://github.com/fixture/vault.git')
-        output = self.root / MODULE.SETTINGS_OUTPUT
+        output = self.root / 'Library/LaunchAgents/com.claude.obsidian-sync.plist'
         before = output.read_bytes()
         settings = self.root / MODULE.SESSION_CAPTURE
         settings.write_text(json.dumps({'vault': str(self.root), 'repository': 'other/vault'}))

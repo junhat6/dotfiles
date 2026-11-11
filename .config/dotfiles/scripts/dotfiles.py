@@ -12,24 +12,34 @@ import tempfile
 from xml.parsers.expat import ExpatError
 
 MANIFEST = '.config/dotfiles/ownership.json'
-SETTINGS_TEMPLATE = '.config/dotfiles/templates/claude-settings.json'
-SETTINGS_HOST = '.claude/settings.host.json'
-SETTINGS_OUTPUT = '.claude/settings.json'
+# Claude Code reads exactly one user settings file. Orca and other tools write
+# machine-specific keys (hooks, permission mode) into it, so the file itself is
+# local; only the keys in CLAUDE_SHARED are shared and merged in by `render`.
+CLAUDE_SHARED = '.config/dotfiles/claude-settings.json'
+CLAUDE_TARGET = '.claude/settings.json'
+# Machine-local vault pin for the Obsidian session capture LaunchAgent. Without it,
+# watch-and-save.sh auto-selects between two configured vaults and stops otherwise.
 SESSION_CAPTURE = '.config/dotfiles/session-capture.local.json'
-FORBIDDEN = ['.claude/settings.local.json', '.gitconfig.local', '.gitconfig.work', '.zshrc.local', '.config/nvim/lazy-lock.json', '.config/nvim/lazyvim.json', '.config/dotfiles/Brewfile.local', '.config/ghostty/*', '.eval-loop/*', 'Library/LaunchAgents/*', '.claude/projects/*', '.claude/logs/*', '.claude/plugins/*', '.claude/history*', '.codex/*', '.ssh/*', '.gnupg/*']
+FORBIDDEN = ['.claude/settings.json', '.claude/settings.local.json', SESSION_CAPTURE, '.gitconfig.local', '.gitconfig.work', '.zshrc.local', '.config/nvim/lazy-lock.json', '.config/nvim/lazyvim.json', '.config/dotfiles/Brewfile.local', '.config/ghostty/*', '.eval-loop/*', 'Library/LaunchAgents/*', '.claude/projects/*', '.claude/logs/*', '.claude/plugins/*', '.claude/history*', '.codex/*', '.ssh/*', '.gnupg/*']
 
 
-FORBIDDEN += [SETTINGS_HOST, SETTINGS_OUTPUT, SESSION_CAPTURE]
+def matches(path, patterns):
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
+
+
+def run(cmd, cwd, check=True):
+    return subprocess.run(cmd, cwd=cwd, check=check, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def session_capture_environment(home):
+    """OBSIDIAN_DIR/CODEX_OBSIDIAN_DIR from SESSION_CAPTURE, verified against the vault's Git."""
     path = home / SESSION_CAPTURE
     if path.is_symlink():
         raise ValueError('refusing session capture settings symlink')
     if not path.exists():
         return {}
-    settings = json_object(path.read_bytes())
-    if set(settings) != {'vault', 'repository'} or any(not isinstance(value, str) or not value for value in settings.values()):
+    settings = json.loads(path.read_bytes())
+    if not isinstance(settings, dict) or set(settings) != {'vault', 'repository'} or any(not isinstance(value, str) or not value for value in settings.values()):
         raise ValueError('session capture requires vault and repository strings')
     vault = Path(settings['vault'])
     repository = settings['repository']
@@ -48,45 +58,6 @@ def session_capture_environment(home):
     if set(ignored.stdout.splitlines()) != set(probes):
         raise ValueError('session capture folders must be ignored by Git')
     return {'OBSIDIAN_DIR': str(vault / 'claude'), 'CODEX_OBSIDIAN_DIR': str(vault / 'Codex')}
-
-
-def json_object(data):
-    value = json.loads(data)
-    if not isinstance(value, dict):
-        raise ValueError('settings must be a JSON object')
-    if 'permissions' in value and not isinstance(value['permissions'], dict):
-        raise ValueError('permissions must be an object')
-    if 'hooks' in value and not isinstance(value['hooks'], dict):
-        raise ValueError('hooks must be an object')
-    return value
-
-
-def host_settings(home):
-    path = home / SETTINGS_HOST
-    if path.is_symlink():
-        raise ValueError('refusing host settings symlink')
-    return json_object(path.read_bytes()) if path.exists() else {}
-
-
-def merge_settings(shared, host):
-    result = dict(shared)
-    for key, value in host.items():
-        previous = result.get(key)
-        if isinstance(previous, dict) and isinstance(value, dict):
-            result[key] = merge_settings(previous, value)
-        elif isinstance(previous, list) and isinstance(value, list):
-            result[key] = previous + [item for item in value if item not in previous]
-        else:
-            result[key] = value
-    return result
-
-
-def matches(path, patterns):
-    return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
-
-
-def run(cmd, cwd, check=True):
-    return subprocess.run(cmd, cwd=cwd, check=check, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 class Repository:
@@ -121,14 +92,10 @@ class Repository:
         for path in m['shared']:
             if matches(path, FORBIDDEN + m['excluded']) or path in m['local']:
                 raise ValueError('forbidden shared path: ' + path)
-            if path.startswith('.claude/') and path not in {'.claude/CLAUDE.md', '.claude/settings.json', '.claude/statusline-command.sh'} and not path.startswith(('.claude/commands/', '.claude/rules/', '.claude/hooks/')):
+            if path.startswith('.claude/') and path not in {'.claude/CLAUDE.md', '.claude/statusline-command.sh'} and not path.startswith(('.claude/commands/', '.claude/rules/', '.claude/hooks/')):
                 raise ValueError('Claude runtime cannot be shared: ' + path)
         for item in m['generated']:
-            if set(item) != {'template', 'output'} or item['template'] not in m['shared']:
-                raise ValueError('invalid generated ownership')
-            if item == {'template': SETTINGS_TEMPLATE, 'output': SETTINGS_OUTPUT}:
-                continue
-            if not item['output'].startswith('Library/LaunchAgents/') or Path(item['output']).name != item['output'].split('/')[-1] or '..' in PurePosixPath(item['output']).parts:
+            if set(item) != {'template', 'output'} or item['template'] not in m['shared'] or not item['output'].startswith('Library/LaunchAgents/') or Path(item['output']).name != item['output'].split('/')[-1] or '..' in PurePosixPath(item['output']).parts:
                 raise ValueError('invalid generated ownership')
         return m
 
@@ -156,13 +123,20 @@ class Repository:
         known = {x.split('/')[1] for x in m['shared'] + m['local'] if x.startswith('.config/')}
         return sorted('.config/' + p.name for p in config.iterdir() if p.is_dir() and p.name not in known) if config.exists() else []
 
+    def claude_settings(self, index=False):
+        """(target path, current, merged): shared top-level keys replace the local ones."""
+        shared = json.loads(self.content(CLAUDE_SHARED, index))
+        if not isinstance(shared, dict):
+            raise ValueError('shared Claude settings must be an object')
+        target = self.root / CLAUDE_TARGET
+        if target.is_symlink():
+            raise ValueError('refusing symlink: ' + CLAUDE_TARGET)
+        current = json.loads(target.read_text()) if target.exists() else {}
+        if not isinstance(current, dict):
+            raise ValueError(CLAUDE_TARGET + ' must be an object')
+        return target, current, {**current, **shared}
+
     def rendered(self, item, home, index=False):
-        if item.get('output') == SETTINGS_OUTPUT:
-            shared = json_object(self.content(item['template'], index))
-            if 'hooks' in shared or 'permissions' in shared:
-                raise ValueError('Claude template must contain only shared preferences; permissions/hooks must be host local')
-            result = merge_settings(shared, host_settings(home))
-            return (json.dumps(result, ensure_ascii=False, indent=2) + '\n').encode()
         text = self.content(item['template'], index).decode()
         from xml.sax.saxutils import escape
         result = text.replace('@HOME@', escape(str(home)))
@@ -216,16 +190,15 @@ class Repository:
                         errors.append('invalid Git syntax: ' + path)
                 if path.endswith('.json'):
                     doc = json.loads(data)
-                    if path == SETTINGS_TEMPLATE and ('permissions' in json_object(data) or 'hooks' in doc):
-                        errors.append('host permission mode/hooks must be local')
+                    if path == CLAUDE_SHARED and (not isinstance(doc, dict) or 'hooks' in doc or 'defaultMode' in doc.get('permissions', {})):
+                        errors.append('host permission mode/hooks must be local: ' + path)
+                    # 共有キーは合成で丸ごと置き換わるため、端末で入れた plugin が同期のたびに消える
+                    if path == CLAUDE_SHARED and isinstance(doc, dict) and ({'enabledPlugins', 'extraKnownMarketplaces'} & set(doc)):
+                        errors.append('plugins/marketplaces must be local: ' + path)
                 if path.endswith('.plist'):
                     plistlib.loads(data.replace(b'@HOME@', b'/portable/home'))
                     if '@HOME@' not in data.decode() or '{{' in data.decode():
                         errors.append('template must use portable @HOME@: ' + path)
-                if path == '.config/mise/config.toml' and (b'gemini-cli' in data or b'\nopencode =' in data):
-                    errors.append('removed tools in mise')
-                if path == '.config/dotfiles/Brewfile' and any(x in data for x in [b'cask "ghostty"', b'brew "chezmoi"', b'brew "stow"']):
-                    errors.append('removed packages in Brewfile')
             except (OSError, ValueError, ExpatError, plistlib.InvalidFileException, subprocess.CalledProcessError) as exc:
                 errors.append('invalid or missing shared file: ' + path + ': ' + str(exc))
         keymap_script = '.config/dotfiles/scripts/karabiner_map.py'
@@ -243,6 +216,13 @@ class Repository:
                 errors.append('invalid keymap: ' + str(exc))
         if discover:
             errors.extend('new candidate (register deliberately or exclude): ' + x for x in self.candidates(m))
+        if generated and CLAUDE_SHARED in m['shared']:
+            try:
+                _, current, merged = self.claude_settings(index)
+                if current != merged:
+                    errors.append('generated drift: ' + CLAUDE_TARGET + ' (run dotfiles render)')
+            except (OSError, ValueError) as exc:
+                errors.append('generated missing/invalid: ' + CLAUDE_TARGET + ': ' + str(exc))
         if generated:
             for item in m['generated']:
                 output = self.root / item['output']
@@ -269,22 +249,29 @@ def atomic_write(path, data, mode=0o644):
 
 
 def bootstrap_local(home, managed):
-    path = home / SETTINGS_HOST
-    settings = host_settings(home)
-    if not path.exists():
-        previous = home / SETTINGS_OUTPUT
-        if previous.is_symlink():
-            raise ValueError('refusing user settings symlink')
-        existing = json_object(previous.read_bytes()) if previous.exists() else {}
-        settings = {key: existing[key] for key in ('permissions', 'hooks', 'modelSettings') if key in existing}
+    """Set this machine's default permission mode once, in the user settings file.
+
+    Claude Code ignores `auto`/`bypassPermissions` from settings.local.json (v2.1.257+),
+    so the mode lives in the now machine-local ~/.claude/settings.json. A mode left in
+    settings.local.json by older versions of this script is carried over.
+    """
+    path = home / CLAUDE_TARGET
+    legacy = home / '.claude/settings.local.json'
+    for candidate in (path, legacy):
+        if candidate.is_symlink():
+            raise ValueError('refusing settings symlink: ' + str(candidate))
+    settings = json.loads(path.read_text()) if path.exists() else {}
+    if not isinstance(settings, dict):
+        raise ValueError('user settings must be an object')
     permissions = settings.setdefault('permissions', {})
     if not isinstance(permissions, dict):
-        raise ValueError('local permissions must be an object')
-    needs_write = not path.exists() or 'defaultMode' not in permissions
+        raise ValueError('user permissions must be an object')
     if 'defaultMode' not in permissions:
-        permissions['defaultMode'] = 'auto' if managed.exists() else 'bypassPermissions'
-    if needs_write:
-        atomic_write(path, (json.dumps(settings, ensure_ascii=False, indent=2) + '\n').encode(), 0o600)
+        old = json.loads(legacy.read_text()) if legacy.exists() else {}
+        old_mode = old.get('permissions', {}).get('defaultMode') if isinstance(old, dict) and isinstance(old.get('permissions'), dict) else None
+        permissions['defaultMode'] = old_mode or ('auto' if managed.exists() else 'bypassPermissions')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write(path, (json.dumps(settings, ensure_ascii=False, indent=2) + '\n').encode())
 
 
 def main():
@@ -343,8 +330,11 @@ def main():
         if args.command == 'render':
             # Validate every output before replacing any.
             outputs = [(repo.root / x['output'], repo.rendered(x, repo.root)) for x in m['generated']]
+            settings = repo.claude_settings() if CLAUDE_SHARED in m['shared'] else None
             for path, data in outputs:
-                atomic_write(path, data, 0o600 if path == repo.root / SETTINGS_OUTPUT else 0o644)
+                atomic_write(path, data)
+            if settings and settings[1] != settings[2]:
+                atomic_write(settings[0], (json.dumps(settings[2], ensure_ascii=False, indent=2) + '\n').encode())
             return 0
         if args.command == 'status':
             result = {'git': repo.git('status', '--short', '--untracked-files=no').decode(), 'candidates': repo.candidates(m), 'unknown_config_directories': repo.unknown_config_directories(m), 'errors': repo.check()}
