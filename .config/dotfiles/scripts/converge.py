@@ -28,7 +28,7 @@ AGENTS = HOME / 'Library/LaunchAgents'
 SCRIPTS = Path(__file__).resolve().parent
 WEBHOOK_SERVICE = 'dotfiles-discord-webhook'
 WEBHOOK_OP_REF = 'op://Automation/dotfiles-discord-webhook/credential'
-WEBHOOK_URL = re.compile(r'https://(discord|discordapp)\.com/api/webhooks/\d+/[A-Za-z0-9_-]+')
+WEBHOOK_URL = re.compile(r'https://(?:(?:ptb|canary)\.)?(?:discord|discordapp)\.com/api/(?:v\d+/)?webhooks/\d+/[A-Za-z0-9_-]+(?:\?[A-Za-z0-9_=&-]*)?')
 HOMEBREW_LOG = HOME / '.claude/logs/homebrew-update.log'
 DAY = 86400
 # Every Mac runs these. obsidian-sync is profile-dependent and stays a setup decision.
@@ -224,6 +224,14 @@ def converge():
         update_issues(issues)
         homebrew_issues(issues)
         url = webhook()
+        if not url and op_env():
+            # Unattended Macs (service account token in the Keychain) set themselves up.
+            # Interactive Macs would show Touch ID from a background job, so they don't.
+            try:
+                store_webhook(WEBHOOK_OP_REF)
+                url = webhook()
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                print('converge: Discord の Webhook を取り込めませんでした: ' + str(exc))
         if url:
             try:
                 notify(state, issues, lambda text: post(url, text))
@@ -244,7 +252,8 @@ def store_webhook(reference):
         raise ValueError('1Password から読めませんでした: ' + result.stderr.strip())
     url = result.stdout.strip()
     if not WEBHOOK_URL.fullmatch(url):
-        raise ValueError('Discord の Webhook URL の形式ではありません')
+        shape = re.sub(r'[A-Za-z0-9_-]{12,}', '<秘密>', url)
+        raise ValueError('Discord の Webhook URL の形式ではありません: ' + shape[:120])
     # Overwriting a different value makes macOS ask for the login keychain password on screen.
     if webhook() != url:
         subprocess.run(['/usr/bin/security', '-i'], check=True, capture_output=True,
