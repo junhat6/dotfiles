@@ -7,7 +7,7 @@ import unittest
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/homebrew-update.sh'
 
 class HomebrewUpdateTest(unittest.TestCase):
-    def run_update(self, failure='', outdated='amical\nstablyai/orca/orca', orca_running=False):
+    def run_update(self, failure='', outdated='amical\nstablyai/orca/orca', orca_running=False, mise_hangs=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             brew = root / 'brew'
@@ -17,11 +17,12 @@ class HomebrewUpdateTest(unittest.TestCase):
             ps.write_text('#!/bin/bash\necho /usr/bin/login\n[[ "$ORCA_RUNNING" == 1 ]] && echo /Applications/Orca.app/Contents/MacOS/Orca\nexit 0\n')
             ps.chmod(0o755)
             mise = root / 'mise'
-            mise.write_text('#!/bin/bash\necho "mise $*" >> "$CALLS"\n[[ "mise $*" != "$FAILURE" ]]\n')
+            mise.write_text('#!/bin/bash\necho "mise $*" >> "$CALLS"\n[[ "$MISE_HANGS" == 1 ]] && sleep 60\n[[ "mise $*" != "$FAILURE" ]]\n')
             mise.chmod(0o755)
             script = root / 'update.sh'
             script.write_text(SCRIPT.read_text().replace('export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"', 'export PATH="' + directory + ':/usr/bin:/bin"'))
-            result = subprocess.run(['bash', str(script)], env={**os.environ, 'CALLS':str(root/'calls'), 'FAILURE':failure, 'OUTDATED':outdated, 'ORCA_RUNNING':'1' if orca_running else '0'}, capture_output=True)
+            result = subprocess.run(['bash', str(script)], env={**os.environ, 'CALLS':str(root/'calls'), 'FAILURE':failure, 'OUTDATED':outdated, 'MISE_HANGS':'1' if mise_hangs else '0', 'HOMEBREW_UPDATE_STEP_TIMEOUT':'2', 'HOMEBREW_UPDATE_KILL_GRACE':'1', 'ORCA_RUNNING':'1' if orca_running else '0'}, capture_output=True, timeout=30)
+            self.output = result.stdout.decode()
             return result.returncode, (root/'calls').read_text().splitlines()
 
     def test_normal(self):
@@ -65,3 +66,9 @@ class HomebrewUpdateTest(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertFalse(any(c.startswith('upgrade --cask') for c in calls))
         self.assertEqual(calls[-1], 'mise upgrade --global --yes --no-prune')
+
+    def test_hung_step_is_stopped_and_reported(self):
+        code, calls = self.run_update(mise_hangs=True)
+        self.assertNotEqual(code, 0)
+        self.assertIn('Step timed out after 2s: mise upgrade', self.output)
+        self.assertIn('Homebrew maintenance exit=1', self.output)

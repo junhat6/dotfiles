@@ -279,7 +279,7 @@ Orcaは公式の `stablyai/orca/orca` caskで初回導入する。既存のOrca.
 
 Orcaの無人更新は `python3 ~/.config/dotfiles/scripts/install-orca-autoupdate.py` で各Macに個別導入する（通常setupとは別の明示導入）。`com.junhat6.orca-autoupdate` がログイン時と3時間ごとに、起動中のローカルOrcaへ認証付きRPCで安定版の確認・ダウンロード・標準インストールを要求する。更新時は画面が再起動する。ログアウト中・スリープ中・Orca未起動時は更新できず、後の定期実行で再試行する。接続先Macへの一括更新はしない。
 
-エラー時は次回に再試行し、更新要求後に確認が中断しても次回のバージョン確認で復帰する（過去のセッション継続まで成功と偽らない）。強制終了・通常Quitの追加送信・アプリ上書きはしない。`~/Library/Application Support/OrcaAutoUpdate/PAUSED` は明示的な手動停止専用。旧版が自動作成した停止フラグの解除はインストーラーでは行わない。更新ログは `~/Library/Logs/OrcaAutoUpdate/update.log`、状態は同サポートディレクトリの `last-update.json`。`--inspect` は更新せず状態を読む。停止は `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`、再有効化はインストーラーの再実行。
+エラー時は次回に再試行し、更新要求後に確認が中断しても次回のバージョン確認で復帰する（過去のセッション継続まで成功と偽らない）。強制終了・通常Quitの追加送信・アプリ上書きはしない。`~/Library/Application Support/OrcaAutoUpdate/PAUSED` は明示的な手動停止専用。旧版が自動作成した停止フラグの解除はインストーラーでは行わない。更新ログは `~/Library/Logs/OrcaAutoUpdate/update.log`、状態は同サポートディレクトリの `last-update.json`。`--inspect` は更新せず状態を読む。停止は `launchctl disable gui/$(id -u)/com.junhat6.orca-autoupdate` のあと `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`（disable しないと converge が再登録する）、再有効化は `launchctl enable` のあとインストーラーの再実行。
 
 セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy --no-quit`（起動中のOrcaは対象から除外）、`mise upgrade --global --yes --no-prune` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
 
@@ -295,11 +295,19 @@ miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジ�
 
 内蔵アップデーターの有効状態はアプリごとに異なり、Homebrewの `auto_updates` 属性だけでは有効と断定しない。Orcaの内蔵更新だけで完全無人になるとは扱わない。管理者認証や追加のOS許可が必要な更新は失敗・保留となるため、全更新が完全無人で完了する保証はない。
 
+### 常駐処理の自動登録と Discord 通知
+
+`dotfiles update`（15分ごと）の最後に、各 Mac で `dotfiles converge` が動く。全 Mac で動かすべき常駐処理（`com.junhat6.homebrew-update`、`com.claude.brewfile-sync`、Orca が入っている Mac の `com.junhat6.orca-autoupdate`）のうち、launchd に未登録のものだけを登録する。動いている処理は止めない・再起動しない。`orca-autoupdate` は実行用コピーが古ければ取り替える（次の定期実行から新しい版で動く）。特定の Mac で止めたい処理は `launchctl disable gui/$(id -u)/<label>` で止める（bootout だけだと次の converge で再登録される）。
+
+人の操作が必要なもの（sudo が必要な cask 更新、plist が変わった常駐処理の再読み込み、取り込みの保留、Homebrew 更新の停止・時間切れ、登録の失敗）は Discord に送る。同じ内容は1日1回まで、解消したら1回だけ「解消しました」を送る。Webhook URL の正本は 1Password の `op://Automation/dotfiles-discord-webhook/credential`。各 Mac で一度 `dotfiles discord-webhook` を実行するとキーチェーンへ取り込み、テスト通知を送る。未設定の Mac は通知せずログにだけ残す。plist の変更による再読み込みは `dotfiles services reload <label>`。状態は `~/Library/Application Support/dotfiles/converge-state.json`。
+
+Homebrew 更新の各段階（brew update / upgrade / mise）は1時間で打ち切る。止まった処理が残ると launchd が次の 04:00 の回を起動しないため（2026-11 に Mac mini で mise が32時間止まった）。
+
 確認: `launchctl print gui/$(id -u)/com.junhat6.homebrew-update`。結果は `~/.claude/logs/homebrew-update.log` の終了コードを確認する。手動で同じ処理を実行する場合は `bash ~/.config/dotfiles/scripts/homebrew-update.sh`。既存のbrewfile-syncは一覧保存、dotfiles-updateは設定同期であり、パッケージ更新ではない。
 
 参考: https://docs.brew.sh/Manpage / https://www.onorca.dev/docs/install / https://www.onorca.dev/docs/model/session-restore
 
-既存Macで設定を取り込んだ後は、`dotfiles render` を実行し、`mkdir -p ~/.claude/logs`、`launchctl enable gui/$(id -u)/com.junhat6.homebrew-update`、未登録なら `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junhat6.homebrew-update.plist` を実行する。dotfilesの自動同期だけでは、新しいLaunchAgentは登録されない。
+既存Macで設定を取り込んだ後は、`dotfiles render` を実行し、`mkdir -p ~/.claude/logs`、`launchctl enable gui/$(id -u)/com.junhat6.homebrew-update`、未登録なら `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.junhat6.homebrew-update.plist` を実行する。自動同期のあと `dotfiles converge` が未登録の共通常駐処理を登録する（対象は converge.py の SERVICES）。
 
 ## Brewfileアプリの初回確認を減らす検証工程
 

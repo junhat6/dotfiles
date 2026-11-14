@@ -356,6 +356,12 @@ def main():
     c7 = sub.add_parser('context7-key', help="copy the Context7 API key from 1Password into this Mac's Keychain")
     c7.add_argument('--ref', default=CONTEXT7_OP_REF, help='1Password secret reference (op://vault/item/field)')
     sub.add_parser('op-token', help="store this Mac's 1Password service account token in the Keychain (read from prompt/stdin)")
+    sub.add_parser('converge', help='register missing per-machine LaunchAgents and notify Discord of what needs a human')
+    hook = sub.add_parser('discord-webhook', help="copy the Discord webhook URL from 1Password into this Mac's Keychain and send a test")
+    hook.add_argument('--ref', default='op://Automation/dotfiles-discord-webhook/credential')
+    services = sub.add_parser('services', help='reload a per-machine LaunchAgent after its plist changed')
+    services.add_argument('action', choices=['reload'])
+    services.add_argument('label')
     boot = sub.add_parser('bootstrap-local')
     boot.add_argument('--managed-settings', default='/Library/Application Support/ClaudeCode/managed-settings.json')
     args = parser.parse_args()
@@ -390,6 +396,19 @@ def main():
             token = getpass.getpass('1Password service account token: ') if sys.stdin.isatty() else sys.stdin.readline()
             store_op_token(token.strip())
             print('dotfiles: キーチェーンに保存しました。この Mac の op は承認なしで Automation 保管庫を読めます')
+            return 0
+        if args.command in {'converge', 'discord-webhook', 'services'}:
+            import converge
+            if args.command == 'converge':
+                return converge.converge()
+            if args.command == 'discord-webhook':
+                converge.store_webhook(args.ref)
+                print('dotfiles: キーチェーンに保存し、Discord にテストを送りました')
+                return 0
+            state = converge.load_state()
+            converge.reload_service(args.label, state)
+            converge.save_state(state)
+            print('dotfiles: ' + args.label + ' を読み込み直しました')
             return 0
         if args.command == 'bootstrap-local':
             bootstrap_local(repo.root, Path(args.managed_settings))

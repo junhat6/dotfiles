@@ -121,6 +121,7 @@
 !/.config/dotfiles/scripts/homebrew-update.sh
 !/.config/dotfiles/templates/com.junhat6.homebrew-update.plist
 !/.config/dotfiles/tests/test_homebrew_update.py
+!/.config/dotfiles/tests/test_converge.py
 !/.config/dotfiles/scripts/orca-sidebar.js
 !/.config/dotfiles/scripts/context7-headers.sh
 !/.config/dotfiles/scripts/install-orca-sidebar.py
@@ -138,4 +139,5 @@
 
 !/.config/dotfiles/scripts/orca-autoupdate.py
 !/.config/dotfiles/scripts/install-orca-autoupdate.py
+!/.config/dotfiles/scripts/converge.py
 !/.config/dotfiles/tests/test_orca_autoupdate.py

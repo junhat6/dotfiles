@@ -33,6 +33,15 @@ def git(repo, *args):
 
 
 def update(repo):
+    code = _update(repo)
+    # Per-machine follow-up with the (possibly just updated) code in a new process.
+    if platform.system() == 'Darwin' and repo.backend == 'yadm' and repo.root == Path.home().resolve():
+        subprocess.run([sys.executable, str(repo.root / '.config/dotfiles/scripts/dotfiles.py'),
+                        '--root', str(repo.root), '--backend', repo.backend, 'converge'], timeout=600)
+    return code
+
+
+def _update(repo):
     directory = state_dir(repo)
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / 'update.lock').open('a') as lock:
