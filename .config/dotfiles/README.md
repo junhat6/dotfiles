@@ -301,6 +301,8 @@ miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジ�
 
 人の操作が必要なもの（sudo が必要な cask 更新、plist が変わった常駐処理の再読み込み、取り込みの保留、Homebrew 更新の停止・時間切れ、登録の失敗）は Discord に送る。同じ内容は1日1回まで、解消したら1回だけ「解消しました」を送る。Webhook URL の正本は 1Password の `op://Automation/dotfiles-discord-webhook/credential`。各 Mac で一度 `dotfiles discord-webhook` を実行するとキーチェーンへ取り込み、テスト通知を送る。未設定の Mac は通知せずログにだけ残す。plist の変更による再読み込みは `dotfiles services reload <label>`。状態は `~/Library/Application Support/dotfiles/converge-state.json`。
 
+sudo が必要な cask（root 所有の旧ファイル削除、pkg、アンインストールスクリプト）を無人で更新するため、各 Mac で一度 `bash ~/.config/dotfiles/scripts/install-brew-sudoers.sh` を画面の前で実行する。`/etc/sudoers.d/homebrew-unattended` に brew が使うコマンドだけのパスワードなし sudo を入れる。`xargs`/`rm` を含むため、このユーザーで動くプロセスにとっては実質 root 相当になる（パスワード自体は保存しない、という判断で受け入れている）。一覧にないコマンドが必要な cask は引き続き失敗し Discord に通知される。
+
 Homebrew 更新の各段階（brew update / upgrade / mise）は1時間で打ち切る。止まった処理が残ると launchd が次の 04:00 の回を起動しないため（2026-11 に Mac mini で mise が32時間止まった）。
 
 確認: `launchctl print gui/$(id -u)/com.junhat6.homebrew-update`。結果は `~/.claude/logs/homebrew-update.log` の終了コードを確認する。手動で同じ処理を実行する場合は `bash ~/.config/dotfiles/scripts/homebrew-update.sh`。既存のbrewfile-syncは一覧保存、dotfiles-updateは設定同期であり、パッケージ更新ではない。

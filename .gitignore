@@ -140,4 +140,5 @@
 !/.config/dotfiles/scripts/orca-autoupdate.py
 !/.config/dotfiles/scripts/install-orca-autoupdate.py
 !/.config/dotfiles/scripts/converge.py
+!/.config/dotfiles/scripts/install-brew-sudoers.sh
 !/.config/dotfiles/tests/test_orca_autoupdate.py

@@ -147,7 +147,8 @@ def homebrew_issues(issues, log=HOMEBREW_LOG, now=None):
                    for m in [re.match(r'Error: ([\w@./+-]+): Failure while executing; `/usr/bin/sudo', line)] if m})
     if sudo:
         issues['homebrew:sudo'] = ('管理者パスワードが必要な更新があります。画面の前で実行してください: '
-                                   '`brew upgrade --cask ' + ' '.join(sudo) + '`')
+                                   '`brew upgrade --cask ' + ' '.join(sudo) + '`'
+                                   '（毎回なくすには一度だけ `bash ~/.config/dotfiles/scripts/install-brew-sudoers.sh`）')
     for line in run:
         if line.startswith('Step timed out'):
             issues['homebrew:timeout'] = 'Homebrew の定期更新で時間切れになった処理があります: ' + line
