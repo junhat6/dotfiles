@@ -96,9 +96,11 @@ Orcaの無人更新は `python3 ~/.config/dotfiles/scripts/install-orca-autoupda
 
 エラー時は次回に再試行し、更新要求後に確認が中断しても次回のバージョン確認で復帰する（過去のセッション継続まで成功と偽らない）。強制終了・通常Quitの追加送信・アプリ上書きはしない。`~/Library/Application Support/OrcaAutoUpdate/PAUSED` は明示的な手動停止専用。旧版が自動作成した停止フラグの解除はインストーラーでは行わない。更新ログは `~/Library/Logs/OrcaAutoUpdate/update.log`、状態は同サポートディレクトリの `last-update.json`。`--inspect` は更新せず状態を読む。停止は `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`、再有効化はインストーラーの再実行。
 
-セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy --no-quit`、`mise upgrade --global --yes --no-prune` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
+セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy --no-quit`（起動中のOrcaは対象から除外）、`mise upgrade --global --yes --no-prune` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
 
 自動更新を優先し、`auto_updates` caskもHomebrewの更新対象に含める。内蔵更新も併用するが、強制終了・強制上書き・無人sudoは使わない。`--no-quit` はアプリを終了させない指定であり、ディスク上の更新後にアプリの再起動が必要な場合がある。CLIやサービスの更新は動作変更やサービス再起動を伴う可能性がある。
+
+起動中のOrca.appはHomebrewで差し替えない。Orcaの画面は `app.asar` 内のハッシュ付きファイルを必要時に読み込むため、起動中に本体を置き換えると読み込みに失敗して画面が真っ白になる（2026-11 に毎朝発生）。起動中のOrcaは `orca-autoupdate`（内蔵アップデーター経由）で更新し、Homebrewは Orca 未起動時の予備経路とする。
 
 miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジェクト内の版指定・lockfileは変更しない。旧ツール版はロールバック用に残す。
 

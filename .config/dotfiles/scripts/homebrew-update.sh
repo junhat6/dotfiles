@@ -14,7 +14,20 @@ result=0
 if brew update; then
   brew upgrade --formula || result=1
   # Include self-updating apps and nightly builds without quitting running apps.
-  brew upgrade --cask --greedy --no-quit || result=1
+  # Never replace a running Orca.app: its renderer lazy-loads hashed chunks from
+  # app.asar, so swapping the bundle underneath it leaves a blank window.
+  # A running Orca is updated by its own updater (orca-autoupdate) instead.
+  if casks=$(brew outdated --cask --greedy --quiet); then
+    if ps -axo comm= | grep -qE '/Orca\.app/Contents/MacOS/Orca$'; then
+      casks=$(printf '%s\n' "$casks" | grep -vxE '(stablyai/orca/)?orca' || true)
+    fi
+    if [[ -n "$casks" ]]; then
+      # shellcheck disable=SC2086
+      brew upgrade --cask --greedy --no-quit $casks || result=1
+    fi
+  else
+    result=1
+  fi
 else
   result=1
 fi
