@@ -245,9 +245,13 @@ def converge():
 
 def store_webhook(reference):
     try:
-        result = subprocess.run(['op', 'read', '--no-newline', reference], capture_output=True, text=True, env=op_env())
+        # A pending 1Password/Keychain dialog nobody answers must not hang the update job.
+        result = subprocess.run(['op', 'read', '--no-newline', reference], capture_output=True, text=True,
+                                env=op_env(), timeout=60)
     except FileNotFoundError:
         raise ValueError('op が見つかりません (brew install --cask 1password-cli)')
+    except subprocess.TimeoutExpired:
+        raise ValueError('1Password の応答が60秒ありません (画面に承認ダイアログが出ていないか確認)')
     if result.returncode:
         raise ValueError('1Password から読めませんでした: ' + result.stderr.strip())
     url = result.stdout.strip()
