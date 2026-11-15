@@ -176,6 +176,8 @@ CLIはフォルダ作成とGUI操作の指示だけを行う。表示ログだ�
 
 公式Standalone版を `brew install --cask tailscale-app` で導入する。CLI専用formulaの `tailscale` は重複導入しない。権限対象アプリとして前半で導入し、拡張機能・VPN許可・ログインを案内する。接続先tailnetやアカウントを推測しない。新しいネットワーク権限や登録の同意は実行環境の確認ルールに従う。
 
+`tailscale` コマンドは yadm 管理の `~/.local/bin/tailscale`（アプリ本体 `/Applications/Tailscale.app/Contents/MacOS/Tailscale` へ引数を渡すラッパー）で使う。アプリ設定の「Add Now」は `/usr/local/bin` への書き込みに管理者権限が要るため使わない。本体へのシンボリックリンクは起動パスからアプリバンドルを特定できず失敗する場合があるため、ラッパーにしている。
+
 `yadm bootstrap` / `install.sh --apply` で `io.tailscale.ipn.macsys` の `SUEnableAutomaticChecks` と `SUAutomaticallyUpdate` をtrueに設定し、アプリ内のSparkle更新を使う。Homebrewの日次更新は自動更新対応caskを除外するため二重管理しない。公式資料: https://tailscale.com/kb/1315/mdm-keys 。
 
 ログイン時の起動も設定する。アプリの「Launch Tailscale at login」で `Start on Login could not be set` が出る版がある（https://github.com/tailscale/tailscale/issues/18042）。その場合はmacOSの「システム設定 → 一般 → ログイン項目と機能拡張 → ログイン時に開く」の追加ボタンから `/Applications/Tailscale.app` を選ぶ。既存項目を残し、重複登録しない。追加後、一覧にTailscale.appが表示されたことをGUIで確認する。アプリ自身のチェックがオフのままでも、macOS側の登録とは別なのでチェック表示だけで失敗と判断しない。ログアウト／再起動による実起動確認はユーザーの都合に合わせ、勝手に実施しない。
