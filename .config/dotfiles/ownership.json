@@ -100,7 +100,11 @@
     ".config/dotfiles/tests/test_orca_sidebar.py",
     ".config/dotfiles/claude-settings.json",
     ".config/dotfiles/scripts/install-orca-sidebar.py",
-    ".config/dotfiles/scripts/context7-headers.sh"
+    ".config/dotfiles/scripts/context7-headers.sh",
+    ".config/dotfiles/scripts/disk-cleanup.sh",
+    ".config/dotfiles/templates/com.junhat6.disk-cleanup.plist",
+    ".config/dotfiles/ssh/tailnet.conf",
+    ".config/dotfiles/tests/test_disk_cleanup.py"
   ],
   "local": [
     ".claude/settings.json",
@@ -192,6 +196,10 @@
     {
       "template": ".config/dotfiles/templates/com.junhat6.homebrew-update.plist",
       "output": "Library/LaunchAgents/com.junhat6.homebrew-update.plist"
+    },
+    {
+      "template": ".config/dotfiles/templates/com.junhat6.disk-cleanup.plist",
+      "output": "Library/LaunchAgents/com.junhat6.disk-cleanup.plist"
     }
   ],
   "discovery_roots": [

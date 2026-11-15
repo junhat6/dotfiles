@@ -143,3 +143,8 @@
 !/.config/dotfiles/scripts/converge.py
 !/.config/dotfiles/scripts/install-brew-sudoers.sh
 !/.config/dotfiles/tests/test_orca_autoupdate.py
+!/.config/dotfiles/ssh/
+!/.config/dotfiles/ssh/tailnet.conf
+!/.config/dotfiles/scripts/disk-cleanup.sh
+!/.config/dotfiles/templates/com.junhat6.disk-cleanup.plist
+!/.config/dotfiles/tests/test_disk_cleanup.py

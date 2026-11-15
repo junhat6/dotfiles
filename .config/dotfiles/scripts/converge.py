@@ -35,6 +35,7 @@ DAY = 86400
 SERVICES = [
     {'label': 'com.junhat6.homebrew-update'},
     {'label': 'com.claude.brewfile-sync'},
+    {'label': 'com.junhat6.disk-cleanup'},
     {'label': 'com.junhat6.orca-autoupdate', 'installer': 'install-orca-autoupdate.py',
      'installed_copy': HOME / 'Library/Application Support/OrcaAutoUpdate/orca-autoupdate.py',
      'source': SCRIPTS / 'orca-autoupdate.py', 'requires': Path('/Applications/Orca.app')},
@@ -101,6 +102,25 @@ def converge_services(state, issues, disabled=None, is_loaded=loaded, run=sh):
                     f'`dotfiles services reload {label}`')
         except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
             issues[label + ':register'] = f'`{label}` を登録できませんでした: {exc}'
+
+
+SSH_INCLUDE = 'Include ~/.config/dotfiles/ssh/tailnet.conf'
+
+
+def ensure_ssh_include(home=HOME):
+    """Make the shared tailnet hosts usable; ~/.ssh itself stays local and untracked.
+
+    The Include goes first: placed after a Host block, ssh would apply it to that host only.
+    """
+    ssh = home / '.ssh'
+    config = ssh / 'config'
+    current = config.read_text() if config.exists() else ''
+    if any(line.strip() == SSH_INCLUDE for line in current.splitlines()):
+        return False
+    ssh.mkdir(mode=0o700, exist_ok=True)
+    atomic_write(config, (SSH_INCLUDE + '\n' + current).encode(), 0o600)
+    print('converge: added tailnet hosts to ~/.ssh/config')
+    return True
 
 
 def reload_service(label, state):
@@ -222,6 +242,10 @@ def converge():
         state = load_state()
         issues = {}
         converge_services(state, issues)
+        try:
+            ensure_ssh_include()
+        except (OSError, ValueError) as exc:
+            issues['ssh:include'] = '~/.ssh/config に tailnet の接続先を追加できませんでした: ' + str(exc)
         update_issues(issues)
         homebrew_issues(issues)
         url = webhook()

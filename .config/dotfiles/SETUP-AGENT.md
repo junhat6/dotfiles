@@ -112,7 +112,7 @@ miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジ�
 
 ### 常駐処理の自動登録と Discord 通知
 
-`dotfiles update`（15分ごと）の最後に、各 Mac で `dotfiles converge` が動く。全 Mac で動かすべき常駐処理（`com.junhat6.homebrew-update`、`com.claude.brewfile-sync`、Orca が入っている Mac の `com.junhat6.orca-autoupdate`）のうち、launchd に未登録のものだけを登録する。動いている処理は止めない・再起動しない。`orca-autoupdate` は実行用コピーが古ければ取り替える（次の定期実行から新しい版で動く）。特定の Mac で止めたい処理は `launchctl disable gui/$(id -u)/<label>` で止める（bootout だけだと次の converge で再登録される）。
+`dotfiles update`（15分ごと）の最後に、各 Mac で `dotfiles converge` が動く。全 Mac で動かすべき常駐処理（`com.junhat6.homebrew-update`、`com.claude.brewfile-sync`、`com.junhat6.disk-cleanup`、Orca が入っている Mac の `com.junhat6.orca-autoupdate`）のうち、launchd に未登録のものだけを登録する。動いている処理は止めない・再起動しない。`orca-autoupdate` は実行用コピーが古ければ取り替える（次の定期実行から新しい版で動く）。特定の Mac で止めたい処理は `launchctl disable gui/$(id -u)/<label>` で止める（bootout だけだと次の converge で再登録される）。
 
 人の操作が必要なもの（sudo が必要な cask 更新、plist が変わった常駐処理の再読み込み、取り込みの保留、Homebrew 更新の停止・時間切れ、登録の失敗）は Discord に送る。同じ内容は1日1回まで、解消したら1回だけ「解消しました」を送る。Webhook URL の正本は 1Password の `op://Automation/dotfiles-discord-webhook/credential`。各 Mac で一度 `dotfiles discord-webhook` を実行するとキーチェーンへ取り込み、テスト通知を送る。未設定の Mac は通知せずログにだけ残す。plist の変更による再読み込みは `dotfiles services reload <label>`。状態は `~/Library/Application Support/dotfiles/converge-state.json`。
 

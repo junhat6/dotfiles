@@ -154,5 +154,29 @@ class ServicesTest(unittest.TestCase):
         self.assertIn('Bootstrap failed', issues['a.plain:register'])
 
 
+class SshIncludeTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.home = Path(self.directory.name)
+
+    def test_include_is_added_first_once(self):
+        (self.home / '.ssh').mkdir()
+        config = self.home / '.ssh/config'
+        config.write_text('Host other\n    User x\n')
+        self.assertTrue(converge.ensure_ssh_include(self.home))
+        self.assertFalse(converge.ensure_ssh_include(self.home))
+        lines = config.read_text().splitlines()
+        self.assertEqual(lines[0], converge.SSH_INCLUDE)
+        self.assertEqual(lines.count(converge.SSH_INCLUDE), 1)
+        self.assertIn('Host other', lines)
+        self.assertEqual(config.stat().st_mode & 0o777, 0o600)
+
+    def test_missing_ssh_directory_is_created_private(self):
+        self.assertTrue(converge.ensure_ssh_include(self.home))
+        self.assertEqual((self.home / '.ssh').stat().st_mode & 0o777, 0o700)
+        self.assertEqual((self.home / '.ssh/config').read_text(), converge.SSH_INCLUDE + '\n')
+
+
 if __name__ == '__main__':
     unittest.main()

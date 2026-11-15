@@ -297,7 +297,7 @@ miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジ�
 
 ### 常駐処理の自動登録と Discord 通知
 
-`dotfiles update`（15分ごと）の最後に、各 Mac で `dotfiles converge` が動く。全 Mac で動かすべき常駐処理（`com.junhat6.homebrew-update`、`com.claude.brewfile-sync`、Orca が入っている Mac の `com.junhat6.orca-autoupdate`）のうち、launchd に未登録のものだけを登録する。動いている処理は止めない・再起動しない。`orca-autoupdate` は実行用コピーが古ければ取り替える（次の定期実行から新しい版で動く）。特定の Mac で止めたい処理は `launchctl disable gui/$(id -u)/<label>` で止める（bootout だけだと次の converge で再登録される）。
+`dotfiles update`（15分ごと）の最後に、各 Mac で `dotfiles converge` が動く。全 Mac で動かすべき常駐処理（`com.junhat6.homebrew-update`、`com.claude.brewfile-sync`、`com.junhat6.disk-cleanup`、Orca が入っている Mac の `com.junhat6.orca-autoupdate`）のうち、launchd に未登録のものだけを登録する。動いている処理は止めない・再起動しない。`orca-autoupdate` は実行用コピーが古ければ取り替える（次の定期実行から新しい版で動く）。特定の Mac で止めたい処理は `launchctl disable gui/$(id -u)/<label>` で止める（bootout だけだと次の converge で再登録される）。
 
 人の操作が必要なもの（sudo が必要な cask 更新、plist が変わった常駐処理の再読み込み、取り込みの保留、Homebrew 更新の停止・時間切れ、登録の失敗）は Discord に送る。同じ内容は1日1回まで、解消したら1回だけ「解消しました」を送る。Webhook URL の正本は 1Password の `op://Automation/dotfiles-discord-webhook/credential`。各 Mac で一度 `dotfiles discord-webhook` を実行するとキーチェーンへ取り込み、テスト通知を送る。未設定の Mac は通知せずログにだけ残す。plist の変更による再読み込みは `dotfiles services reload <label>`。状態は `~/Library/Application Support/dotfiles/converge-state.json`。
 
@@ -330,3 +330,24 @@ python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --
 ```
 
 参考: https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html
+
+## ディスクの定期掃除
+
+`com.junhat6.disk-cleanup` が毎週日曜 06:00 に `.config/dotfiles/scripts/disk-cleanup.sh` を実行する（converge が全 Mac に登録）。消すのは、必要になれば再取得・再生成されるものだけ。
+
+- Chrome の起動用コピー（`$TMPDIR/../X/com.google.Chrome*.code_sign_clone/`）。Chrome は起動のたびに本体をここへ複製し、正常終了で消す。自動操作などで強制終了されると残り、Chrome 更新後は旧版のデータを抱えたまま溜まる。作成から1日以内のもの、実行中の Chrome が使っている版（lsof で実行ファイルを inode 照合）は残す。lsof が使えない時は何も消さない。
+- `brew cleanup -s --prune=all`、`mise cache clear`、`mise prune --yes`（日次の `--no-prune` で残した旧版を週1で整理。ロールバックの猶予は最大1週間）、`npm cache clean --force`、`uv cache prune`
+- Docker が既に起動している時だけ、タグのないイメージと30日より古いビルドキャッシュ。VM を起動しない。コンテナ・ボリュームは消さない。
+
+ワークツリー・プロジェクトのファイル・Docker のボリュームは対象外。結果は `~/.claude/logs/disk-cleanup.log`（開始・終了時の空き容量つき）。今すぐ実行: `launchctl kickstart gui/$(id -u)/com.junhat6.disk-cleanup`。止める: `launchctl disable gui/$(id -u)/com.junhat6.disk-cleanup`。
+
+## tailnet の Mac へ SSH
+
+`.config/dotfiles/ssh/tailnet.conf` に `macbook-raw` / `macmini-raw` を定義し、converge が `~/.ssh/config` の先頭へ `Include` を1行追加する。鍵・known_hosts・authorized_keys は共有しない（`~/.ssh` は端末ローカル）。名前は Tailscale MagicDNS の短縮名で、tailnet 内でだけ解決する。接続を10分再利用するので、AI エージェントが短いコマンドを繰り返しても速い。
+
+接続される側の Mac で一度だけ行う:
+
+1. システム設定 → 一般 → 共有 → リモートログインをオン。「アクセスを許可」は自分のユーザーだけにする。
+2. 接続元の公開鍵（`~/.ssh/id_ed25519.pub`、無ければ `ssh-keygen -t ed25519`）を `~/.ssh/authorized_keys` に追加する。`from="<接続元の Tailscale IP>"` を前置すると tailnet の当該端末からだけ使える鍵になる。
+
+確認: `ssh macbook-raw hostname`。
