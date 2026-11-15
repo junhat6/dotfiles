@@ -21,8 +21,14 @@ class HomebrewUpdateTest(unittest.TestCase):
             mise.chmod(0o755)
             script = root / 'update.sh'
             script.write_text(SCRIPT.read_text().replace('export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"', 'export PATH="' + directory + ':/usr/bin:/bin"'))
-            result = subprocess.run(['bash', str(script)], env={**os.environ, 'CALLS':str(root/'calls'), 'FAILURE':failure, 'OUTDATED':outdated, 'MISE_HANGS':'1' if mise_hangs else '0', 'HOMEBREW_UPDATE_STEP_TIMEOUT':'2', 'HOMEBREW_UPDATE_KILL_GRACE':'1', 'ORCA_RUNNING':'1' if orca_running else '0'}, capture_output=True, timeout=30)
+            self.state = root / 'state'
+            tracked = self.state / 'tracked-configs'
+            tracked.mkdir(parents=True)
+            (tracked / 'docs').symlink_to(Path.home() / 'Documents/x/mise.toml')
+            (tracked / 'repo').symlink_to(Path.home() / 'ghq/x/mise.toml')
+            result = subprocess.run(['bash', str(script)], env={**os.environ, 'MISE_STATE_DIR':str(self.state), 'CALLS':str(root/'calls'), 'FAILURE':failure, 'OUTDATED':outdated, 'MISE_HANGS':'1' if mise_hangs else '0', 'HOMEBREW_UPDATE_STEP_TIMEOUT':'2', 'HOMEBREW_UPDATE_KILL_GRACE':'1', 'ORCA_RUNNING':'1' if orca_running else '0'}, capture_output=True, timeout=30)
             self.output = result.stdout.decode()
+            self.tracked_left = sorted(x.name for x in tracked.iterdir())
             return result.returncode, (root/'calls').read_text().splitlines()
 
     def test_normal(self):
@@ -72,3 +78,8 @@ class HomebrewUpdateTest(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn('Step timed out after 2s: mise upgrade', self.output)
         self.assertIn('Homebrew maintenance exit=1', self.output)
+
+    def test_protected_mise_configs_are_forgotten_before_upgrade(self):
+        code, calls = self.run_update()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.tracked_left, ['repo'])

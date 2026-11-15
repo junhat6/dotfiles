@@ -19,6 +19,7 @@ cat >"$rule" <<EOF
 Cmnd_Alias BREW_CASK = /usr/bin/xargs, /bin/rm, /bin/rmdir, /bin/mkdir, /bin/mv, /bin/cp, \\
     /bin/chmod, /usr/sbin/chown, /usr/bin/chflags, /usr/bin/ditto, /usr/sbin/installer, \\
     /usr/sbin/pkgutil, /bin/launchctl, /usr/bin/killall, /usr/bin/pkill, \\
+    /Library/Application\\ Support/org.pqrs/*/*.sh, \\
     /Library/Application\\ Support/org.pqrs/*/scripts/uninstall/*.sh
 ${user} ALL=(root) NOPASSWD:SETENV: BREW_CASK
 EOF

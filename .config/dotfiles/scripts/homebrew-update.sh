@@ -58,7 +58,24 @@ else
 fi
 # Only the shared environment: never read or modify project version pins.
 # Keep old versions for rollback and avoid background confirmation prompts.
+# After installing, mise rebuilds shims and re-opens every project config it has ever
+# seen (tracked-configs). Opening one under a privacy-protected folder (Documents,
+# Desktop, Downloads, iCloud, external volumes) from this background job waits on a
+# macOS privacy (TCC) prompt nobody answers, so mise hung for hours. Forget only those
+# links; mise tracks a project again the next time it is used there.
+forget_protected_mise_configs() {
+  local dir="${MISE_STATE_DIR:-$HOME/.local/state/mise}/tracked-configs" link
+  [[ -d "$dir" ]] || return 0
+  for link in "$dir"/*; do
+    [[ -L "$link" ]] || continue
+    case "$(readlink "$link")" in
+      "$HOME/Documents/"*|"$HOME/Desktop/"*|"$HOME/Downloads/"*|"$HOME/Library/Mobile Documents/"*|"$HOME/Library/CloudStorage/"*|/Volumes/*)
+        rm -f "$link" ;;
+    esac
+  done
+}
 if command -v mise >/dev/null 2>&1; then
+  forget_protected_mise_configs
   limited mise upgrade --global --yes --no-prune || result=1
 fi
 printf '[%s] Homebrew maintenance exit=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$result"

@@ -303,7 +303,7 @@ miseの共通設定は原則 `latest`、Nodeは `lts` に追従し、プロジ�
 
 sudo が必要な cask（root 所有の旧ファイル削除、pkg、アンインストールスクリプト）を無人で更新するため、各 Mac で一度 `bash ~/.config/dotfiles/scripts/install-brew-sudoers.sh` を画面の前で実行する。`/etc/sudoers.d/homebrew-unattended` に brew が使うコマンドだけのパスワードなし sudo を入れる。`xargs`/`rm` を含むため、このユーザーで動くプロセスにとっては実質 root 相当になる（パスワード自体は保存しない、という判断で受け入れている）。一覧にないコマンドが必要な cask は引き続き失敗し Discord に通知される。
 
-Homebrew 更新の各段階（brew update / upgrade / mise）は1時間で打ち切る。止まった処理が残ると launchd が次の 04:00 の回を起動しないため（2026-11 に Mac mini で mise が32時間止まった）。
+Homebrew 更新の各段階（brew update / upgrade / mise）は1時間で打ち切る。止まった処理が残ると launchd が次の 04:00 の回を起動しないため（2026-11 に Mac mini で mise が32時間止まった）。原因は、mise がインストール後に過去のプロジェクト設定（tracked-configs）を開き直す際、`~/Documents` などプライバシー保護されたフォルダの設定を開くと、バックグラウンドでは誰も応答しない macOS の許可ダイアログ（TCC）を待ち続けることだった。そのため mise の実行前に、保護フォルダを指す tracked-configs のリンクだけを消す（プロジェクトを次に使えば mise が再び記録する）。
 
 確認: `launchctl print gui/$(id -u)/com.junhat6.homebrew-update`。結果は `~/.claude/logs/homebrew-update.log` の終了コードを確認する。手動で同じ処理を実行する場合は `bash ~/.config/dotfiles/scripts/homebrew-update.sh`。既存のbrewfile-syncは一覧保存、dotfiles-updateは設定同期であり、パッケージ更新ではない。
 
