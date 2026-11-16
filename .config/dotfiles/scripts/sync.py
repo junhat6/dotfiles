@@ -20,8 +20,11 @@ def state_dir(repo):
 
 
 def command(repo, *args):
+    # A stalled HTTPS transfer (e.g. right after a laptop wakes) fails in 30s instead of
+    # sitting until the 120s subprocess timeout.
     env = dict(os.environ, GIT_TERMINAL_PROMPT='0', GCM_INTERACTIVE='never',
-               GIT_SSH_COMMAND='ssh -oBatchMode=yes -oConnectTimeout=15')
+               GIT_SSH_COMMAND='ssh -oBatchMode=yes -oConnectTimeout=15',
+               GIT_HTTP_LOW_SPEED_LIMIT='1000', GIT_HTTP_LOW_SPEED_TIME='30')
     result = subprocess.run(list(args), cwd=repo.root, env=env, capture_output=True, timeout=120)
     if result.returncode:
         raise ValueError(result.stderr.decode(errors='replace').strip() or result.stdout.decode(errors='replace').strip() or 'command failed: ' + ' '.join(args))
@@ -77,11 +80,23 @@ def _update(repo):
             print('dotfiles: ' + result['status'] + ' ' + target[:12])
             return 0
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
-            result.update(status='blocked', message=str(exc))
+            # Keep when blocking began, so the notifier can ignore one-off network blips
+            # that the next 15-minute run clears by itself.
+            result.update(status='blocked', message=str(exc), since=blocked_since(directory))
             print('dotfiles: 更新を保留しました: ' + str(exc))
             return 1
         finally:
             atomic_write(directory / 'last-update.json', (json.dumps(result, ensure_ascii=False, indent=2) + '\n').encode(), 0o600)
+
+
+def blocked_since(directory):
+    try:
+        previous = json.loads((directory / 'last-update.json').read_text())
+    except (OSError, ValueError):
+        previous = {}
+    if previous.get('status') == 'blocked' and isinstance(previous.get('since'), (int, float)):
+        return previous['since']
+    return int(time.time())
 
 
 def auto_update(repo, action):

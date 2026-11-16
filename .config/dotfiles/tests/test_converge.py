@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -83,6 +84,44 @@ class HomebrewLogTest(unittest.TestCase):
                             'Step timed out after 3600s: mise upgrade --global\n'
                             '[2026-11-14T05:00:05+0900] Homebrew maintenance exit=1\n')
         self.assertIn('mise upgrade', found['homebrew:timeout'])
+
+    def test_failure_in_two_runs_in_a_row_is_reported(self):
+        run = ('[2026-11-1{d}T04:00:05+0900] Homebrew maintenance started\n'
+               'Error: karabiner-elements: uninstall script /x/remove_files.sh does not exist.\n'
+               'Error: zoom: Broken pipe\n'
+               '[2026-11-1{d}T04:01:30+0900] Homebrew maintenance exit=1\n')
+        self.assertEqual(self.issues(run.format(d=5)), {})
+        found = self.issues(run.format(d=5).replace('Error: zoom: Broken pipe\n', '') + run.format(d=6))
+        self.assertEqual(list(found), ['homebrew:failed'])
+        self.assertIn('karabiner-elements', found['homebrew:failed'])
+        self.assertNotIn('zoom', found['homebrew:failed'])
+
+    def test_sudo_failure_is_not_double_reported(self):
+        run = ('[2026-11-1{d}T04:00:05+0900] Homebrew maintenance started\n'
+               'Error: capsomnia: Failure while executing; `/usr/bin/sudo -u root`\n'
+               '[2026-11-1{d}T04:01:30+0900] Homebrew maintenance exit=1\n')
+        self.assertEqual(list(self.issues(run.format(d=5) + run.format(d=6))), ['homebrew:sudo'])
+
+
+class UpdateIssuesTest(unittest.TestCase):
+    def issues(self, data, now):
+        with tempfile.TemporaryDirectory() as directory:
+            last = Path(directory) / 'last-update.json'
+            last.write_text(json.dumps(data))
+            found = {}
+            converge.update_issues(found, last, now)
+            return found
+
+    def test_short_block_is_ignored_then_reported(self):
+        data = {'status': 'blocked', 'message': 'fetch timed out', 'since': 1000}
+        self.assertEqual(self.issues(data, 1000 + 1800), {})
+        self.assertIn('fetch timed out', self.issues(data, 1000 + converge.BLOCKED_GRACE)['dotfiles:blocked'])
+
+    def test_block_without_start_time_is_reported(self):
+        self.assertIn('dotfiles:blocked', self.issues({'status': 'blocked', 'message': 'x'}, 1000))
+
+    def test_current_is_quiet(self):
+        self.assertEqual(self.issues({'status': 'current'}, 1000), {})
 
 
 class ServicesTest(unittest.TestCase):

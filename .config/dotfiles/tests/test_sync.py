@@ -62,6 +62,21 @@ class RemoteFollowing(unittest.TestCase):
         self.assertNotEqual(self.cli('update', success=False).returncode, 0)
         self.assertEqual(self.git('rev-parse', 'HEAD').stdout, head)
 
+    def test_block_keeps_its_start_time(self):
+        self.remote()
+        self.git('checkout', '-qb', 'feature')
+        path = self.root / 'Library/Application Support/dotfiles/last-update.json'
+        self.cli('update', success=False)
+        first = json.loads(path.read_text())
+        self.assertEqual(first['status'], 'blocked')
+        first['since'] = 1000
+        path.write_text(json.dumps(first))
+        self.cli('update', success=False)
+        self.assertEqual(json.loads(path.read_text())['since'], 1000)
+        self.git('checkout', '-q', 'main')
+        self.cli('update')
+        self.assertNotIn('since', json.loads(path.read_text()))
+
     def test_non_main_is_untouched(self):
         self.remote()
         self.git('checkout', '-qb', 'feature')

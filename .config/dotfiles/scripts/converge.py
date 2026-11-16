@@ -135,12 +135,21 @@ def reload_service(label, state):
     state.setdefault('plist_hashes', {})[label] = digest(plist)
 
 
-def update_issues(issues):
-    last = STATE / 'last-update.json'
+# The auto-pull runs every 15 minutes; a block that clears within this window (network
+# down while the laptop wakes or roams) is not worth a human's attention.
+BLOCKED_GRACE = 3600
+
+
+def update_issues(issues, last=None, now=None):
+    last = last or STATE / 'last-update.json'
     if last.exists():
         data = json.loads(last.read_text())
-        if data.get('status') == 'blocked':
-            issues['dotfiles:blocked'] = 'dotfiles の自動取り込みが保留中です: ' + data.get('message', '')
+        if data.get('status') != 'blocked':
+            return
+        since = data.get('since')
+        if isinstance(since, (int, float)) and (now or time.time()) - since < BLOCKED_GRACE:
+            return
+        issues['dotfiles:blocked'] = 'dotfiles の自動取り込みが保留中です: ' + data.get('message', '')
 
 
 def homebrew_issues(issues, log=HOMEBREW_LOG, now=None):
@@ -152,6 +161,7 @@ def homebrew_issues(issues, log=HOMEBREW_LOG, now=None):
     if not starts:
         return
     run = lines[starts[-1]:]
+    previous = lines[starts[-2]:starts[-1]] if len(starts) > 1 else []
     started = re.match(r'\[([^\]]+)\]', run[0])
     finished = any('Homebrew maintenance exit=' in line for line in run)
     if not finished and started:
@@ -172,6 +182,18 @@ def homebrew_issues(issues, log=HOMEBREW_LOG, now=None):
     for line in run:
         if line.startswith('Step timed out'):
             issues['homebrew:timeout'] = 'Homebrew の定期更新で時間切れになった処理があります: ' + line
+    # Any other per-package failure (e.g. a cask whose old uninstall script is gone) used to
+    # fail silently every day. Report it only when it also failed the run before, so a
+    # one-off download hiccup ("Broken pipe") clears itself without a message.
+    failing = sorted((failed_packages(run) & failed_packages(previous)) - set(sudo))
+    if failing:
+        issues['homebrew:failed'] = ('Homebrew の定期更新で 2 回続けて失敗している更新があります: '
+                                     + ' '.join(failing)
+                                     + '（~/.claude/logs/homebrew-update.log の Error 行を確認してください）')
+
+
+def failed_packages(lines):
+    return {m.group(1) for line in lines for m in [re.match(r'Error: ([\w@./+-]+): ', line)] if m}
 
 
 def webhook():
