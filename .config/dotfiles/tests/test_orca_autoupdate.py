@@ -1,7 +1,5 @@
 import importlib.util
-import json
 from pathlib import Path
-import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -10,75 +8,71 @@ u = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(u)
 
 
-def snapshot(version='1.4.245', state='not-available'):
-    return {'appVersion': version, 'support': {'automatic': True, 'installMode': 'interactive'},
-            'status': {'state': state, 'source': 'release'}}
+def status(state, version=None, app='1.4.261'):
+    return {'appVersion': app, 'status': {'state': state, 'version': version}}
 
 
-class RecoveryTests(unittest.TestCase):
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.base = Path(self.temp.name)
-        self.p = patch.object(u, 'BASE', self.base)
-        self.p.start()
-        self.addCleanup(self.p.stop)
+class FakeOrca:
+    """Answers RPCs from a scripted list of updater.getStatus replies."""
 
-    def pending(self, at=0):
-        u.save('last-update.json', {'state': 'install-requested', 'target': '1.4.230', 'at': at})
+    def __init__(self, statuses, accepted=True):
+        self.statuses = list(statuses)
+        self.accepted = accepted
+        self.calls = []
 
-    def test_interrupted_update_recovers_without_claiming_session_survival(self):
-        self.pending()
-        with patch.object(u, 'rpc', return_value=snapshot()) as rpc:
+    def __call__(self, method, params=None):
+        self.calls.append((method, params))
+        if method == 'updater.getStatus':
+            return self.statuses.pop(0) if len(self.statuses) > 1 else self.statuses[0]
+        if method == 'updater.install':
+            return {'accepted': self.accepted}
+        return None
+
+    def methods(self):
+        return [method for method, _ in self.calls]
+
+
+class RunTests(unittest.TestCase):
+    def run_with(self, orca):
+        with patch.object(u, 'rpc', orca), patch.object(u.time, 'sleep'):
             u.run()
-        saved = json.loads((self.base / 'last-update.json').read_text())
-        self.assertEqual(saved['state'], 'version-confirmed')
-        self.assertNotIn('preservedLocalTerminals', saved)
-        self.assertIn('updater.check', [c.args[0] for c in rpc.call_args_list])
 
-    def test_recent_pending_install_does_not_repeat_install(self):
-        self.pending(at=u.time.time())
-        with patch.object(u, 'rpc', return_value=snapshot('1.4.229')) as rpc:
+    def test_up_to_date_does_nothing(self):
+        orca = FakeOrca([status('not-available')])
+        self.run_with(orca)
+        self.assertEqual(orca.methods(), ['updater.check', 'updater.getStatus'])
+
+    def test_checks_stable_releases_only(self):
+        orca = FakeOrca([status('not-available')])
+        self.run_with(orca)
+        self.assertEqual(orca.calls[0][1], {'includePrerelease': False, 'includePerfPrerelease': False})
+
+    def test_available_update_is_downloaded_once_then_installed(self):
+        orca = FakeOrca([status('checking'), status('available', '1.4.262'),
+                         status('downloading', '1.4.262'), status('available', '1.4.262'),
+                         status('downloaded', '1.4.262')])
+        self.run_with(orca)
+        self.assertEqual(orca.methods().count('updater.download'), 1)
+        self.assertEqual(orca.methods()[-1], 'updater.install')
+
+    def test_never_stops_the_app_itself(self):
+        orca = FakeOrca([status('downloaded', '1.4.262')])
+        with patch.object(u.os, 'kill') as kill, patch.object(u, 'rpc', orca), patch.object(u.time, 'sleep'):
             u.run()
-        self.assertEqual(rpc.call_count, 1)
+        kill.assert_not_called()
 
-    def test_old_failed_install_retries(self):
-        self.pending()
-        with patch.object(u, 'rpc', return_value=snapshot('1.4.229')) as rpc:
-            u.run()
-        self.assertIn('updater.check', [c.args[0] for c in rpc.call_args_list])
-        self.assertFalse((self.base / 'PAUSED').exists())
-
-    def test_inspect_does_not_change_pending_record(self):
-        self.pending()
-        before = (self.base / 'last-update.json').read_bytes()
-        with patch.object(u, 'rpc', return_value=snapshot()), patch.object(u, 'daemon_snapshot', return_value={}), patch.object(u, 'terminal_snapshot', return_value={}):
-            with patch('builtins.print'):
-                u.run(inspect_only=True)
-        self.assertEqual((self.base / 'last-update.json').read_bytes(), before)
-        self.assertFalse((self.base / 'last-attempt.json').exists())
-
-    def test_manual_pause_is_respected(self):
-        (self.base / 'PAUSED').touch()
-        with patch.object(u, 'rpc') as rpc:
-            u.run()
-        rpc.assert_not_called()
-
-    def test_changed_daemon_inventory_with_surviving_terminals_succeeds(self):
-        downloaded = snapshot('1.4.245', 'downloaded')
-        downloaded['status']['version'] = '1.4.247'
-        replies = [snapshot(), None, downloaded, {'accepted': True}, snapshot('1.4.247')]
-        with patch.object(u, 'rpc', side_effect=replies), patch.object(u, 'daemon_snapshot', return_value={123: 'old daemon'}), patch.object(u, 'process_identity', return_value=None), patch.object(u, 'terminal_snapshot', return_value={'pty': 'same-incarnation'}), patch.object(u.time, 'sleep'):
-            u.run()
-        result = json.loads((self.base / 'last-update.json').read_text())
-        self.assertEqual(result['state'], 'verified')
-        self.assertFalse(result['sameDaemons'])
-        self.assertEqual(result['preservedLocalTerminals'], 1)
-        self.assertFalse((self.base / 'PAUSED').exists())
-
-    def test_prereleases_are_refused(self):
+    def test_updater_error_raises(self):
         with self.assertRaises(RuntimeError):
-            u.stable_version('1.4.246-rc.1')
+            self.run_with(FakeOrca([status('error')]))
+
+    def test_rejected_install_raises(self):
+        with self.assertRaises(RuntimeError):
+            self.run_with(FakeOrca([status('downloaded', '1.4.262')], accepted=False))
+
+    def test_gives_up_after_deadline(self):
+        clock = iter(range(0, 10 ** 6, 100))
+        with patch.object(u.time, 'monotonic', lambda: next(clock)), self.assertRaises(RuntimeError):
+            self.run_with(FakeOrca([status('downloading', '1.4.262')]))
 
 
 if __name__ == '__main__':

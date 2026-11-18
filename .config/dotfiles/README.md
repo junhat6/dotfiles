@@ -279,7 +279,7 @@ Orcaは公式の `stablyai/orca/orca` caskで初回導入する。既存のOrca.
 
 Orcaの無人更新は `python3 ~/.config/dotfiles/scripts/install-orca-autoupdate.py` で各Macに個別導入する（通常setupとは別の明示導入）。`com.junhat6.orca-autoupdate` がログイン時と3時間ごとに、起動中のローカルOrcaへ認証付きRPCで安定版の確認・ダウンロード・標準インストールを要求する。更新時は画面が再起動する。ログアウト中・スリープ中・Orca未起動時は更新できず、後の定期実行で再試行する。接続先Macへの一括更新はしない。
 
-エラー時は次回に再試行し、更新要求後に確認が中断しても次回のバージョン確認で復帰する（過去のセッション継続まで成功と偽らない）。強制終了・通常Quitの追加送信・アプリ上書きはしない。`~/Library/Application Support/OrcaAutoUpdate/PAUSED` は明示的な手動停止専用。旧版が自動作成した停止フラグの解除はインストーラーでは行わない。更新ログは `~/Library/Logs/OrcaAutoUpdate/update.log`、状態は同サポートディレクトリの `last-update.json`。`--inspect` は更新せず状態を読む。停止は `launchctl disable gui/$(id -u)/com.junhat6.orca-autoupdate` のあと `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`（disable しないと converge が再登録する）、再有効化は `launchctl enable` のあとインストーラーの再実行。
+エラー時は何もせず、次の定期実行で再試行する。スクリプトがするのは「再起動して更新」ボタンと同じ要求（確認・ダウンロード・インストール）だけで、アプリの終了・入れ替え・再起動はすべてOrcaに任せる。強制終了・通常Quitの追加送信・アプリ上書きはしない。そのため、更新時にOrcaが終了しないまま固まった場合（2026-11-18に1回発生。Orca側の修正 stablyai/orca#43652 待ち）は自動では直らない。症状は外部から6768番に繋がらないこと。古いOrcaのプロセスを終了すれば、ShipItが入れ替えて再起動する。ログは `~/Library/Logs/OrcaAutoUpdate/launchd.log`。停止は `launchctl disable gui/$(id -u)/com.junhat6.orca-autoupdate` のあと `launchctl bootout gui/$(id -u)/com.junhat6.orca-autoupdate`（disable しないと converge が再登録する）、再有効化は `launchctl enable` のあとインストーラーの再実行。
 
 セットアップのservices段階で `com.junhat6.homebrew-update` を有効化する。ログイン中、毎日ローカル時刻04:00に `brew update`（Homebrew本体・定義）、`brew upgrade --formula`、`brew upgrade --cask --greedy --no-quit`（起動中のOrcaは対象から除外）、`mise upgrade --global --yes --no-prune` を実行する。スリープ中の予定は復帰後に実行される。ログアウト中は実行されない。セットアップ直後に全アプリを更新する処理ではない。
 

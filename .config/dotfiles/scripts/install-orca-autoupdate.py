@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Install the per-user three-hour Orca updater. Does not unpause manual pauses."""
+"""Install the per-user three-hour Orca updater (LaunchAgent + script copy)."""
 from pathlib import Path
 import os
 import plistlib
