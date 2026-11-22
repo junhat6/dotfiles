@@ -26,6 +26,7 @@ alias reload='source ~/.zshrc'
 alias d='docker'
 alias dc='docker compose'
 alias cc='claude --dangerously-skip-permissions'
+alias agyyolo='agy --dangerously-skip-permissions'
 alias lg='lazygit'
 
 # === dotfiles (yadm) ===
