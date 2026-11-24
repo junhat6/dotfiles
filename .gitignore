@@ -35,6 +35,8 @@
 !/.claude/hooks/watch-and-save.sh
 !/.claude/rules/context7.md
 !/.claude/rules/human-checkpoint.md
+!/.claude/rules/google-workspace.md
+!/.claude/rules/browser.md
 !/.claude/statusline-command.sh
 !/.config/atuin/config.toml
 !/.config/dotfiles/Brewfile
