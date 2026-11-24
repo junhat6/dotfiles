@@ -25,23 +25,26 @@
 
 以下は [app_shortcuts.lua](modules/app_shortcuts.lua) の**初回設定**です。登録後の変更は端末ごとの `hs.settings` に保存されるため、README と実際の割り当てが異なる場合があります。
 
-| キー | 初回設定のアプリ |
-| --- | --- |
-| Alt + A | ChatGPT |
-| Alt + B | DBeaver |
-| Alt + C | Claude |
-| Alt + D | Discord |
-| Alt + F | Finder |
-| Alt + G | Google Chrome |
-| Alt + I | Visual Studio Code |
-| Alt + M | Muse |
-| Alt + O | Obsidian |
-| Alt + S | Slack |
-| Alt + T | WezTerm |
-| Alt + U | Orca |
-| Alt + Z | zoom.us |
+| キー | 初回設定のアプリ | 覚え方 |
+| --- | --- | --- |
+| Alt + A | Codex | |
+| Alt + B | DBeaver | |
+| Alt + C | Claude | |
+| Alt + D | Discord | |
+| Alt + F | Finder | |
+| Alt + G | Google Chrome | |
+| Alt + I | Visual Studio Code | |
+| Alt + O | Obsidian | |
+| Alt + P | 1Password | Password |
+| Alt + S | Slack | |
+| Alt + T | WezTerm | |
+| Alt + U | Orca | |
+| Alt + V | Amical | Voice（音声入力） |
+| Alt + Z | zoom.us | |
 
-**Alt + M → Muse は dotfiles の初回設定に含まれます。** 現在の端末の登録も `hs.settings` に保存され、設定の再読み込み・Hammerspoon の再起動後も保持されます。初期化済みの別端末では、初回設定を更新しても既存の登録は上書きしません。
+初回設定は、その端末で一度だけ `hs.settings` に書き込まれます。初期化済みの端末では、初回設定を更新しても既存の登録は上書きしません。
+
+後から既定に加えた割り当ては、`DEFAULT_BINDINGS` に加えて `ADDED_DEFAULTS` にも id 付きで書きます。初期化済みの端末でも、設定の再読み込み時に id ごとに一度だけ、**キーが空いている場合だけ**登録します。別のアプリに使用中なら追加せず通知します。一度適用した id は、後で解除しても再登録しません。
 
 現在の登録一覧・変更・解除は **Alt + Shift + P →「登録済みアプリショートカットを管理」** で確認できます。メニューバーの `⌨︎` からも操作できます。
 
@@ -120,7 +123,7 @@ Capsomnia は共有 [Brewfile](../.config/dotfiles/Brewfile) に含まれます�
 | Alt + Ctrl + H/L | 単語単位で左/右へ移動（Alt + ←/→ を出力） | Karabiner が処理。Hammerspoon のウィンドウ配置とは別 |
 | Alt + Ctrl + Shift + H/L | 単語単位で左/右へ選択を拡張 | Karabiner が処理 |
 | Alt + N、Alt + Shift + N/M | 変換しない | N はアプリ用に登録可能。Shift 付きの N/M は Hammerspoon でも未割り当て |
-| Alt + M | 変換しない | Muse を開く（初回設定） |
+| Alt + M | 変換しない | アプリ用に登録可能（初回設定では未割り当て） |
 
 Alt + H/L の1文字移動に Ctrl を足すと単語移動、さらに Shift を足すと単語単位の選択になります。Alt + Shift + L は引き続き URL ランチャーです。
 

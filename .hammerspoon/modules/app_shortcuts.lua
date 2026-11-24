@@ -15,6 +15,14 @@ local DEFAULT_BINDINGS = {
 	{ key = "z", name = "zoom.us" },
 	{ key = "u", name = "Orca" },
 	{ key = "v", name = "Amical" },
+	{ key = "p", name = "1Password" },
+}
+
+-- 初期化済みの端末には DEFAULT_BINDINGS の変更が届かないため、後から増やした既定の割り当てはここにも足す。
+-- 端末ごとに id 単位で一度だけ適用し、キーが空いている場合だけ登録する（利用者の割り当ては上書きしない）。
+-- 適用後に利用者が解除しても、同じ id は再適用しない。
+local ADDED_DEFAULTS = {
+	{ id = "2026-11-25-1password", key = "p", name = "1Password" },
 }
 
 local function trimmedString(value)
@@ -50,6 +58,7 @@ function AppShortcuts.new(options)
 	local self = setmetatable({}, AppShortcuts)
 	self.settingsKey = options.settingsKey or "appShortcutBindingsV1"
 	self.initializedKey = options.initializedKey or "appShortcutBindingsV1Initialized"
+	self.addedDefaultsKey = options.addedDefaultsKey or "appShortcutAddedDefaultsV1"
 	self.reservedKeys = options.reservedKeys or {}
 	self.showHelp = options.showHelp
 	self.paletteCallback = nil
@@ -620,8 +629,55 @@ function AppShortcuts:buildMenubarMenu()
 	return menu
 end
 
+function AppShortcuts:applyAddedDefaultsOnce()
+	local appliedSucceeded, storedApplied = pcall(hs.settings.get, self.addedDefaultsKey)
+	if not appliedSucceeded then
+		return
+	end
+	local applied = type(storedApplied) == "table" and storedApplied or {}
+
+	local bindings = self:loadBindings()
+	local bindingsChanged = false
+	local appliedChanged = false
+	for _, addition in ipairs(ADDED_DEFAULTS) do
+		if applied[addition.id] ~= true then
+			local key = addition.key
+			local current = bindings[key]
+			if self:isReserved(key) then
+				print("Alt + " .. key:upper() .. " は予約キーのため " .. addition.name .. " を追加しませんでした")
+			elseif current == nil then
+				bindings[key] = {
+					name = addition.name,
+					bundleID = self:resolveInstalledBundleID(addition.name),
+					savedAt = os.time(),
+				}
+				bindingsChanged = true
+				hs.alert.show("Alt + " .. key:upper() .. " に " .. addition.name .. " を登録しました")
+			elseif current.name ~= addition.name then
+				hs.alert.show(
+					"Alt + " .. key:upper() .. " は " .. self:bindingLabel(current) .. " に使用中のため、"
+						.. addition.name .. " は追加しませんでした"
+				)
+			end
+			applied[addition.id] = true
+			appliedChanged = true
+		end
+	end
+
+	if bindingsChanged and not self:saveBindings(bindings) then
+		return
+	end
+	if appliedChanged then
+		local succeeded, result = pcall(hs.settings.set, self.addedDefaultsKey, applied)
+		if not succeeded or result == false then
+			hs.alert.show("追加した既定ショートカットの適用状態を保存できませんでした")
+		end
+	end
+end
+
 function AppShortcuts:start()
 	self:migrateDefaultsOnce()
+	self:applyAddedDefaultsOnce()
 	-- 新しく予約されたキーの旧アプリ割り当ても保存済み設定から削除する。
 	local storedSucceeded, stored = pcall(hs.settings.get, self.settingsKey)
 	if storedSucceeded and type(stored) == "table" then
