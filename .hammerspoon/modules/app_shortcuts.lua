@@ -9,12 +9,12 @@ local DEFAULT_BINDINGS = {
 	{ key = "f", name = "Finder" },
 	{ key = "d", name = "Discord" },
 	{ key = "i", name = "Visual Studio Code" },
-	{ key = "m", name = "Muse", bundleID = "com.meta.endo" },
 	{ key = "b", name = "DBeaver" },
 	{ key = "c", name = "Claude" },
-	{ key = "a", name = "ChatGPT", bundleID = "com.openai.codex" },
+	{ key = "a", name = "Codex" },
 	{ key = "z", name = "zoom.us" },
 	{ key = "u", name = "Orca" },
+	{ key = "v", name = "Amical" },
 }
 
 local function trimmedString(value)
@@ -178,11 +178,11 @@ function AppShortcuts:launch(binding)
 	local launched = false
 	if binding.bundleID then
 		local succeeded, result = pcall(hs.application.launchOrFocusByBundleID, binding.bundleID)
-		launched = succeeded and result == true
+		launched = succeeded and result ~= false
 	end
 	if not launched and binding.name then
 		local succeeded, result = pcall(hs.application.launchOrFocus, binding.name)
-		launched = succeeded and result == true
+		launched = succeeded and result ~= false
 	end
 	if not launched then
 		hs.alert.show(self:bindingLabel(binding) .. "を開けませんでした")
@@ -283,7 +283,7 @@ function AppShortcuts:migrateDefaultsOnce()
 		for _, defaultBinding in ipairs(DEFAULT_BINDINGS) do
 			bindings[defaultBinding.key] = {
 				name = defaultBinding.name,
-				bundleID = defaultBinding.bundleID or self:resolveInstalledBundleID(defaultBinding.name),
+				bundleID = self:resolveInstalledBundleID(defaultBinding.name),
 				savedAt = os.time(),
 			}
 		end
