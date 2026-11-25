@@ -1,0 +1,6 @@
+{
+  "contentBoundaries": true,
+  "maxOutput": 50000,
+  "screenshotFormat": "jpeg",
+  "screenshotQuality": 80
+}

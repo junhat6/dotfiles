@@ -12,6 +12,7 @@
     ".claude/rules/human-checkpoint.md",
     ".claude/rules/google-workspace.md",
     ".claude/rules/browser.md",
+    ".agent-browser/config.json",
     ".claude/statusline-command.sh",
     ".config/atuin/config.toml",
     ".config/dotfiles/Brewfile",
