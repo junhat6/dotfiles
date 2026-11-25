@@ -60,7 +60,6 @@ cask "caffeine"
 # Closed-lid keep-awake mode used by Hammerspoon Alt + Ctrl + S
 cask "capsomnia"
 # Universal database tool and SQL client
-cask "dbeaver-community"
 # Voice and text chat software
 cask "discord"
 cask "font-hackgen-nerd"
@@ -80,7 +79,6 @@ cask "tailscale-app"
 # Team communication and collaboration software
 cask "slack"
 # Open-source code editor
-cask "visual-studio-code"
 # GPU-accelerated cross-platform terminal emulator and multiplexer
 cask "wezterm@nightly"
 # Video communication and virtual meeting platform

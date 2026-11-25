@@ -8,13 +8,14 @@ local DEFAULT_BINDINGS = {
 	{ key = "o", name = "Obsidian" },
 	{ key = "f", name = "Finder" },
 	{ key = "d", name = "Discord" },
-	{ key = "i", name = "Visual Studio Code" },
-	{ key = "b", name = "DBeaver" },
 	{ key = "c", name = "Claude" },
 	{ key = "a", name = "Codex" },
 	{ key = "z", name = "zoom.us" },
 	{ key = "u", name = "Orca" },
 	{ key = "v", name = "Amical" },
+	{ key = "m", name = "Muse", bundleID = "com.meta.endo" },
+	{ key = "e", name = "Karabiner-Elements" },
+	{ key = "n", name = "Tailscale" },
 	{ key = "p", name = "1Password" },
 }
 
@@ -23,6 +24,9 @@ local DEFAULT_BINDINGS = {
 -- 適用後に利用者が解除しても、同じ id は再適用しない。
 local ADDED_DEFAULTS = {
 	{ id = "2026-11-25-1password", key = "p", name = "1Password" },
+	{ id = "2026-11-25-muse", key = "m", name = "Muse", bundleID = "com.meta.endo" },
+	{ id = "2026-11-25-karabiner", key = "e", name = "Karabiner-Elements" },
+	{ id = "2026-11-25-tailscale", key = "n", name = "Tailscale" },
 }
 
 local function trimmedString(value)
