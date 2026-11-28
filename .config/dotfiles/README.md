@@ -343,7 +343,7 @@ python3 ~/.config/dotfiles/scripts/setup_machine.py prepare-apps --check-only --
 
 ## tailnet の Mac へ SSH
 
-`.config/dotfiles/ssh/tailnet.conf` に `macbook-raw` / `macmini-raw` を定義し、converge が `~/.ssh/config` の先頭へ `Include` を1行追加する。鍵・known_hosts・authorized_keys は共有しない（`~/.ssh` は端末ローカル）。名前は Tailscale MagicDNS の短縮名で、tailnet 内でだけ解決する。接続を10分再利用するので、AI エージェントが短いコマンドを繰り返しても速い。
+`.config/dotfiles/ssh/tailnet.conf` に `macbook-raw` / `mac-mini-raw` を定義し、converge が `~/.ssh/config` の先頭へ `Include` を1行追加する。鍵・known_hosts・authorized_keys は共有しない（`~/.ssh` は端末ローカル）。名前は Tailscale MagicDNS の短縮名で、tailnet 内でだけ解決する。接続を10分再利用するので、AI エージェントが短いコマンドを繰り返しても速い。
 
 接続される側の Mac で一度だけ行う:
 
