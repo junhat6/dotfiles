@@ -25,3 +25,8 @@ if [[ -r "$_dotfiles_brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highli
   source "$_dotfiles_brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 unset _dotfiles_zsh_dir _dotfiles_brew_prefix
+
+
+# bun は mise で入れる (mise use -g bun@latest)。公式インストーラー (curl bun.sh/install) は使わない。
+# 理由: 公式インストーラーは ~/.bun/bin を PATH に足さず補完行だけここに追記するため、
+# 再起動後に bun が見つからず Discord プラグインの MCP サーバーなどが起動しなくなる。

@@ -30,6 +30,7 @@ ruby = "latest"
 "npm:agent-browser" = { version = "latest", allow_builds = ["agent-browser"] }
 pnpm = "11.28.9"
 "aqua:google-antigravity/antigravity-cli" = "latest"
+bun = "latest"
 
 [settings]
 legacy_version_file = true
